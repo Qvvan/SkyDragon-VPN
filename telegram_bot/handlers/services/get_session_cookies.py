@@ -3,12 +3,12 @@ import ssl
 
 import aiohttp
 
-from config_data.config import MY_SECRET_URL, LOGIN_X_UI_PANEL, PASSWORD_X_UI_PANEL
+from config_data.config import MY_SECRET_URL, LOGIN_X_UI_PANEL, PASSWORD_X_UI_PANEL, PORT_X_UI
 from logger.logging_config import logger
 
 
 async def get_session_cookie(server_ip: str) -> str:
-    url = f"https://{server_ip}:54321/{MY_SECRET_URL}/login"
+    url = f"https://{server_ip}:{PORT_X_UI}/{MY_SECRET_URL}/login"
     payload = {
         "username": LOGIN_X_UI_PANEL,
         "password": PASSWORD_X_UI_PANEL
