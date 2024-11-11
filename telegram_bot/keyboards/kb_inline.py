@@ -145,7 +145,7 @@ class InlineKeyboards:
 
     @staticmethod
     async def get_support() -> InlineKeyboardMarkup:
-        support_user_id = "qvvan"
+        support_user_id = "1"
         support_link = f"t.me/{support_user_id}"
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
