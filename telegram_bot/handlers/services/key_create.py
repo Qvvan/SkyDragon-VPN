@@ -5,10 +5,8 @@ import uuid
 
 import aiohttp
 
-from config_data.config import MY_SECRET_URL
+from config_data.config import MY_SECRET_URL, PORT_X_UI
 from handlers.services.get_session_cookies import get_session_cookie
-
-from telegram_bot.config_data.config import PORT_X_UI
 
 
 class ServerUnavailableError(Exception):
