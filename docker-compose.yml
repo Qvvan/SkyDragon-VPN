@@ -1,0 +1,35 @@
+services:
+  telegram-bot:
+    build:
+      context: ./telegram_bot
+      dockerfile: Dockerfile
+    container_name: telegram-bot
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - db
+    command: python main.py
+    networks:
+      - bot-network
+
+  db:
+    image: postgres:16.2
+    container_name: telegram-db
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5442:5432"
+    networks:
+      - bot-network
+
+volumes:
+  postgres_data:
+
+networks:
+  bot-network:

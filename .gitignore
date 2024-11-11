@@ -1,0 +1,11 @@
+.env
+
+.mypy_cache/
+.vscode/
+venv/
+__pycache__/
+.idea
+telegram_bot/outline/config_outline/secret.py
+
+bot.log
+*.log
