@@ -24,7 +24,6 @@ async def get_session_cookie(server_ip: str) -> str:
             async with session.post(url, json=payload, ssl=ssl_context, timeout=30) as response:
 
                 if response.status == 200:
-                    # Логируем заголовки Set-Cookie
                     set_cookie_headers = response.headers.getall("Set-Cookie")
 
                     session_value = None
