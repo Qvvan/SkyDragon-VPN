@@ -266,7 +266,7 @@ class VlessKeyManager(BaseKeyManager):
         return (f"vless://{client_id}@{self.server_ip}:{port}"
                 f"?type=tcp&security=reality&pbk={public_key}"
                 f"&fp=firefox&sni={server_name}&sid={short_id}&spx=%2F&flow=xtls-rprx-vision"
-                f"#MASKNETVPN")
+                f"#SkyDragon")
 
 
 class ShadowsocksKeyManager(BaseKeyManager):
@@ -366,4 +366,4 @@ class ShadowsocksKeyManager(BaseKeyManager):
     def generate_ss_link(self, port, password, method, key_id):
         user_info = f"{method}:{password}".encode()
         user_info_base64 = base64.b64encode(user_info).decode()
-        return f"ss://{user_info_base64}@{self.server_ip}:{port}?prefix=POST%20&type=tcp#MASKNETVPN - {key_id}"
+        return f"ss://{user_info_base64}@{self.server_ip}:{port}?prefix=POST%20&type=tcp#SkyDragon"

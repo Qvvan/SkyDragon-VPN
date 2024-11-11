@@ -5,10 +5,8 @@ import uuid
 
 import aiohttp
 
-from config_data.config import MY_SECRET_URL
+from config_data.config import MY_SECRET_URL, PORT_X_UI
 from handlers.services.get_session_cookies import get_session_cookie
-
-from telegram_bot.config_data.config import PORT_X_UI
 
 
 class ServerUnavailableError(Exception):
@@ -268,7 +266,7 @@ class VlessKeyManager(BaseKeyManager):
         return (f"vless://{client_id}@{self.server_ip}:{port}"
                 f"?type=tcp&security=reality&pbk={public_key}"
                 f"&fp=firefox&sni={server_name}&sid={short_id}&spx=%2F&flow=xtls-rprx-vision"
-                f"#MASKNETVPN")
+                f"#SkyDragon")
 
 
 class ShadowsocksKeyManager(BaseKeyManager):
