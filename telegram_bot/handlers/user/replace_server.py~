@@ -32,14 +32,24 @@ async def get_support(callback_query: CallbackQuery, state: FSMContext, callback
     subscription_id = callback_data.subscription_id
     server_ip = callback_data.server_ip
 
+    data = await state.get_data()
+    previous_message_id = data.get("text_dragons_overview_id")
+    if previous_message_id:
+        try:
+            await callback_query.bot.delete_message(callback_query.message.chat.id, previous_message_id)
+            await state.update_data(text_dragons_overview_id=None)
+        except Exception as e:
+            await logger.log_error(f"Не удалось удалить сообщение с ID {previous_message_id}: {e}")
+
     await state.update_data(
         subscription_id=subscription_id,
     )
     keyboard = await InlineKeyboards.get_servers(server_ip)
     if not keyboard:
         error_message = LEXICON_RU["no_servers_available"]
+        await callback_query.answer(error_message, show_alert=True, cache_time=3)
         await callback_query.message.edit_text(
-            text=error_message
+            text=,
         )
     else:
         await callback_query.message.edit_text(
