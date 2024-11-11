@@ -187,8 +187,18 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
             await logger.log_error(f'Пользователь: @{callback_query.from_user.username}\nСервер недоступен', e)
             await callback_query.answer(LEXICON_RU["server_unavailable"], show_alert=True)
             await callback_query.message.delete()
+            await show_user_subscriptions(
+                user_id=callback_query.from_user.id,
+                username=callback_query.from_user.username,
+                message=callback_query.message,
+                state=state)
         except Exception as e:
             await logger.log_error(f'Пользователь: @{callback_query.from_user.username}\n'
                                    f'Ошибка при смене сервера', e)
             await callback_query.message.edit_text(text=LEXICON_RU['error'])
+            await show_user_subscriptions(
+                user_id=callback_query.from_user.id,
+                username=callback_query.from_user.username,
+                message=callback_query.message,
+                state=state)
         await state.clear()
