@@ -8,6 +8,8 @@ import aiohttp
 from config_data.config import MY_SECRET_URL
 from handlers.services.get_session_cookies import get_session_cookie
 
+from telegram_bot.config_data.config import PORT_X_UI
+
 
 class ServerUnavailableError(Exception):
     """Кастомное исключение для недоступного сервера."""
@@ -24,12 +26,12 @@ class BaseKeyManager:
             "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
             "Connection": "keep-alive",
             "Cookie": f"lang=ru-RU; 3x-ui={session_cookie}",
-            "Origin": f"https://{server_ip}:54321",
-            "Referer": f"https://{server_ip}:54321/{MY_SECRET_URL}/panel/inbounds",
+            "Origin": f"https://{server_ip}:{PORT_X_UI}",
+            "Referer": f"https://{server_ip}:{PORT_X_UI}/{MY_SECRET_URL}/panel/inbounds",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
             "X-Requested-With": "XMLHttpRequest"
         }
-        self.base_url = f"https://{server_ip}:54321/{MY_SECRET_URL}/panel"
+        self.base_url = f"https://{server_ip}:{PORT_X_UI}/{MY_SECRET_URL}/panel"
 
     @staticmethod
     def generate_uuid():
@@ -135,7 +137,7 @@ class BaseKeyManager:
 class VlessKeyManager(BaseKeyManager):
     def __init__(self, server_ip, session_cookie):
         super().__init__(server_ip, session_cookie)
-        self.get_cert_api_url = f"https://{server_ip}:54321/{MY_SECRET_URL}/server/getNewX25519Cert"
+        self.get_cert_api_url = f"https://{server_ip}:{PORT_X_UI}/{MY_SECRET_URL}/server/getNewX25519Cert"
 
     async def get_certificate(self, session):
         async with session.post(self.get_cert_api_url, headers=self.headers, ssl=False) as response:
@@ -176,21 +178,41 @@ class VlessKeyManager(BaseKeyManager):
             "streamSettings": json.dumps({
                 "network": "tcp",
                 "security": "reality",
+                "externalProxy": [],  # Добавлено externalProxy
                 "realitySettings": {
+                    "show": False,
+                    "xver": 0,
                     "dest": "google.com:443",
                     "serverNames": ["google.com", "www.google.com"],
                     "privateKey": private_key,
-                    "publicKey": public_key,
-                    "shortIds": [short_id]
+                    "minClient": "",
+                    "maxClient": "",
+                    "maxTimediff": 0,
+                    "shortIds": [short_id, "d794e37acfc7557b", "4815a2", "af5b73d52b", "9f57", "d0", "faad19837e6869",
+                                 "ea39de6417ae"],
+                    "settings": {
+                        "publicKey": public_key,
+                        "fingerprint": "firefox",
+                        "serverName": "",
+                        "spiderX": "/"
+                    }
                 },
                 "tcpSettings": {
+                    "acceptProxyProtocol": False,
                     "header": {"type": "none"}
                 }
             }),  # Сериализуем streamSettings в JSON строку
             "sniffing": json.dumps({
                 "enabled": True,
-                "destOverride": ["http", "tls"]
-            })  # Сериализуем sniffing в JSON строку
+                "destOverride": ["http", "tls", "quic", "fakedns"],  # Добавлены дополнительные destOverride
+                "metadataOnly": False,
+                "routeOnly": False
+            }),  # Сериализуем sniffing в JSON строку
+            "allocate": json.dumps({
+                "strategy": "always",
+                "refresh": 5,
+                "concurrency": 3
+            })
         }
 
         async with session.post(create_api_url, headers=headers_with_cookie, json=new_vless_key_data,
@@ -241,10 +263,10 @@ class VlessKeyManager(BaseKeyManager):
             except aiohttp.ClientResponseError as e:
                 print(f"Request error: {e}")
 
-    def generate_vless_link(self, client_id, port, short_id, server_name="google.com"):
+    def generate_vless_link(self, client_id, port, short_id, public_key, server_name="google.com"):
         return (f"vless://{client_id}@{self.server_ip}:{port}"
-                f"?type=tcp&security=reality&fp=firefox"
-                f"&sni={server_name}&sid={short_id}&spx=%2F&flow=xtls-rprx-vision"
+                f"?type=tcp&security=reality&pbk={public_key}"
+                f"&fp=firefox&sni={server_name}&sid={short_id}&spx=%2F&flow=xtls-rprx-vision"
                 f"#MASKNETVPN")
 
 

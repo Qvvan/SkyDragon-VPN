@@ -178,21 +178,41 @@ class VlessKeyManager(BaseKeyManager):
             "streamSettings": json.dumps({
                 "network": "tcp",
                 "security": "reality",
+                "externalProxy": [],  # Добавлено externalProxy
                 "realitySettings": {
+                    "show": False,
+                    "xver": 0,
                     "dest": "google.com:443",
                     "serverNames": ["google.com", "www.google.com"],
                     "privateKey": private_key,
-                    "publicKey": public_key,
-                    "shortIds": [short_id]
+                    "minClient": "",
+                    "maxClient": "",
+                    "maxTimediff": 0,
+                    "shortIds": [short_id, "d794e37acfc7557b", "4815a2", "af5b73d52b", "9f57", "d0", "faad19837e6869",
+                                 "ea39de6417ae"],
+                    "settings": {
+                        "publicKey": public_key,
+                        "fingerprint": "firefox",
+                        "serverName": "",
+                        "spiderX": "/"
+                    }
                 },
                 "tcpSettings": {
+                    "acceptProxyProtocol": False,
                     "header": {"type": "none"}
                 }
             }),  # Сериализуем streamSettings в JSON строку
             "sniffing": json.dumps({
                 "enabled": True,
-                "destOverride": ["http", "tls"]
-            })  # Сериализуем sniffing в JSON строку
+                "destOverride": ["http", "tls", "quic", "fakedns"],  # Добавлены дополнительные destOverride
+                "metadataOnly": False,
+                "routeOnly": False
+            }),  # Сериализуем sniffing в JSON строку
+            "allocate": json.dumps({
+                "strategy": "always",
+                "refresh": 5,
+                "concurrency": 3
+            })
         }
 
         async with session.post(create_api_url, headers=headers_with_cookie, json=new_vless_key_data,
@@ -237,16 +257,17 @@ class VlessKeyManager(BaseKeyManager):
                     client_id=new_client["id"],
                     port=port,
                     short_id=short_id,
+                    public_key=cert_data["publicKey"],
                     server_name="google.com"
                 )
                 return vless_link, key_id
             except aiohttp.ClientResponseError as e:
                 print(f"Request error: {e}")
 
-    def generate_vless_link(self, client_id, port, short_id, server_name="google.com"):
+    def generate_vless_link(self, client_id, port, short_id, public_key, server_name="google.com"):
         return (f"vless://{client_id}@{self.server_ip}:{port}"
-                f"?type=tcp&security=reality&fp=firefox"
-                f"&sni={server_name}&sid={short_id}&spx=%2F&flow=xtls-rprx-vision"
+                f"?type=tcp&security=reality&pbk={public_key}"
+                f"&fp=firefox&sni={server_name}&sid={short_id}&spx=%2F&flow=xtls-rprx-vision"
                 f"#MASKNETVPN")
 
 
