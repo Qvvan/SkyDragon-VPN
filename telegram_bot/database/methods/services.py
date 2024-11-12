@@ -1,4 +1,4 @@
-from sqlalchemy import desc
+from sqlalchemy import desc, asc
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -13,7 +13,7 @@ class ServiceMethods:
 
     async def get_services(self):
         try:
-            result = await self.session.execute(select(Services).order_by(desc(Services.service_id)))
+            result = await self.session.execute(select(Services).order_by(asc(Services.service_id)))
             services = result.scalars().all()
             return services
         except SQLAlchemyError as e:
