@@ -5,12 +5,13 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 
-load_dotenv('../../.env')
+load_dotenv('/srv/BotVPN/.env')
 
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = os.getenv("DB_HOST")
 DB_NAME = os.getenv("DB_NAME")
+BACKUP_PATH = os.getenv("BACKUP_PATH")
 
 TOKEN = os.getenv('BOT_TOKEN')
 BACKUP_GROUP_ID = os.getenv('BACKUP_GROUP_ID')
@@ -18,7 +19,7 @@ BACKUP_GROUP_ID = os.getenv('BACKUP_GROUP_ID')
 
 def create_backup():
     date_str = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    backup_file = f"../backup/backup_{date_str}.dump.gz"
+    backup_file = f"{BACKUP_PATH}/backup_{date_str}.dump.gz"
 
     # Команда для выполнения резервного копирования через Docker
     command = (
