@@ -33,8 +33,9 @@ jobs:
         run: |
           curl -s -X POST https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage \
           -d chat_id=$TELEGRAM_CHAT_ID \
-          -d parse_mode=Markdown \
-          -d text="*Деплой начат!*\n\n*Коммит:* $GIT_COMMIT_MESSAGE\n*Автор:* $GIT_COMMIT_AUTHOR\n*Дата:* $GIT_COMMIT_DATE\n*Тип события:* $GIT_COMMIT_TYPE"
+          -d parse_mode=MarkdownV2 \
+          -d text="*Деплой начат\!*%0A%0A*Коммит\:* ${GIT_COMMIT_MESSAGE//_/\\_}%0A*Описание\:* ${GIT_COMMIT_DESCRIPTION//_/\\_}%0A*Автор\:* ${GIT_COMMIT_AUTHOR//_/\\_}%0A*Дата\:* ${GIT_COMMIT_DATE//_/\\_}%0A*Тип события\:* ${GIT_COMMIT_TYPE//_/\\_}"
+
 
       - name: Deploy to server
         env:
