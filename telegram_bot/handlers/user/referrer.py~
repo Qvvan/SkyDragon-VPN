@@ -34,15 +34,7 @@ async def show_referrals(callback: CallbackQuery):
             if not list_referrals:
                 keyboard = InlineKeyboardMarkup(inline_keyboard=[
                     [
-                        InlineKeyboardButton(
-                            text="🔗 Призвать союзника",
-                            callback_data="get_invite_link")
-                    ],
-                    [
-                        InlineKeyboardButton(
-                            text="🔙 Назад",
-                            callback_data="back_to_call_allies"
-                        )
+                        InlineKeyboardButton(text="🔗 Призвать союзника", callback_data="get_invite_link")
                     ]
                 ])
                 await callback.message.edit_text(

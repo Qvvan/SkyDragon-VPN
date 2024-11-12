@@ -463,7 +463,7 @@ class InlineKeyboards:
                 [
                     InlineKeyboardButton(
                         text="🔙 Вернуться в меню FAQ",
-                        callback_data="faq"
+                        callback_data="back_to_device_selection"
                     )
                 ]
             ])
