@@ -1,0 +1,50 @@
+# .github/workflows/ci-cd.yml
+name: CI/CD для SkyDragon
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+
+      - name: Send deploy notification to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GIT_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          GIT_COMMIT_AUTHOR: ${{ github.event.head_commit.author.name }}
+          GIT_COMMIT_DATE: ${{ github.event.head_commit.timestamp }}
+          GIT_COMMIT_TYPE: ${{ github.event_name }}
+        run: |
+          curl -s -X POST https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage \
+          -d chat_id=$TELEGRAM_CHAT_ID \
+          -d parse_mode=Markdown \
+          -d text="*Деплой начат!*\n\n*Коммит:* $GIT_COMMIT_MESSAGE\n*Автор:* $GIT_COMMIT_AUTHOR\n*Дата:* $GIT_COMMIT_DATE\n*Тип события:* $GIT_COMMIT_TYPE"
+
+      - name: Deploy to server
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+        run: |
+          ssh -o StrictHostKeyChecking=no -i $SSH_PRIVATE_KEY $SERVER_USER@$SERVER_IP "
+          cd /root/SkyDragon-VPN &&
+          git pull origin main &&
+          docker-compose down &&
+          docker-compose up -d --build
+          "

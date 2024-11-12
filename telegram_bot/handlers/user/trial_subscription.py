@@ -30,6 +30,7 @@ async def process_trial_subscription_callback(callback: CallbackQuery, state: FS
                     message=callback.message,
                     state=state
                 )
+                await logger.log_info(f"Пользователь @{callback.from_user.username} активировал пробную подписку")
             else:
                 await callback.message.edit_text(
                     text=LEXICON_RU['trial_subscription_used'],
