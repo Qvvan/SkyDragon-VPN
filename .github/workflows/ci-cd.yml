@@ -34,7 +34,7 @@ jobs:
           curl -s -X POST https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage \
           -d chat_id=$TELEGRAM_CHAT_ID \
           -d parse_mode=MarkdownV2 \
-          -d text="*Деплой начат\!*%0A%0A*Коммит\:* ${GIT_COMMIT_MESSAGE//_/\\_}%0A*Описание\:* ${GIT_COMMIT_DESCRIPTION//_/\\_}%0A*Автор\:* ${GIT_COMMIT_AUTHOR//_/\\_}%0A*Дата\:* ${GIT_COMMIT_DATE//_/\\_}%0A*Тип события\:* ${GIT_COMMIT_TYPE//_/\\_}"
+          -d text="*Деплой начат\\!*%0A%0A*Коммит\\:* ${GIT_COMMIT_MESSAGE//-/\\-}%0A*Описание\\:* ${GIT_COMMIT_DESCRIPTION//-/\\-}%0A*Автор\\:* ${GIT_COMMIT_AUTHOR//-/\\-}%0A*Дата\\:* ${GIT_COMMIT_DATE//-/\\-}%0A*Тип события\\:* ${GIT_COMMIT_TYPE//-/\\-}"
 
 
       - name: Deploy to server
@@ -43,7 +43,7 @@ jobs:
           SERVER_USER: ${{ secrets.SERVER_USER }}
           SERVER_IP: ${{ secrets.SERVER_IP }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i $SSH_PRIVATE_KEY $SERVER_USER@$SERVER_IP "
+          ssh -i $SSH_PRIVATE_KEY $SERVER_USER@$SERVER_IP "
           cd /root/SkyDragon-VPN &&
           git pull origin main &&
           docker-compose down &&
