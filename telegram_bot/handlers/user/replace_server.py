@@ -178,7 +178,8 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
             )
             await message.answer(
                 text=LEXICON_RU["choose_device"],
-                reply_markup=await InlineKeyboards.get_menu_install_app(subscription.name_app, subscription.subscription_id)
+                reply_markup=await InlineKeyboards.get_menu_install_app(subscription.name_app,
+                                                                        subscription.subscription_id)
             )
             await session_methods.session.commit()
 
