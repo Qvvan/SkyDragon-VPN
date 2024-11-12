@@ -37,7 +37,7 @@ async def show_referrals(callback: CallbackQuery):
                         InlineKeyboardButton(text="🔗 Призвать союзника", callback_data="get_invite_link")
                     ]
                 ])
-                await callback.message.answer(
+                await callback.message.edit_text(
                     text=LEXICON_RU['no_invites'],
                     reply_markup=keyboard
                 )
@@ -71,7 +71,7 @@ async def show_referrals(callback: CallbackQuery):
 @router.callback_query(lambda c: c.data == "get_invite_link")
 async def send_invite_link(callback: CallbackQuery):
     user_id = callback.from_user.id
-    referral_link = f"https://t.me/test_reminders_task_bot?start={user_id}"
+    referral_link = f"https://t.me/SkyDragonVPNBot?start={user_id}"
     invite_text = LEXICON_RU['invite'].format(referral_link=referral_link)
 
     await callback.message.edit_text(
