@@ -42,7 +42,7 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Subs
             subsciption = await session_methods.subscription.get_subscription_by_id(subscription_id)
             user_key = subsciption.key
             await callback_query.message.edit_text(
-                text=guide_install[name_app][name_device.format(key=user_key)],
+                text=guide_install[name_app][name_device].format(key=user_key),
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                     [
                         InlineKeyboardButton(
