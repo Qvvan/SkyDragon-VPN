@@ -42,16 +42,12 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Subs
             subsciption = await session_methods.subscription.get_subscription_by_id(subscription_id)
             user_key = subsciption.key
             await callback_query.message.edit_text(
-                text=guide_install[name_app][name_device.format(key=user_key)],
+                text=guide_install[name_app][name_device.format(user_key)],
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                     [
                         InlineKeyboardButton(
                             text="🔙 Назад",
-                            callback_data=SubscriptionCallbackFactory(
-                                action='get_guide_install_app',
-                                subscription_id=subscription_id,
-                                name_app=name_app
-                            ).pack()
+                            callback_data=SubscriptionCallbackFactory(action='get_guide_install_app', name_app=name_app).pack()
                         )
                     ]
                 ]),
