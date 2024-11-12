@@ -35,7 +35,7 @@ async def get_support(callback_query: CallbackQuery, state: FSMContext, callback
 
     await callback_query.message.edit_text(
         text=LEXICON_RU['choice_app'].format(current_app=current_app, new_app=new_app),
-        reply_markup=await InlineKeyboards.replace_app(current_app),
+        reply_markup=await InlineKeyboards.replace_app(current_app, subscription_id),
         parse_mode='HTML',
     )
 

@@ -165,7 +165,6 @@ async def show_subscription_details(callback: CallbackQuery, state: FSMContext):
                 server_name = subscription.server_name
                 server_ip = subscription.server_ip
 
-                # Полная информация по подписке
                 detailed_info = (
                     f"<b>🐉 Статус защиты:</b> {'🐲 Дракон на страже' if status == 'активная' else '💀 Покровительство завершено'}\n"
                     f"<b>🧿 Амулет:</b> {name_app}\n"
@@ -204,5 +203,5 @@ async def extend_subscription(callback: CallbackQuery, callback_data: Subscripti
 
     await callback.message.edit_text(
         text=LEXICON_RU['createorder'],
-        reply_markup=await InlineKeyboards.create_order_keyboards(StatusPay.OLD, 'view_subs'),
+        reply_markup=await InlineKeyboards.create_order_keyboards(StatusPay.OLD, f'view_details_{subscription_id}'),
     )

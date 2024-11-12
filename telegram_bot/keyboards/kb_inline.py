@@ -95,7 +95,7 @@ class InlineKeyboards:
                 await logger.log_error(f'Произошла ошибка при формирование услуг', e)
 
     @staticmethod
-    async def get_servers(ip) -> InlineKeyboardMarkup | int:
+    async def get_servers(ip, subscription_id) -> InlineKeyboardMarkup | int:
         async with DatabaseContextManager() as session_methods:
             try:
                 keyboard = InlineKeyboardBuilder()
@@ -122,7 +122,7 @@ class InlineKeyboards:
                 keyboard.row(*buttons)
 
                 keyboard.row(
-                    InlineKeyboardButton(text='🔙 Назад', callback_data='view_subs')
+                    InlineKeyboardButton(text='🔙 Назад', callback_data=f'view_details_{subscription_id}')
                 )
 
                 keyboard.adjust(1)
@@ -205,7 +205,7 @@ class InlineKeyboards:
                 ).pack()),
             InlineKeyboardButton(
                 text='🔙 Назад',
-                callback_data='view_subs',
+                callback_data=f'view_details_{subscription_id}',
             )
         )
         keyboard.adjust(2, 1)
@@ -306,7 +306,7 @@ class InlineKeyboards:
         return keyboard.as_markup()
 
     @staticmethod
-    async def replace_app(name_app) -> InlineKeyboardMarkup:
+    async def replace_app(name_app, subscription_id) -> InlineKeyboardMarkup:
         keyboard = InlineKeyboardBuilder()
         if name_app == NameApp.OUTLINE:
             button = InlineKeyboardButton(text="VLESS", callback_data=SubscriptionCallbackFactory(
@@ -316,7 +316,7 @@ class InlineKeyboards:
                 action='name_app', name_app="OUTLINE").pack())
         keyboard.add(button)
         keyboard.row(
-            InlineKeyboardButton(text='🔙 Назад', callback_data='view_subs')
+            InlineKeyboardButton(text='🔙 Назад', callback_data=f'view_details_{subscription_id}')
         )
 
         return keyboard.as_markup()
@@ -571,7 +571,7 @@ class InlineKeyboards:
             [
                 InlineKeyboardButton(
                     text="🔙 Назад",
-                    callback_data="view_subs")
+                    callback_data=f"view_details_{subscription_id}")
             ],
         ])
         return keyboard

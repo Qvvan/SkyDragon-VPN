@@ -44,7 +44,7 @@ async def get_support(callback_query: CallbackQuery, state: FSMContext, callback
     await state.update_data(
         subscription_id=subscription_id,
     )
-    keyboard = await InlineKeyboards.get_servers(server_ip)
+    keyboard = await InlineKeyboards.get_servers(server_ip, subscription_id)
     if not keyboard:
         await callback_query.answer(LEXICON_RU["no_servers_available"], show_alert=True, cache_time=3)
         await show_user_subscriptions(
