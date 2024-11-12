@@ -37,20 +37,16 @@ jobs:
           -d text="*Деплой начат\\!*%0A%0A*Коммит\\:* ${GIT_COMMIT_MESSAGE//-/\\-}%0A*Автор\\:* ${GIT_COMMIT_AUTHOR//-/\\-}%0A*Дата\\:* ${GIT_COMMIT_DATE//-/\\-}%0A*Тип события\\:* ${GIT_COMMIT_TYPE//-/\\-}"
 
       - name: Deploy to server
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-          SERVER_IP: ${{ secrets.SERVER_IP }}
-        run: |
-          echo "$SSH_PRIVATE_KEY" > /tmp/deploy_key
-          chmod 600 /tmp/deploy_key
-          ssh -o StrictHostKeyChecking=no -i /tmp/deploy_key $SERVER_USER@$SERVER_IP "
-            cd /root/SkyDragon-VPN &&
-            git pull origin main &&
-            docker-compose down &&
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /root/SkyDragon-VPN
+            git pull origin main
+            docker-compose down
             docker-compose up -d --build
-          "
-          rm -f /tmp/deploy_key
 
       - name: Notify end of deployment
         if: success()  # Это сообщение будет отправлено только если деплой прошел успешно
