@@ -22,7 +22,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y docker-compose
 
-      - name: Send deploy notification to Telegram
+      - name: Notify start of deployment
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -34,8 +34,7 @@ jobs:
           curl -s -X POST https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage \
           -d chat_id=$TELEGRAM_CHAT_ID \
           -d parse_mode=MarkdownV2 \
-          -d text="*Деплой начат\\!*%0A%0A*Коммит\\:* ${GIT_COMMIT_MESSAGE//-/\\-}%0A*Описание\\:* ${GIT_COMMIT_DESCRIPTION//-/\\-}%0A*Автор\\:* ${GIT_COMMIT_AUTHOR//-/\\-}%0A*Дата\\:* ${GIT_COMMIT_DATE//-/\\-}%0A*Тип события\\:* ${GIT_COMMIT_TYPE//-/\\-}"
-
+          -d text="*Деплой начат\\!*%0A%0A*Коммит\\:* ${GIT_COMMIT_MESSAGE//-/\\-}%0A*Автор\\:* ${GIT_COMMIT_AUTHOR//-/\\-}%0A*Дата\\:* ${GIT_COMMIT_DATE//-/\\-}%0A*Тип события\\:* ${GIT_COMMIT_TYPE//-/\\-}"
 
       - name: Deploy to server
         env:
@@ -43,9 +42,34 @@ jobs:
           SERVER_USER: ${{ secrets.SERVER_USER }}
           SERVER_IP: ${{ secrets.SERVER_IP }}
         run: |
-          ssh -i $SSH_PRIVATE_KEY $SERVER_USER@$SERVER_IP "
-          cd /root/SkyDragon-VPN &&
-          git pull origin main &&
-          docker-compose down &&
-          docker-compose up -d --build
+          echo "$SSH_PRIVATE_KEY" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          ssh -o StrictHostKeyChecking=no -i /tmp/deploy_key $SERVER_USER@$SERVER_IP "
+            cd /root/SkyDragon-VPN &&
+            git pull origin main &&
+            docker-compose down &&
+            docker-compose up -d --build
           "
+          rm -f /tmp/deploy_key
+
+      - name: Notify end of deployment
+        if: success()  # Это сообщение будет отправлено только если деплой прошел успешно
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          curl -s -X POST https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage \
+          -d chat_id=$TELEGRAM_CHAT_ID \
+          -d parse_mode=MarkdownV2 \
+          -d text="*Деплой завершен успешно\\!*"
+
+      - name: Notify deployment failure
+        if: failure()  # Это сообщение будет отправлено только если деплой завершился ошибкой
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          curl -s -X POST https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage \
+          -d chat_id=$TELEGRAM_CHAT_ID \
+          -d parse_mode=MarkdownV2 \
+          -d text="*Ошибка деплоя\\!*%0AПроверьте логи для получения дополнительной информации"
