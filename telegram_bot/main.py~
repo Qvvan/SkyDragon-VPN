@@ -10,7 +10,7 @@ from database.init_db import DataBase
 from handlers.admin import add_server, key_info, unban_user, block_key, cancel, refund, del_key, \
     unblock_key, help_info, ban_user, pushes, show_servers
 from handlers.services import payments_service, guide_install
-from handlers.user import subs, replace_server, replace_app, referrer
+from handlers.user import subs, replace_server, replace_app, referrer, trial_subscription
 from handlers.user import start, support, createorder
 from keyboards.set_menu import set_main_menu
 from logger.logging_config import logger
@@ -76,6 +76,7 @@ async def main():
     dp.include_router(replace_app.router)
     dp.include_router(guide_install.router)
     dp.include_router(referrer.router)
+    dp.include_router(trial_subscription.router)
 
     # admin-handlers
     dp.include_router(add_server.router)

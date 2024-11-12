@@ -9,8 +9,8 @@ from config_data import config
 from database.init_db import DataBase
 from handlers.admin import add_server, key_info, unban_user, block_key, cancel, refund, del_key, \
     unblock_key, help_info, ban_user, pushes, show_servers
-from handlers.services import payments_service, guide_install
-from handlers.user import subs, replace_server, replace_app, referrer, trial_subscription
+from handlers.services import payments_service, guide_install, trial_subscription
+from handlers.user import subs, replace_server, replace_app, referrer
 from handlers.user import start, support, createorder
 from keyboards.set_menu import set_main_menu
 from logger.logging_config import logger

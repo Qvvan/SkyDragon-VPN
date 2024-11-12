@@ -200,6 +200,7 @@ class InlineKeyboards:
                 text='Как подключиться ❔',
                 callback_data=SubscriptionCallbackFactory(
                     action='get_guide_install_app',
+                    subscription_id=subscription_id,
                     name_app=name_app
                 ).pack()),
             InlineKeyboardButton(
@@ -533,19 +534,21 @@ class InlineKeyboards:
     from aiogram.types import InlineKeyboardMarkup
 
     @staticmethod
-    async def get_menu_install_app(name_app) -> InlineKeyboardMarkup:
+    async def get_menu_install_app(name_app, subscription_id) -> InlineKeyboardMarkup:
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(
                     text="Android 📱",
                     callback_data=SubscriptionCallbackFactory(
                         action='Android',
+                        subscription_id=subscription_id,
                         name_app=name_app
                     ).pack()),
                 InlineKeyboardButton(
                     text="iPhone 🍏",
                     callback_data=SubscriptionCallbackFactory(
                         action='iPhone',
+                        subscription_id=subscription_id,
                         name_app=name_app
                     ).pack())
             ],
@@ -554,12 +557,14 @@ class InlineKeyboards:
                     text="Windows 💻",
                     callback_data=SubscriptionCallbackFactory(
                         action='Windows',
+                        subscription_id=subscription_id,
                         name_app=name_app
                     ).pack()),
                 InlineKeyboardButton(
                     text="MacOS 💻",
                     callback_data=SubscriptionCallbackFactory(
                         action='MacOS',
+                        subscription_id=subscription_id,
                         name_app=name_app
                     ).pack())
             ],
