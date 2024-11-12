@@ -41,15 +41,6 @@ async def process_start_command(message: Message):
                     f"Имя: @{message.from_user.username}\n"
                     f"id: {message.from_user.id}")
                 if referrer_id and referrer_id != message.from_user.id:
-                    await session_methods.referrals.add_referrer(
-                        referral=Referrals(
-                            referrer_id=referrer_id,
-                            referred_id=message.from_user.id,
-                            invited_username=message.from_user.username,
-                            bonus_issued=ReferralStatus.INVITED,
-                        )
-                    )
-                    await extend_user_subscription(referrer_id, 7, session_methods)
                     await message.bot.send_message(
                         referrer_id,
                         f"🐲 Ваш союзник @{message.from_user.username} присоединился к кругу! Древние драконы даруют вам бонус силы 🎁",
@@ -58,6 +49,18 @@ async def process_start_command(message: Message):
                     await logger.log_info(
                         f"Его пригласил пользователь с ID: {referrer_id}"
                     )
+                    try:
+                        await session_methods.referrals.add_referrer(
+                            referral=Referrals(
+                                referrer_id=referrer_id,
+                                referred_id=message.from_user.id,
+                                invited_username=message.from_user.username,
+                                bonus_issued=ReferralStatus.INVITED,
+                            )
+                        )
+                        await extend_user_subscription(referrer_id, 7, session_methods)
+                    except Exception as e:
+                        await logger.log_error(f"Ошибка при начислении бонуса за приглашение: {referrer_id}", e)
             await session_methods.session.commit()
         except Exception as e:
             await logger.log_error(f'Пользователь: @{message.from_user.username}\n'

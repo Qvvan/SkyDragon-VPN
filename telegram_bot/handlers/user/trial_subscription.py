@@ -1,9 +1,8 @@
 from aiogram import Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import CallbackQuery
 
 from database.context_manager import DatabaseContextManager
-from handlers.services.create_subscription_service import SubscriptionService
 from handlers.services.extend_latest_subscription import extend_user_subscription
 from handlers.user.subs import show_user_subscriptions
 from keyboards.kb_inline import InlineKeyboards

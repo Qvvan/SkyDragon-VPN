@@ -21,7 +21,8 @@ async def get_invite_link(message: Message):
 
 @router.callback_query(lambda c: c.data == "back_to_call_allies")
 async def show_referrals(callback: CallbackQuery):
-    await callback.message.edit_text(text=LEXICON_RU['invite_info'], reply_markup=await InlineKeyboards.get_invite_keyboard("back_to_start"))
+    await callback.message.edit_text(text=LEXICON_RU['invite_info'],
+                                     reply_markup=await InlineKeyboards.get_invite_keyboard("back_to_start"))
 
 
 @router.callback_query(lambda c: c.data == "show_referrals")

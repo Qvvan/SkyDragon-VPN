@@ -197,6 +197,12 @@ class InlineKeyboards:
                     subscription_id=subscription_id
                 ).pack()),
             InlineKeyboardButton(
+                text='Как подключиться ❔',
+                callback_data=SubscriptionCallbackFactory(
+                    action='get_guide_install_app',
+                    name_app=name_app
+                ).pack()),
+            InlineKeyboardButton(
                 text='🔙 Назад',
                 callback_data='view_subs',
             )
@@ -523,3 +529,44 @@ class InlineKeyboards:
                 )
             ]
         ])
+
+    from aiogram.types import InlineKeyboardMarkup
+
+    @staticmethod
+    async def get_menu_install_app(name_app) -> InlineKeyboardMarkup:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Android 📱",
+                    callback_data=SubscriptionCallbackFactory(
+                        action='Android',
+                        name_app=name_app
+                    ).pack()),
+                InlineKeyboardButton(
+                    text="iPhone 🍏",
+                    callback_data=SubscriptionCallbackFactory(
+                        action='iPhone',
+                        name_app=name_app
+                    ).pack())
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Windows 💻",
+                    callback_data=SubscriptionCallbackFactory(
+                        action='Windows',
+                        name_app=name_app
+                    ).pack()),
+                InlineKeyboardButton(
+                    text="MacOS 💻",
+                    callback_data=SubscriptionCallbackFactory(
+                        action='MacOS',
+                        name_app=name_app
+                    ).pack())
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 Назад",
+                    callback_data="view_subs")
+            ],
+        ])
+        return keyboard

@@ -33,7 +33,7 @@ async def handle_subscribe(callback: CallbackQuery, state: FSMContext):
 
     await callback.message.edit_text(
         text=LEXICON_RU['createorder'],
-        reply_markup=await InlineKeyboards.create_order_keyboards(StatusPay.NEW,  back_target=back_target),
+        reply_markup=await InlineKeyboards.create_order_keyboards(StatusPay.NEW, back_target=back_target),
         parse_mode="HTML"
     )
 

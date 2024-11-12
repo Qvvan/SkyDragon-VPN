@@ -8,7 +8,6 @@ from handlers.services.key_create import ShadowsocksKeyManager, VlessKeyManager,
 from handlers.user.subs import show_user_subscriptions
 from keyboards.kb_inline import InlineKeyboards, ServerSelectCallback, \
     SubscriptionCallbackFactory, ReplaceServerCallbackFactory
-from keyboards.kb_reply.kb_inline import ReplyKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 from models.models import NameApp
@@ -179,13 +178,12 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
             )
             await message.answer(
                 text=LEXICON_RU["choose_device"],
-                reply_markup=await ReplyKeyboards.get_menu_install_app()
             )
             await session_methods.session.commit()
 
         except ServerUnavailableError as e:
             await logger.log_error(f'Пользователь: @{callback_query.from_user.username}\nСервер недоступен', e)
-            await callback_query.answer(LEXICON_RU["server_unavailable"], show_alert=True)
+            await callback_query.answer(LEXICON_RU["server_unavailable"], show_alert=True, cache_time=3)
             await callback_query.message.delete()
             await show_user_subscriptions(
                 user_id=callback_query.from_user.id,
@@ -195,7 +193,7 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
         except Exception as e:
             await logger.log_error(f'Пользователь: @{callback_query.from_user.username}\n'
                                    f'Ошибка при смене сервера', e)
-            await callback_query.message.edit_text(text=LEXICON_RU['error'])
+            await callback_query.answer(text=LEXICON_RU['error'], show_alert=True, cache_time=3)
             await show_user_subscriptions(
                 user_id=callback_query.from_user.id,
                 username=callback_query.from_user.username,

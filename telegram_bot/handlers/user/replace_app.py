@@ -7,7 +7,6 @@ from handlers.services.get_session_cookies import get_session_cookie
 from handlers.services.key_create import ShadowsocksKeyManager, VlessKeyManager, ServerUnavailableError
 from handlers.user.subs import show_user_subscriptions
 from keyboards.kb_inline import InlineKeyboards, SubscriptionCallbackFactory
-from keyboards.kb_reply.kb_inline import ReplyKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 from models.models import NameApp
@@ -26,16 +25,17 @@ async def get_support(callback_query: CallbackQuery, state: FSMContext, callback
             await callback_query.bot.delete_message(callback_query.message.chat.id, previous_message_id)
             await state.update_data(text_dragons_overview_id=None)
         except Exception as e:
-            await logger.log_error(f"Не удалось удалить сообщение с ID {previous_message_id}: {e}")
+            await logger.log_error(f"Не удалось удалить сообщение с ID {previous_message_id}", e)
 
     subscription_id = callback_data.subscription_id
-    name_app = callback_data.name_app
+    current_app = callback_data.name_app
+    new_app = "VLESS" if current_app == "Outline" else "Outline"
 
     await state.update_data(subscription_id=subscription_id)
 
     await callback_query.message.edit_text(
-        text=LEXICON_RU['choice_app'],
-        reply_markup=await InlineKeyboards.replace_app(name_app),
+        text=LEXICON_RU['choice_app'].format(current_app=current_app, new_app=new_app),
+        reply_markup=await InlineKeyboards.replace_app(current_app),
         parse_mode='HTML',
     )
 
@@ -99,7 +99,7 @@ async def handle_server_selection(callback_query: CallbackQuery,
             )
             await message.answer(
                 text=LEXICON_RU["choose_device"],
-                reply_markup=await ReplyKeyboards.get_menu_install_app()
+                reply_markup=await InlineKeyboards.get_menu_install_app(name_app)
             )
             await session_methods.session.commit()
 

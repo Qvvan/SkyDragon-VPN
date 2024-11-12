@@ -7,7 +7,6 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 
 from database.context_manager import DatabaseContextManager
 from keyboards.kb_inline import InlineKeyboards, SubscriptionCallbackFactory, StatusPay
-from keyboards.kb_reply.kb_inline import ReplyKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 
@@ -103,7 +102,7 @@ async def show_user_subscriptions(user_id, username, message, state: FSMContext)
                 days_left = (end_date - datetime.now().date()).days
 
                 # Текст на кнопке: либо оставшиеся дни, либо "Дракон спит"
-                button_text = f"{data.name_app}({days_left} дн.)" if days_left >= 0 else "Дракон спит"
+                button_text = f"Ваша подписка({days_left} дн.)" if days_left >= 0 else "Дракон спит"
 
                 buttons.append([
                     InlineKeyboardButton(
@@ -150,8 +149,7 @@ async def show_subscription_details(callback: CallbackQuery, state: FSMContext):
 
     # Отправляем новое сообщение text_dragons_overview и сохраняем его ID
     text_dragons_overview = await callback.message.answer(
-        text=LEXICON_RU['text_dragons_overview'],
-        reply_markup=await ReplyKeyboards.get_menu_help()
+        text=LEXICON_RU['text_dragons_overview']
     )
     await state.update_data(text_dragons_overview_id=text_dragons_overview.message_id)
 
@@ -173,7 +171,7 @@ async def show_subscription_details(callback: CallbackQuery, state: FSMContext):
                     f"<b>🧿 Амулет:</b> {name_app}\n"
                     f"<b>🌍 Местоположение цитадели:</b> {server_name}\n"
                     f"<b>📅 Завершение покровительства:</b> {end_date.strftime('%d-%m-%Y')}\n"
-                    f"<b>🐲 Имя дракона:</b>\n"
+                    f"<b>🐲🔑 Имя дракона:</b>\n"
                     f"<pre>{key}</pre>"
                 )
 

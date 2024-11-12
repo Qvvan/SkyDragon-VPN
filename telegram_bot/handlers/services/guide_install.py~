@@ -42,7 +42,6 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Subs
                     callback_data=SubscriptionCallbackFactory(action='get_guide_install_app', name_app=name_app).pack()
                 )
             ]
-        ]),
-        parse_mode="Markdown"
+        ])
     )
     await callback_query.answer()

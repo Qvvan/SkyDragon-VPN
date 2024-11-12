@@ -2,11 +2,8 @@ from datetime import datetime, timedelta
 
 from handlers.services.active_servers import get_active_server_and_key
 from handlers.services.create_subscription_service import SubscriptionService
+from handlers.services.subscriptions_service import NoAvailableServersError
 from logger.logging_config import logger
-
-
-class NoAvailableServersError(Exception):
-    pass
 
 
 async def extend_user_subscription(user_id: int, days: int, session_methods):

@@ -8,7 +8,6 @@ from handlers.services.key_create import ShadowsocksKeyManager, VlessKeyManager,
 from handlers.user.subs import show_user_subscriptions
 from keyboards.kb_inline import InlineKeyboards, ServerSelectCallback, \
     SubscriptionCallbackFactory, ReplaceServerCallbackFactory
-from keyboards.kb_reply.kb_inline import ReplyKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 from models.models import NameApp
@@ -179,7 +178,7 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
             )
             await message.answer(
                 text=LEXICON_RU["choose_device"],
-                reply_markup=await ReplyKeyboards.get_menu_install_app()
+                reply_markup=await InlineKeyboards.get_menu_install_app(subscription.name_app)
             )
             await session_methods.session.commit()
 

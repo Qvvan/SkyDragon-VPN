@@ -1,23 +1,16 @@
-import random
 from datetime import datetime, timedelta
 
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from database.context_manager import DatabaseContextManager
+from handlers.services.active_servers import get_active_server_and_key
 from handlers.services.create_subscription_service import SubscriptionService
 from handlers.services.create_transaction_service import TransactionService
-from handlers.services.extend_latest_subscription import extend_user_subscription
-from handlers.services.get_session_cookies import get_session_cookie
-from handlers.services.key_create import ShadowsocksKeyManager
-from keyboards.kb_reply.kb_inline import ReplyKeyboards
+from handlers.services.extend_latest_subscription import extend_user_subscription, NoAvailableServersError
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 from models.models import SubscriptionStatusEnum, StatusSubscriptionHistory
-
-
-class NoAvailableServersError(Exception):
-    pass
 
 
 class SubscriptionsService:
@@ -44,7 +37,6 @@ class SubscriptionsService:
         async with DatabaseContextManager() as session_methods:
             shadowsocks_manager = None
             key_id = None
-            error_message = None
 
             try:
                 in_payload = message.successful_payment.invoice_payload.split(':')
@@ -59,7 +51,7 @@ class SubscriptionsService:
                     raise Exception("Ошибка сохранения транзакции")
 
                 # Получение активного сервера и создание Shadowsocks ключа
-                shadowsocks_manager, server_ip, key, key_id = await SubscriptionsService.get_active_server_and_key(
+                shadowsocks_manager, server_ip, key, key_id = await get_active_server_and_key(
                     user_id, username, session_methods
                 )
 
@@ -124,6 +116,7 @@ class SubscriptionsService:
         async with DatabaseContextManager() as session_methods:
             try:
                 in_payload = message.successful_payment.invoice_payload.split(':')
+                service_id = in_payload[0]
                 durations_days = in_payload[1]
                 user_data = await state.get_data()
                 subscription_id = user_data.get('subscription_id')
@@ -145,6 +138,7 @@ class SubscriptionsService:
                                 new_end_date = sub.end_date + timedelta(days=int(durations_days))
                             await session_methods.subscription.update_sub(
                                 subscription_id=sub.subscription_id,
+                                service_id=service_id,
                                 end_date=new_end_date,
                                 updated_at=datetime.now(),
                                 status=SubscriptionStatusEnum.ACTIVE,
@@ -193,7 +187,6 @@ class SubscriptionsService:
         )
         await message.answer(
             text=LEXICON_RU['choose_device'],
-            reply_markup=await ReplyKeyboards.get_menu_install_app()
         )
 
     @staticmethod
@@ -206,32 +199,6 @@ class SubscriptionsService:
         """
         await message.bot.refund_star_payment(message.from_user.id,
                                               message.successful_payment.telegram_payment_charge_id)
-
-    @staticmethod
-    async def get_active_server_and_key(user_id: int, username: str, session_methods):
-        try:
-            server_ips = await session_methods.servers.get_all_servers()
-            available_servers = [server for server in server_ips if server.hidden == 0]
-            random.shuffle(available_servers)
-
-            for server in available_servers:
-                try:
-                    session_cookie = await get_session_cookie(server.server_ip)
-                    if session_cookie:
-                        server_ip = server.server_ip
-                        shadowsocks_manager = ShadowsocksKeyManager(server_ip, session_cookie)
-                        key, key_id = await shadowsocks_manager.manage_shadowsocks_key(
-                            tg_id=str(user_id),
-                            username=username,
-                        )
-                        return shadowsocks_manager, server_ip, key, key_id
-                except Exception as e:
-                    await logger.log_error(f"Сервер {server.server_ip} не доступен", e)
-
-            return None, None, None, None
-        except Exception as e:
-            await logger.log_error("Ошибка при поиске активного сервера или создании ключа", e)
-            return None, None, None, None
 
     @staticmethod
     async def process_referral_bonus(user_id: int, username: str, bot):
