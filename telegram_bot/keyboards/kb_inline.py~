@@ -205,7 +205,7 @@ class InlineKeyboards:
                 ).pack()),
             InlineKeyboardButton(
                 text='🔙 Назад',
-                callback_data=f'view_subs',
+                callback_data=f'view_details_{subscription_id}',
             )
         )
         keyboard.adjust(2, 1)
