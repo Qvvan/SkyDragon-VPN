@@ -1,7 +1,6 @@
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
-from aiogram.types import PreCheckoutQuery
+from aiogram.types import Message, PreCheckoutQuery
 
 from handlers.services.subscriptions_service import SubscriptionsService
 

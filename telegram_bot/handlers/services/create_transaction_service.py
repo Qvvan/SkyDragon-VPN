@@ -12,14 +12,16 @@ class TransactionService:
             user_id = message.from_user.id
 
             transaction = await session_methods.transactions.add_transaction(
-                transaction_code=transaction_code,
-                service_id=service_id,
-                user_id=user_id,
-                status=status,
-                description=description,
-            )
+                    transaction_code=transaction_code,
+                    service_id=service_id,
+                    user_id=user_id,
+                    status=status,
+                    description=description,
+                    )
             return transaction
         except Exception as e:
-            await logger.log_error(f"Пользователь: @{message.from_user.username}"
-                                   f"Ошибка при создании транзакции", e)
+            await logger.log_error(
+                f"Пользователь: @{message.from_user.username}"
+                f"Ошибка при создании транзакции", e
+                )
             return None

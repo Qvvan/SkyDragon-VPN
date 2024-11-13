@@ -3,7 +3,7 @@ import ssl
 
 import aiohttp
 
-from config_data.config import MY_SECRET_URL, LOGIN_X_UI_PANEL, PASSWORD_X_UI_PANEL, PORT_X_UI
+from config_data.config import LOGIN_X_UI_PANEL, MY_SECRET_URL, PASSWORD_X_UI_PANEL, PORT_X_UI
 from logger.logging_config import logger
 
 
@@ -12,7 +12,7 @@ async def get_session_cookie(server_ip: str) -> str:
     payload = {
         "username": LOGIN_X_UI_PANEL,
         "password": PASSWORD_X_UI_PANEL
-    }
+        }
 
     # Создаем контекст SSL для отключения проверки сертификата
     ssl_context = ssl.create_default_context()
@@ -36,7 +36,8 @@ async def get_session_cookie(server_ip: str) -> str:
                                 return session_value
                             else:
                                 await logger.log_error(
-                                    f"Сессионный ключ 3x-ui не найден в Set-Cookie заголовках от {server_ip}", None)
+                                        f"Сессионный ключ 3x-ui не найден в Set-Cookie заголовках от {server_ip}", None
+                                        )
 
                         else:
                             await logger.log_error(f"Неудачный ответ от {server_ip}: статус {response.status}", None)

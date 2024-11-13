@@ -1,6 +1,6 @@
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 
 from database.context_manager import DatabaseContextManager
 from keyboards.kb_inline import InlineKeyboards, SubscriptionCallbackFactory
@@ -11,8 +11,10 @@ router = Router()
 
 
 @router.callback_query(SubscriptionCallbackFactory.filter(F.action == 'get_guide_install_app'))
-async def back_to_device_selection(callback_query: CallbackQuery, state: FSMContext,
-                                   callback_data: SubscriptionCallbackFactory):
+async def back_to_device_selection(
+        callback_query: CallbackQuery, state: FSMContext,
+        callback_data: SubscriptionCallbackFactory
+        ):
     data = await state.get_data()
     previous_message_id = data.get("text_dragons_overview_id")
     if previous_message_id:
@@ -25,9 +27,9 @@ async def back_to_device_selection(callback_query: CallbackQuery, state: FSMCont
     name_app = callback_data.name_app
     subscription_id = callback_data.subscription_id
     await callback_query.message.edit_text(
-        text="Выбери своё устройство",
-        reply_markup=await InlineKeyboards.get_menu_install_app(name_app, subscription_id)
-    )
+            text="Выбери своё устройство",
+            reply_markup=await InlineKeyboards.get_menu_install_app(name_app, subscription_id)
+            )
     await callback_query.answer()
 
 
@@ -42,20 +44,22 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Subs
             subsciption = await session_methods.subscription.get_subscription_by_id(subscription_id)
             user_key = subsciption.key
             await callback_query.message.edit_text(
-                text=guide_install[name_app][name_device].format(key=user_key),
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [
-                        InlineKeyboardButton(
-                            text="🔙 Назад",
-                            callback_data=SubscriptionCallbackFactory(
-                                action='get_guide_install_app',
-                                subscription_id=subscription_id,
-                                name_app=name_app
-                            ).pack()
-                        )
-                    ]
-                ]),
-                parse_mode="Markdown"
-            )
+                    text=guide_install[name_app][name_device].format(key=user_key),
+                    reply_markup=InlineKeyboardMarkup(
+                            inline_keyboard=[
+                                [
+                                    InlineKeyboardButton(
+                                            text="🔙 Назад",
+                                            callback_data=SubscriptionCallbackFactory(
+                                                    action='get_guide_install_app',
+                                                    subscription_id=subscription_id,
+                                                    name_app=name_app
+                                                    ).pack()
+                                            )
+                                    ]
+                                ]
+                            ),
+                    parse_mode="Markdown"
+                    )
         except Exception as e:
             await logger.log_error("Не удалось получить подписку при показе инструкции", e)
