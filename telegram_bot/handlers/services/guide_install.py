@@ -61,5 +61,17 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Subs
                             ),
                     parse_mode="Markdown"
                     )
+            await callback_query.message.answer(
+                text="Если у вас плохо грузит VPN, попробуйте сменить локацию или приложение в своей подписке 👇.",
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text="🐉 Мои драконы",
+                                callback_data="view_subs"
+                            )
+                        ],
+                ])
+            )
         except Exception as e:
             await logger.log_error("Не удалось получить подписку при показе инструкции", e)
