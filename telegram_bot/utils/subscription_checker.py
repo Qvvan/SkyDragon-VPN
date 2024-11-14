@@ -70,7 +70,7 @@ async def send_reminder(bot: Bot, sub, session_methods):
     )
     await session_methods.session.commit()
     await logger.log_info(
-        f"Подписка у пользователя с ID {sub.user_id} истечет через 3 дня.\nКлюч <pre>{sub.key}</pre> будет заблокирован."
+        f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: {sub.username}\nИстечет через 3 дня."
     )
 
 
@@ -87,7 +87,7 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
         text=LEXICON_RU['expired'],
     )
     await logger.log_info(
-        f"Подписка у пользователя с ID {sub.user_id} истекла.\nКлюч <pre>{sub.key}</pre> заблокирован."
+        f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: {sub.username}\nИстекла"
     )
 
 
@@ -99,7 +99,7 @@ async def handle_subscription_deletion(sub, session_methods):
 
     await session_methods.session.commit()
     await logger.log_info(
-        f"Подписка у пользователя с ID {sub.user_id} полностью удалена.\nКлюч <pre>{sub.key}</pre> удалён."
+        f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: {sub.username}\nПолностью удалена"
     )
 
 

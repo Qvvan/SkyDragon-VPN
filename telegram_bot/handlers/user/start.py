@@ -159,3 +159,5 @@ async def handle_know_more(callback: CallbackQuery):
                         )
         except Exception as e:
             await logger.log_error("Error fetching user", e)
+
+

@@ -1,5 +1,3 @@
-from typing import Union
-
 from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -87,23 +85,17 @@ class UserMethods:
             await logger.log_error("Error fetching all users", e)
             return False
 
-    async def update_user(self, user_id: int, **kwargs) -> Union[Success, NotFoundError, LogicError]:
+    async def update_user(self, user_id: int, **kwargs):
         try:
             user = await self.get_user(user_id)
             if not user:
-                return NotFoundError(user_id)  # Пользователь не найден
-
-            # Проверка логики: допустим, обновление не выполняется, если `kwargs` пустой
-            if not kwargs:
-                return LogicError("No fields provided for update")  # Логическая ошибка
-
+                raise UserNotFoundError(user_id)
             stmt = update(Users).where(Users.user_id == user_id).values(**kwargs)
             await self.session.execute(stmt)
-            await self.session.commit()  # Сохраняем изменения
-
-            # Получаем обновленного пользователя
-            updated_user = await self.get_user(user_id)
-            return Success(updated_user)
+            return True
+        except UserNotFoundError as e:
+            await logger.log_error("User not found", e)
+            return False
         except SQLAlchemyError as e:
-            await logger.log_error("Database error during user update", e)
-            return LogicError("Database error occurred")
+            await logger.log_error("Error updating user", e)
+            return False
