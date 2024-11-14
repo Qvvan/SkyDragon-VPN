@@ -49,12 +49,17 @@ async def process_subscription(bot: Bot, sub, current_date, session_methods):
 async def send_reminder(bot: Bot, sub, session_methods):
     keyboard = InlineKeyboardBuilder()
     keyboard.add(
+    InlineKeyboardButton(
+        text='⏳ Продлить защиту',
+        callback_data=SubscriptionCallbackFactory(
+            action='extend_subscription',
+            subscription_id=sub.subscription_id
+        ).pack(),
+        ),
         InlineKeyboardButton(
-            text='⏳ Продлить защиту',
-            callback_data=SubscriptionCallbackFactory(
-                action='extend_subscription',
-                subscription_id=sub.subscription_id
-            ).pack())
+            text="🎁 Дар союзника",
+            callback_data="referal_subs"
+        )
     )
 
     await bot.send_message(
@@ -81,11 +86,26 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
         status=SubscriptionStatusEnum.EXPIRED,
         reminder_sent=0,
     )
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(
+    InlineKeyboardButton(
+        text='⏳ Продлить защиту',
+        callback_data=SubscriptionCallbackFactory(
+            action='extend_subscription',
+            subscription_id=sub.subscription_id
+        ).pack(),
+        ),
+        InlineKeyboardButton(
+            text="🎁 Дар союзника",
+            callback_data="referal_subs"
+        )
+    )
 
     await session_methods.session.commit()
     await bot.send_message(
         chat_id=sub.user_id,
         text=LEXICON_RU['expired'],
+        reply_markup=keyboard.as_markup(),
     )
     user = await session_methods.users.get_user(sub.user_id)
     await logger.log_info(
