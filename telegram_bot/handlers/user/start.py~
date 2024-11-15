@@ -150,12 +150,6 @@ async def handle_know_more(callback: CallbackQuery):
                                         ],
                                     [
                                         InlineKeyboardButton(
-                                            text="🧙‍♂️ Поддержка",
-                                            callback_data="help_wizards_callback"
-                                        )
-                                    ],
-                                    [
-                                        InlineKeyboardButton(
                                                 text="🔙 Назад",
                                                 callback_data="back_to_start"
                                                 )

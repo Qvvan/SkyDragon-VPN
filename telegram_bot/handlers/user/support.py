@@ -15,6 +15,14 @@ async def get_support(message: Message):
         reply_markup=await InlineKeyboards.get_support(),
     )
 
+@router.callback_query(lambda c: c.data == 'help_wizards_callback')
+async def callback_get_support(callback: CallbackQuery):
+    await callback.answer()
+    await callback.message.edit_text(
+        text=LEXICON_RU['help_message'],
+        reply_markup=await InlineKeyboards.get_support(),
+    )
+
 
 @router.callback_query(lambda c: c.data == 'faq')
 async def handle_back_to_support_menu(callback: CallbackQuery):
