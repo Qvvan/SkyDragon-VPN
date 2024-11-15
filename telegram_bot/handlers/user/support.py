@@ -20,7 +20,7 @@ async def callback_get_support(callback: CallbackQuery):
     await callback.answer()
     await callback.message.edit_text(
         text=LEXICON_RU['help_message'],
-        reply_markup=await InlineKeyboards.get_support(),
+        reply_markup=await InlineKeyboards.get_support('back_to_start'),
     )
 
 

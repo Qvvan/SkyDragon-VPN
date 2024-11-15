@@ -144,7 +144,7 @@ class InlineKeyboards:
         return keyboard.as_markup()
 
     @staticmethod
-    async def get_support() -> InlineKeyboardMarkup:
+    async def get_support(callback_data: str = None) -> InlineKeyboardMarkup:
         support_user_id = "1"
         support_link = f"t.me/{support_user_id}"
 
@@ -162,6 +162,13 @@ class InlineKeyboards:
                 )
             ]
         ])
+        if callback_data:
+            keyboard.inline_keyboard.append([
+                InlineKeyboardButton(
+                    text="🔙 Назад",
+                    callback_data=callback_data
+                )
+            ])
 
         return keyboard
 
