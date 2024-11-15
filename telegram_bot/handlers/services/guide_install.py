@@ -23,14 +23,14 @@ async def back_to_device_selection(
             await callback_query.bot.delete_message(callback_query.message.chat.id, show_slow_internet_id)
             await state.update_data(show_slow_internet_id=None)
         except Exception as e:
-            await logger.log_error(f"Не удалось удалить сообщение с ID {show_slow_internet_id}", e)
+            await logger.error(f"Не удалось удалить сообщение с ID {show_slow_internet_id}", e)
 
     if previous_message_id:
         try:
             await callback_query.bot.delete_message(callback_query.message.chat.id, previous_message_id)
             await state.update_data(text_dragons_overview_id=None)
         except Exception as e:
-            await logger.log_error(f"Не удалось удалить сообщение с ID {previous_message_id}", e)
+            await logger.error(f"Не удалось удалить сообщение с ID {previous_message_id}", e)
 
     name_app = callback_data.name_app
     subscription_id = callback_data.subscription_id
@@ -51,7 +51,7 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Subs
         try:
             subsciption = await session_methods.subscription.get_subscription_by_id(subscription_id)
             user_key = subsciption.key
-            await callback_query.message.edit_text(
+            show_guide_message = await callback_query.message.edit_text(
                     text=guide_install[name_app][name_device].format(key=user_key),
                     reply_markup=InlineKeyboardMarkup(
                             inline_keyboard=[
@@ -81,6 +81,7 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Subs
                         ],
                 ])
             )
+            await state.update_data(show_guide_message=show_guide_message.message_id)
             await state.update_data(show_slow_internet=show_slow_internet.message_id)
         except Exception as e:
             await logger.log_error("Не удалось получить подписку при показе инструкции", e)

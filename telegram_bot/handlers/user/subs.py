@@ -19,19 +19,27 @@ async def get_user_subs_callback(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     previous_message_id = data.get("text_dragons_overview_id")
     show_slow_internet_id = data.get("show_slow_internet")
+    show_guide_message_id = data.get("show_guide_message")
     if show_slow_internet_id:
         try:
             await callback.bot.delete_message(callback.message.chat.id, show_slow_internet_id)
             await state.update_data(show_slow_internet_id=None)
         except Exception as e:
-            await logger.log_error(f"Не удалось удалить сообщение с ID {show_slow_internet_id}", e)
+            await logger.error(f"Не удалось удалить сообщение с ID {show_slow_internet_id}", e)
+
+    if show_guide_message_id:
+        try:
+            await callback.bot.delete_message(callback.message.chat.id, show_guide_message_id)
+            await state.update_data(show_slow_internet_id=None)
+        except Exception as e:
+            await logger.error(f"Не удалось удалить сообщение с ID {show_guide_message_id}", e)
 
     if previous_message_id:
         try:
             await callback.bot.delete_message(callback.message.chat.id, previous_message_id)
             await state.update_data(text_dragons_overview_id=None)
         except Exception as e:
-            await logger.log_error(f"Не удалось удалить сообщение с ID {previous_message_id}", e)
+            await logger.error(f"Не удалось удалить сообщение с ID {previous_message_id}", e)
 
     await show_user_subscriptions(
         user_id=callback.from_user.id,
