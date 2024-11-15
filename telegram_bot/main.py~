@@ -14,7 +14,6 @@ from handlers.user import subs, replace_server, replace_app, referrer
 from handlers.user import start, support, createorder
 from keyboards.set_menu import set_main_menu
 from logger.logging_config import logger
-from middleware.last_visit import LastVisitMiddleware
 from middleware.logging_middleware import CallbackLoggingMiddleware, MessageLoggingMiddleware
 from middleware.trottling import ThrottlingMiddleware
 from utils import check_servers
@@ -63,9 +62,6 @@ async def main():
     throttling_middleware = ThrottlingMiddleware(limit=0.8)
     dp.message.outer_middleware(throttling_middleware)
     dp.callback_query.outer_middleware(throttling_middleware)
-
-    dp.message.outer_middleware(LastVisitMiddleware())
-    dp.callback_query.outer_middleware(LastVisitMiddleware())
 
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
