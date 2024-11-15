@@ -129,4 +129,4 @@ async def handle_subscription_deletion(sub, session_methods):
 async def run_checker(bot: Bot):
     while True:
         await check_subscriptions(bot)
-        await asyncio.sleep(3600)
+        await asyncio.sleep(1800)

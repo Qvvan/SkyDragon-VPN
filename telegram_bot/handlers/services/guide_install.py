@@ -17,6 +17,14 @@ async def back_to_device_selection(
         ):
     data = await state.get_data()
     previous_message_id = data.get("text_dragons_overview_id")
+    show_slow_internet_id = data.get("show_slow_internet")
+    if show_slow_internet_id:
+        try:
+            await callback_query.bot.delete_message(callback_query.message.chat.id, show_slow_internet_id)
+            await state.update_data(show_slow_internet_id=None)
+        except Exception as e:
+            await logger.log_error(f"Не удалось удалить сообщение с ID {show_slow_internet_id}", e)
+
     if previous_message_id:
         try:
             await callback_query.bot.delete_message(callback_query.message.chat.id, previous_message_id)
