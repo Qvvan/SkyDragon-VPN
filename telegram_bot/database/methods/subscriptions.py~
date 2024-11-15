@@ -77,8 +77,8 @@ class SubscriptionMethods:
     async def create_sub(self, sub: Subscriptions):
         try:
             self.session.add(sub)
-            await self.session.flush()
-            return sub
+            await self.session.flush()  # Принудительно записывает объект в базу данных
+            return sub  # Возвращаем сам объект
         except SQLAlchemyError as e:
             await logger.log_error(f"Error creating subscription", e)
             return False

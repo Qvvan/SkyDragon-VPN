@@ -15,9 +15,11 @@ async def back_to_device_selection(
         callback_query: CallbackQuery, state: FSMContext,
         callback_data: SubscriptionCallbackFactory
         ):
+    print('Я тут')
     data = await state.get_data()
     previous_message_id = data.get("text_dragons_overview_id")
     show_slow_internet_id = data.get("show_slow_internet")
+    print('Ха-ха, все работает')
     if show_slow_internet_id:
         try:
             await callback_query.bot.delete_message(callback_query.message.chat.id, show_slow_internet_id)
@@ -31,7 +33,7 @@ async def back_to_device_selection(
             await state.update_data(text_dragons_overview_id=None)
         except Exception as e:
             await logger.error(f"Не удалось удалить сообщение с ID {previous_message_id}", e)
-
+    print('Я все еще тут')
     name_app = callback_data.name_app
     subscription_id = callback_data.subscription_id
     await callback_query.message.edit_text(

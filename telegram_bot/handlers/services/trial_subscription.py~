@@ -20,22 +20,24 @@ async def process_trial_subscription_callback(callback: CallbackQuery, state: FS
             user = await session_methods.users.get_user(user_id=callback.from_user.id)
             if not user.trial_used:
                 subscription = await extend_user_subscription(user.user_id, 7, session_methods)
+                print('вот наша подписка', subscription.__dict__)
+                print(subscription.subscription_id)
+                await session_methods.users.update_user(user_id=callback.from_user.id, trial_used=True)
+                await session_methods.session.commit()
                 await callback.answer(
                     text=LEXICON_RU['trial_activated'], show_alert=True, cache_time=3
                 )
-                if subscription:
-                    await back_to_device_selection(
-                        callback_query=callback,
-                        state=state,
-                        callback_data=SubscriptionCallbackFactory(
-                            action='get_guide_install_app',
-                            subscription_id=subscription.subscription_id,
-                            name_app=subscription.name_app
-                        )
-                    )
-                    await logger.log_info(f"Пользователь @{callback.from_user.username} активировал пробную подписку")
-                    await session_methods.users.update_user(user_id=callback.from_user.id, trial_used=True)
-                    await session_methods.session.commit()
+                # if subscription:
+                #     await back_to_device_selection(
+                #         callback_query=callback,
+                #         state=state,
+                #         callback_data=SubscriptionCallbackFactory(
+                #             action='get_guide_install_app',
+                #             subscription_id=subscription.subscription_id,
+                #             name_app=subscription.name_app
+                #         )
+                #     )
+                await logger.log_info(f"Пользователь @{callback.from_user.username} активировал пробную подписку")
             else:
                 await callback.message.edit_text(
                     text=LEXICON_RU['trial_subscription_used'],

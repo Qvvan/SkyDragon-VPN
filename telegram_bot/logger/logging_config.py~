@@ -1,0 +1,97 @@
+import logging
+import traceback
+from logging.handlers import RotatingFileHandler
+from aiogram import Bot
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
+
+from config_data import config
+
+
+class CustomLogger:
+    def __init__(self, name: str, log_file: str = "bot.log", max_file_size: int = 5 * 1024 * 1024, backup_count: int = 5):
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.DEBUG)  # Логгируем все, включая DEBUG
+
+        # Формат логов
+        log_format = logging.Formatter(
+            "%(levelname)s - %(asctime)s - [%(name)s] - [%(module)s.%(funcName)s] - line: %(lineno)d - %(message)s"
+        )
+
+        # Ротация файлов логов
+        file_handler = RotatingFileHandler(log_file, maxBytes=max_file_size, backupCount=backup_count)
+        file_handler.setFormatter(log_format)
+        file_handler.setLevel(logging.DEBUG)
+
+        # Логи в консоль
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(log_format)
+        console_handler.setLevel(logging.INFO)
+
+        # Добавляем хендлеры
+        self.logger.addHandler(file_handler)
+        self.logger.addHandler(console_handler)
+
+    @staticmethod
+    async def send_safe_message(bot: Bot, chat_id: int, text: str, **kwargs):
+        max_length = 4096
+        if len(text) > max_length:
+            for i in range(0, len(text), max_length):
+                await bot.send_message(chat_id=chat_id, text=text[i:i + max_length], **kwargs)
+        else:
+            await bot.send_message(chat_id=chat_id, text=text, **kwargs)
+
+    @staticmethod
+    async def notify_group(message: str, error: Exception = None, keyboard=None):
+        group_id = config.ERROR_GROUP_ID if error else config.INFO_GROUP_ID
+        notification_type = "🚨 Ошибка:\n" if error else "ℹ️ Информация:\n"
+        error_message = (
+            f"\n\nОшибка: {str(error)}\nТрассировка:\n<pre>{traceback.format_exc()}</pre>"
+            if error else ""
+        )
+        full_message = f"{notification_type}{message}{error_message}"
+
+        async with Bot(
+                token=config.BOT_TOKEN,
+                default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+        ) as bot:
+            await CustomLogger.send_safe_message(bot, chat_id=group_id, text=full_message, reply_markup=keyboard)
+
+    # Асинхронные методы
+    async def log_info(self, message: str):
+        """Логгирование информации и отправка уведомления."""
+        await self.info(message)  # Вызываем синхронный метод
+        await self.notify_group(message)
+
+    async def log_error(self, message: str, error: Exception, keyboard=None):
+        """Логгирование ошибки и отправка уведомления."""
+        full_message = f"{message}. Error: {str(error)}"
+        await self.error(message, error)  # Вызываем синхронный метод
+        await self.notify_group(message, error, keyboard)
+
+    # Синхронные методы
+    async def info(self, message: str):
+        """Синхронное логгирование информации."""
+        self.logger.info(message, stacklevel=3)
+
+    async def debug(self, message: str):
+        """Синхронное логгирование отладочной информации."""
+        self.logger.debug(message, stacklevel=3)
+
+    async def warning(self, message: str):
+        """Синхронное логгирование предупреждений."""
+        self.logger.warning(message, stacklevel=3)
+
+    async def error(self, message: str, error: Exception = None):
+        """Синхронное логгирование ошибок."""
+        full_message = f"{message}. Error: {str(error)}" if error else message
+        self.logger.error(full_message, stacklevel=3, exc_info=bool(error))
+
+    async def critical(self, message: str, error: Exception = None):
+        """Синхронное логгирование критических ошибок."""
+        full_message = f"{message}. Critical Error: {str(error)}" if error else message
+        self.logger.critical(full_message, stacklevel=3, exc_info=bool(error))
+
+
+# Экземпляр логгера для использования в других модулях
+logger = CustomLogger(__name__)

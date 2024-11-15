@@ -10,7 +10,7 @@ from handlers.services.create_transaction_service import TransactionService
 from handlers.services.extend_latest_subscription import NoAvailableServersError, extend_user_subscription
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
-from models.models import StatusSubscriptionHistory, SubscriptionStatusEnum
+from models.models import StatusSubscriptionHistory, SubscriptionStatusEnum, Subscriptions, NameApp
 
 
 class SubscriptionsService:
@@ -66,8 +66,18 @@ class SubscriptionsService:
                 service_id = int(in_payload[0])
                 durations_days = int(in_payload[1])
                 subscription_created = await SubscriptionService.create_subscription(
-                        user_id, service_id, durations_days, key, key_id, server_ip, session_methods
-                        )
+                    Subscriptions(
+                        user_id=user_id,
+                        service_id=service_id,
+                        key=key,
+                        key_id=key_id,
+                        server_ip=server_ip,
+                        name_app=NameApp.OUTLINE,
+                        start_date=datetime.now(),
+                        end_date=datetime.now() + timedelta(days=durations_days)
+                    ),
+                    session_methods=session_methods
+                )
                 if not subscription_created:
                     raise Exception("Ошибка создания подписки")
 
