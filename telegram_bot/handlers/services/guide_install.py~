@@ -51,7 +51,7 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Subs
         try:
             subsciption = await session_methods.subscription.get_subscription_by_id(subscription_id)
             user_key = subsciption.key
-            show_guide_message = await callback_query.message.edit_text(
+            await callback_query.message.edit_text(
                     text=guide_install[name_app][name_device].format(key=user_key),
                     reply_markup=InlineKeyboardMarkup(
                             inline_keyboard=[
@@ -81,7 +81,6 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Subs
                         ],
                 ])
             )
-            await state.update_data(show_guide_message=show_guide_message.message_id)
             await state.update_data(show_slow_internet=show_slow_internet.message_id)
         except Exception as e:
             await logger.log_error("Не удалось получить подписку при показе инструкции", e)
