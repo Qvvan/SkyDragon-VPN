@@ -21,7 +21,7 @@ async def get_session_cookie(server_ip: str) -> str:
 
     try:
         async with aiohttp.ClientSession() as session:
-            for attempt in range(3):  # три попытки подключения
+            for attempt in range(3):
                 try:
                     async with session.post(url, json=payload, ssl=ssl_context, timeout=3) as response:
 
@@ -44,10 +44,10 @@ async def get_session_cookie(server_ip: str) -> str:
                     break  # выход из цикла, если подключение успешно
 
                 except (aiohttp.ClientConnectionError, asyncio.TimeoutError) as e:
-                    if attempt == 2:  # на последней попытке бросаем ошибку
+                    if attempt == 2:
                         await logger.log_error(f"Ошибка соединения с {server_ip} после трех попыток", e)
                     else:
-                        await asyncio.sleep(1)  # задержка перед повторной попыткой
+                        await asyncio.sleep(1)
 
     except Exception as e:
         await logger.log_error(f"Неизвестная ошибка при подключении к {server_ip}: {str(e)}")
