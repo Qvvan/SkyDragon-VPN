@@ -77,7 +77,7 @@ class ThrottlingMiddleware(BaseMiddleware):
             await event.answer(
                 f'🐉 Пожалуйста, не тревожь дракона так часто! 😅 Дай ему немного времени, чтобы обработать твой запрос.'
             )
-            await logger.log_error(f"Пользователь:@{event.from_user.username}\nID: {event.from_user.id}\nфлудит", throttled)
+            await logger.warning(f"Пользователь:@{event.from_user.username}\nID: {event.from_user.id}\nфлудит")
 
     async def is_throttled(self, event: Union[Message, CallbackQuery]) -> bool:
         limit = self.rate_limit

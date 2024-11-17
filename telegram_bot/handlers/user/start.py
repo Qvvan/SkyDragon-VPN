@@ -128,10 +128,10 @@ async def handle_know_more(callback: CallbackQuery, state: FSMContext):
 async def handle_know_more(callback: CallbackQuery):
     """Обработчик кнопки 'Узнать больше'."""
     await callback.answer()
-    user_id = callback.from_user.id
     async with DatabaseContextManager() as session:
         try:
-            user = await session.users.get_user(user_id=user_id)
+            user_id = callback.from_user.id
+            user = await session.users.get_user(user_ib=user_id)
             if not user.trial_used:
                 await callback.message.edit_text(
                         text=LEXICON_RU['trial_offer'],
@@ -164,6 +164,6 @@ async def handle_know_more(callback: CallbackQuery):
                                 )
                         )
         except Exception as e:
-            await logger.log_error("Error fetching user", e)
+            await logger.log_error(f"Error fetching user @{callback.from_user.username}", e)
 
 
