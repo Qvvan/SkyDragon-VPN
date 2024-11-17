@@ -41,7 +41,7 @@ async def get_session_cookie(server_ip: str) -> str:
 
                         else:
                             await logger.log_error(f"Неудачный ответ от {server_ip}: статус {response.status}", None)
-                    break
+                    break  # выход из цикла, если подключение успешно
 
                 except (aiohttp.ClientConnectionError, asyncio.TimeoutError) as e:
                     if attempt == 2:
@@ -50,4 +50,4 @@ async def get_session_cookie(server_ip: str) -> str:
                         await asyncio.sleep(1)
 
     except Exception as e:
-        await logger.log_error(f"Неизвестная ошибка при подключении к {server_ip}", e)
+        await logger.log_error(f"Неизвестная ошибка при подключении к {server_ip}: {str(e)}")

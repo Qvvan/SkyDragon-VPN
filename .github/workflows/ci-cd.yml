@@ -34,7 +34,13 @@ jobs:
           curl -s -X POST https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage \
           -d chat_id=$TELEGRAM_CHAT_ID \
           -d parse_mode=MarkdownV2 \
-          -d text="*Деплой начат\\!*%0A%0A*Коммит\\:* ${GIT_COMMIT_MESSAGE//-/\\-}%0A*Автор\\:* ${GIT_COMMIT_AUTHOR//-/\\-}%0A*Дата\\:* ${GIT_COMMIT_DATE//-/\\-}%0A*Тип события\\:* ${GIT_COMMIT_TYPE//-/\\-}"
+          -d text="*🚀 Деплой начат*%0A%0A\
+          \`\`\`\
+          💬 Коммит: ${GIT_COMMIT_MESSAGE//-/\\-}%0A\
+          👤 Автор: ${GIT_COMMIT_AUTHOR//-/\\-}%0A\
+          📅 Дата: ${GIT_COMMIT_DATE//-/\\-}%0A\
+          📦 Тип события: ${GIT_COMMIT_TYPE//-/\\-}%0A\
+          \`\`\`"
 
       - name: Deploy to server
         uses: appleboy/ssh-action@master
@@ -57,7 +63,7 @@ jobs:
           curl -s -X POST https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage \
           -d chat_id=$TELEGRAM_CHAT_ID \
           -d parse_mode=MarkdownV2 \
-          -d text="*Деплой завершен успешно\\!*"
+          -d text="*✅ Деплой завершен успешно\\!*"
 
       - name: Notify deployment failure
         if: failure()  # Это сообщение будет отправлено только если деплой завершился ошибкой
@@ -68,4 +74,4 @@ jobs:
           curl -s -X POST https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage \
           -d chat_id=$TELEGRAM_CHAT_ID \
           -d parse_mode=MarkdownV2 \
-          -d text="*Ошибка деплоя\\!*%0AПроверьте логи для получения дополнительной информации"
+          -d text="*❌ Ошибка деплоя\\!*%0AПроверьте логи для получения дополнительной информации"
