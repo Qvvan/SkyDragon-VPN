@@ -138,6 +138,12 @@ async def show_user_subscriptions(user_id, username, message, state: FSMContext)
             ])
             buttons.append([
                 InlineKeyboardButton(
+                    text="Помощь хранителей 🧙‍",
+                    callback_data="help_wizards_callback"
+                )
+            ])
+            buttons.append([
+                InlineKeyboardButton(
                     text="🌌 К началу пути",
                     callback_data="back_to_start"
                 )

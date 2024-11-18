@@ -135,8 +135,6 @@ class InlineKeyboards:
     async def create_pay(price) -> InlineKeyboardMarkup:
         keyboard = InlineKeyboardBuilder()
         keyboard.button(text=f"Оплатить {price} ⭐️", pay=True)
-        keyboard.button(text="⭐ Купить звезды ⭐",
-                        url='https://telegra.ph/Instrukciya-po-pokupke-zvezd-dlya-VPN-cherez-Telegram-bota-10-22')
         keyboard.button(text="🔙 Назад", callback_data="back_to_services")
 
         keyboard.adjust(1, 2)
@@ -163,6 +161,13 @@ class InlineKeyboards:
             ]
         ])
         if callback_data:
+            keyboard.inline_keyboard.append([
+                InlineKeyboardButton(
+                    text="🔙 Назад",
+                    callback_data=callback_data
+                )
+            ])
+        else:
             keyboard.inline_keyboard.append([
                 InlineKeyboardButton(
                     text="🔙 Назад",
@@ -485,7 +490,7 @@ class InlineKeyboards:
             return InlineKeyboardMarkup(inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text="🐉 Мои драконы",
+                        text="🔥 Оформить защиту дракона",
                         callback_data="subscribe"
                     )
                 ],

@@ -167,6 +167,13 @@ class InlineKeyboards:
                     callback_data=callback_data
                 )
             ])
+        else:
+            keyboard.inline_keyboard.append([
+                InlineKeyboardButton(
+                    text="🌌 К началу пути",
+                    callback_data='back_to_start'
+                )
+            ])
 
         return keyboard
 
@@ -483,7 +490,7 @@ class InlineKeyboards:
             return InlineKeyboardMarkup(inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text="🐉 Мои драконы",
+                        text="🔥 Оформить защиту дракона",
                         callback_data="subscribe"
                     )
                 ],
