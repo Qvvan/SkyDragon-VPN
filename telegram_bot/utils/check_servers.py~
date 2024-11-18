@@ -78,4 +78,4 @@ async def ping_servers(bot: Bot):
             if not notification_dict[server_ip]:
                 del notification_dict[server_ip]
 
-        await asyncio.sleep(180)
+        await asyncio.sleep(60)

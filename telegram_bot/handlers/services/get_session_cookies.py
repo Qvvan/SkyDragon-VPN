@@ -26,13 +26,10 @@ async def get_session_cookie(server_ip: str) -> str | None:
     async with aiohttp.ClientSession() as session:
         for attempt in range(3):
             try:
-                # Запрос к серверу
                 async with session.post(url, json=payload, ssl=ssl_context, timeout=3) as response:
                     if response.status == 200:
-                        # Парсинг заголовка Set-Cookie для извлечения сессионного ключа
                         session_value = parse_session_cookie(response.headers)
                         if session_value:
-                            await logger.info(f"Сессионный ключ успешно получен с {server_ip}")
                             return session_value
                         else:
                             await logger.warning(
@@ -42,7 +39,7 @@ async def get_session_cookie(server_ip: str) -> str | None:
                         await logger.warning(
                             f"Неудачный ответ от {server_ip}: статус {response.status}. Тело ответа: {await response.text()}"
                         )
-                break  # Прекращаем попытки после успешного ответа
+                break
 
             except (aiohttp.ClientConnectionError, asyncio.TimeoutError) as e:
                 if attempt == 2:  # После 3-й попытки логируем предупреждение
