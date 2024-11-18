@@ -73,14 +73,6 @@ async def back_to_services(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     user_data = await state.get_data()
 
-    show_stars_guide = user_data.get("show_stars_guide")
-    if show_stars_guide:
-        try:
-            await callback.bot.delete_message(callback.message.chat.id, show_stars_guide)
-            await state.update_data(show_slow_internet_id=None)
-        except Exception as e:
-            await logger.error(f"Не удалось удалить сообщение с ID {show_stars_guide}", e)
-
     status_pay_value = user_data.get('status_pay', StatusPay.NEW.value)
 
     try:

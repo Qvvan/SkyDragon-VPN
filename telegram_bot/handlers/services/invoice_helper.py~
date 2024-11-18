@@ -1,4 +1,3 @@
-from aiogram.fsm.context import FSMContext
 from aiogram.types import LabeledPrice, Message
 
 from keyboards.kb_inline import InlineKeyboards
@@ -14,18 +13,13 @@ async def send_invoice(
         duration_days: int,
         action: str,
         subscription_id: int = None,
-        state: FSMContext = None
         ):
     try:
         prices = [LabeledPrice(label="XTR", amount=price)]
-        show_stars_guide = await message.answer(
-            text='✨ Вы можете приобрести звёзды у Telegram-бота @PremiumBot, просто введя команду /stars. ⭐'
-        )
-        await state.update_data(show_stars_guide=show_stars_guide.message_id)
-
+        text='✨ Вы можете приобрести звёзды у Telegram-бота @PremiumBot, просто введя команду /stars. ⭐'
         await message.answer_invoice(
                 title=f"Защита {service_name}а на {duration_days} дней",
-                description=description,
+                description=description + ,
                 prices=prices,
                 payload=f"{service_id}:{duration_days}:{action}:{subscription_id}",
                 currency="XTR",
