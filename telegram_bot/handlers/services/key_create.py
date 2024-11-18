@@ -94,6 +94,9 @@ class BaseKeyManager:
         Args:
             key_id (str): Идентификатор ключа для обновления.
             enable (bool): Новый статус для поля `enable`.
+
+        Raises:
+            ValueError: Если ключ не удалось получить или обновить.
         """
         # Получаем текущий объект ключа
         get_api_url = f"{self.base_url}/api/inbounds/get/{key_id}"
@@ -105,14 +108,12 @@ class BaseKeyManager:
                 async with session.get(get_api_url, headers=self.headers, ssl=False) as response:
                     if response.status != 200:
                         error_text = await response.text()
-                        print(f"Error fetching key: {response.status}, {error_text}")
-                        raise aiohttp.ClientResponseError(
-                            response.request_info, response.history,
-                            status=response.status, message=error_text
-                        )
+                        raise ValueError(f"Failed to fetch key with ID {key_id}: {response.status}, {error_text}")
+
                     data = await response.json()
                     if not data.get("success"):
-                        raise ValueError(f"API Error: {data.get('msg', 'Unknown error')}")
+                        raise ValueError(
+                            f"API Error while fetching key with ID {key_id}: {data.get('msg', 'Unknown error')}")
 
                     # Получаем объект ключа
                     key_data = data["obj"]
@@ -149,25 +150,22 @@ class BaseKeyManager:
                                 print(f"Key with ID {key_id} successfully updated after refreshing session.")
                             else:
                                 error_text = await retry_response.text()
-                                print(f"Error updating key after retry: {retry_response.status}, {error_text}")
-                                raise aiohttp.ClientResponseError(
-                                    retry_response.request_info, retry_response.history,
-                                    status=retry_response.status, message=error_text
-                                )
+                                raise ValueError(
+                                    f"Failed to update key with ID {key_id} after retry: {retry_response.status}, {error_text}")
                     else:
                         error_text = await update_response.text()
-                        print(f"Error updating key: {update_response.status}, {error_text}")
-                        raise aiohttp.ClientResponseError(
-                            update_response.request_info, update_response.history,
-                            status=update_response.status, message=error_text
-                        )
+                        raise ValueError(
+                            f"Failed to update key with ID {key_id}: {update_response.status}, {error_text}")
 
             except aiohttp.ClientError as e:
-                print(f"HTTP Client Error: {e}")
+                raise ValueError(f"HTTP Client Error while processing key with ID {key_id}: {e}")
+            except ValueError as e:
+                # Логируем ошибку и возвращаем информативное сообщение
+                print(f"Error: {e}")
                 raise
             except Exception as e:
-                print(f"Unexpected Error: {e}")
-                raise
+                print(f"Unexpected error while updating key with ID {key_id}: {e}")
+                raise ValueError(f"Unexpected error while updating key with ID {key_id}: {e}")
 
 
 class VlessKeyManager(BaseKeyManager):

@@ -105,6 +105,7 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
         )
         session = await get_session_cookie(sub.server_ip)
         await session_methods.session.commit()
+        await BaseKeyManager(server_ip=sub.server_ip, session_cookie=session).update_key_enable(sub.key_id, False)
         await bot.send_message(
             chat_id=sub.user_id,
             text=LEXICON_RU['expired'],
@@ -114,7 +115,6 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
         await logger.log_info(
             f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{user.username}\nИстекла"
         )
-        await BaseKeyManager(server_ip=sub.server_ip, session_cookie=session).update_key_enable(sub.key_id, False)
     except Exception as e:
         await session_methods.session.rollback()
         await logger.log_error(f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при обновлении подписки', e)
