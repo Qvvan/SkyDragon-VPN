@@ -30,7 +30,7 @@ async def extend_user_subscription(user_id: int, days: int, session_methods):
                         )
                 raise NoAvailableServersError("нет доступных серверов")
 
-            subscriptions = Subscriptions(
+            subscription = Subscriptions(
                 user_id=user_id,
                 service_id=0,
                 key=key,
@@ -41,13 +41,14 @@ async def extend_user_subscription(user_id: int, days: int, session_methods):
                 end_date=datetime.now() + timedelta(days=days)
             )
             subscription_created = await SubscriptionService.create_subscription(
-                subscriptions,
+                subscription,
                 session_methods
             )
             if not subscription_created:
                 raise Exception("Ошибка создания подписки")
 
-            return subscriptions
+            print('Вот что я ему верну', subscription)
+            return subscription
 
         latest_subscription = max(subscriptions, key=lambda sub: sub.end_date or datetime.min)
         subscription_id = latest_subscription.subscription_id
