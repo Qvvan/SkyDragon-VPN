@@ -67,9 +67,16 @@ class SubscriptionsService:
                 durations_days = int(in_payload[1])
                 subscription_created = await SubscriptionService.create_subscription(
                     Subscriptions(
-                        user_id, service_id, durations_days, key, key_id, server_ip, NameApp.OUTLINE
+                        user_id=user_id,
+                        service_id=service_id,
+                        key=key,
+                        key_id=key_id,
+                        server_ip=server_ip,
+                        name_app=NameApp.OUTLINE,
+                        start_date=datetime.now(),
+                        end_date=datetime.now() + timedelta(days=durations_days)
                     ),
-                    session_methods
+                    session_methods=session_methods
                 )
                 if not subscription_created:
                     raise Exception("Ошибка создания подписки")
@@ -119,8 +126,8 @@ class SubscriptionsService:
         async with DatabaseContextManager() as session_methods:
             try:
                 in_payload = message.successful_payment.invoice_payload.split(':')
-                service_id = in_payload[0]
-                durations_days = in_payload[1]
+                service_id = int(in_payload[0])
+                durations_days = int(in_payload[1])
                 user_data = await state.get_data()
                 subscription_id = user_data.get('subscription_id')
 
@@ -154,8 +161,8 @@ class SubscriptionsService:
                                     end_date=new_end_date,
                                     status=StatusSubscriptionHistory.EXTENSION
                                     )
-                            await message.answer(text=LEXICON_RU['subscription_renewed'])
                             await session_methods.session.commit()
+                            await message.answer(text=LEXICON_RU['subscription_renewed'])
                             await logger.log_info(
                                 f"Пользователь: @{message.from_user.username}\n"
                                 f"Продлил подписку на {durations_days} дней"

@@ -33,7 +33,6 @@ async def check_subscriptions(bot: Bot):
 async def process_subscription(bot: Bot, sub, current_date, session_methods):
     days_since_expiration = (current_date - sub.end_date).days
     days_until_end = (sub.end_date - current_date).days
-
     if days_until_end == 3 and not sub.reminder_sent:
         await send_reminder(bot, sub, session_methods)
 
@@ -49,12 +48,12 @@ async def send_reminder(bot: Bot, sub, session_methods):
     try:
         keyboard = InlineKeyboardBuilder()
         keyboard.add(
-        InlineKeyboardButton(
-            text='⏳ Продлить защиту',
-            callback_data=SubscriptionCallbackFactory(
-                action='extend_subscription',
-                subscription_id=sub.subscription_id
-            ).pack(),
+    InlineKeyboardButton(
+                text='⏳ Продлить защиту',
+                callback_data=SubscriptionCallbackFactory(
+                    action='extend_subscription',
+                    subscription_id=sub.subscription_id
+                ).pack(),
             ),
             InlineKeyboardButton(
                 text="🎁 Дар союзника",
@@ -105,7 +104,7 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
             )
         )
         session = await get_session_cookie(sub.server_ip)
-        await BaseKeyManager(server_ip=sub.server_ip, session_cookie=session).update_key(sub.key_id, False)
+        await BaseKeyManager(server_ip=sub.server_ip, session_cookie=session).update_key_enable(sub.key_id, False)
         await session_methods.session.commit()
         await bot.send_message(
             chat_id=sub.user_id,
@@ -144,4 +143,4 @@ async def handle_subscription_deletion(sub, session_methods):
 async def run_checker(bot: Bot):
     while True:
         await check_subscriptions(bot)
-        await asyncio.sleep(1800)
+        await asyncio.sleep(5)

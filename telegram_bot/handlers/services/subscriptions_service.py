@@ -8,6 +8,8 @@ from handlers.services.active_servers import get_active_server_and_key
 from handlers.services.create_subscription_service import SubscriptionService
 from handlers.services.create_transaction_service import TransactionService
 from handlers.services.extend_latest_subscription import NoAvailableServersError, extend_user_subscription
+from handlers.services.get_session_cookies import get_session_cookie
+from handlers.services.key_create import BaseKeyManager
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 from models.models import StatusSubscriptionHistory, SubscriptionStatusEnum, Subscriptions, NameApp
@@ -126,8 +128,8 @@ class SubscriptionsService:
         async with DatabaseContextManager() as session_methods:
             try:
                 in_payload = message.successful_payment.invoice_payload.split(':')
-                service_id = in_payload[0]
-                durations_days = in_payload[1]
+                service_id = int(in_payload[0])
+                durations_days = int(in_payload[1])
                 user_data = await state.get_data()
                 subscription_id = user_data.get('subscription_id')
 
@@ -161,8 +163,11 @@ class SubscriptionsService:
                                     end_date=new_end_date,
                                     status=StatusSubscriptionHistory.EXTENSION
                                     )
-                            await message.answer(text=LEXICON_RU['subscription_renewed'])
+                            session = await get_session_cookie(sub.server_ip)
+                            await BaseKeyManager(server_ip=sub.server_ip, session_cookie=session).update_key_enable(
+                                sub.key_id, True)
                             await session_methods.session.commit()
+                            await message.answer(text=LEXICON_RU['subscription_renewed'])
                             await logger.log_info(
                                 f"Пользователь: @{message.from_user.username}\n"
                                 f"Продлил подписку на {durations_days} дней"

@@ -8,7 +8,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from database.context_manager import DatabaseContextManager
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
-from models.models import NameApp
+from models.models import NameApp, SubscriptionStatusEnum
 
 
 class ServerCallbackData(CallbackData, prefix="server_disable"):
@@ -185,44 +185,53 @@ class InlineKeyboards:
 
     @staticmethod
     async def menu_subs(subscription_id, name_app, server_ip):
-        keyboard = InlineKeyboardBuilder()
-        # Добавляем три кнопки с изменённым текстом
-        keyboard.add(
-            InlineKeyboardButton(
-                text='🌍 Изменить локацию',
-                callback_data=ReplaceServerCallbackFactory(
-                    action='rep_serv',
-                    subscription_id=subscription_id,
-                    server_ip=server_ip
-                ).pack()),
-            InlineKeyboardButton(
-                text='⚔️ Изменить приложение',
-                callback_data=SubscriptionCallbackFactory(
-                    action='replace_app',
-                    subscription_id=subscription_id,
-                    name_app=name_app
-                ).pack()),
-            InlineKeyboardButton(
-                text='⏳ Продлить защиту',
-                callback_data=SubscriptionCallbackFactory(
-                    action='extend_subscription',
-                    subscription_id=subscription_id
-                ).pack()),
-            InlineKeyboardButton(
-                text='Как подключиться ❔',
-                callback_data=SubscriptionCallbackFactory(
-                    action='get_guide_install_app',
-                    subscription_id=subscription_id,
-                    name_app=name_app
-                ).pack()),
-            InlineKeyboardButton(
-                text='🔙 Назад',
-                callback_data=f'view_subs',
-            )
-        )
-        keyboard.adjust(2, 1)
+        async with DatabaseContextManager() as session_methods:
+            try:
+                keyboard = InlineKeyboardBuilder()
+                subscription = await session_methods.subscription.get_subscription_by_id(subscription_id)
+                if subscription.status == SubscriptionStatusEnum.ACTIVE:
+                    keyboard.add(
+                        InlineKeyboardButton(
+                            text='🌍 Изменить локацию',
+                            callback_data=ReplaceServerCallbackFactory(
+                                action='rep_serv',
+                                subscription_id=subscription_id,
+                                server_ip=server_ip
+                            ).pack()),
+                        InlineKeyboardButton(
+                            text='⚔️ Изменить приложение',
+                            callback_data=SubscriptionCallbackFactory(
+                                action='replace_app',
+                                subscription_id=subscription_id,
+                                name_app=name_app
+                            ).pack())
+                    )
+                # Добавляем три кнопки с изменённым текстом
+                keyboard.add(
+                InlineKeyboardButton(
+                    text='⏳ Продлить защиту',
+                    callback_data=SubscriptionCallbackFactory(
+                        action='extend_subscription',
+                        subscription_id=subscription_id
+                    ).pack()),
+                InlineKeyboardButton(
+                    text='Как подключиться ❔',
+                    callback_data=SubscriptionCallbackFactory(
+                        action='get_guide_install_app',
+                        subscription_id=subscription_id,
+                        name_app=name_app
+                    ).pack()),
+                InlineKeyboardButton(
+                    text='🔙 Назад',
+                    callback_data='view_subs',
+                    )
+                )
+                keyboard.adjust(2, 1)
 
-        return keyboard.as_markup()
+                return keyboard.as_markup()
+            except Exception as e:
+                await logger.log_error(f'Произошла ошибка при формирование клавиатуры с подпиской', e)
+
 
     @staticmethod
     async def get_back_button_keyboard(callback: str = "back_to_support_menu") -> InlineKeyboardMarkup:

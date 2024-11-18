@@ -9,7 +9,7 @@ from handlers.user.subs import show_user_subscriptions
 from keyboards.kb_inline import InlineKeyboards, SubscriptionCallbackFactory
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
-from models.models import NameApp
+from models.models import NameApp, SubscriptionStatusEnum
 
 router = Router()
 
@@ -17,6 +17,18 @@ router = Router()
 @router.callback_query(SubscriptionCallbackFactory.filter(F.action == 'replace_app'))
 async def get_support(callback_query: CallbackQuery, state: FSMContext, callback_data: SubscriptionCallbackFactory):
     await callback_query.answer()
+    state_data = await state.get_data()
+    subscription_id = int(state_data.get("subscription_id"))
+    async with DatabaseContextManager() as session_methods:
+        try:
+            subscription = await session_methods.subscription.get_subscription_by_id(subscription_id)
+            if subscription.status == SubscriptionStatusEnum.EXPIRED:
+                await callback_query.answer(LEXICON_RU["subscription_expired"], show_alert=True, cache_time=5)
+                return
+        except Exception as e:
+            await logger.log_error(f'Пользователь: @{callback_query.from_user.username}\nОшибка при получении подписок', e)
+            await callback_query.answer(LEXICON_RU["error"], show_alert=True, cache_time=5)
+            return
 
     data = await state.get_data()
     previous_message_id = data.get("text_dragons_overview_id")
@@ -47,6 +59,16 @@ async def handle_server_selection(callback_query: CallbackQuery,
 
     state_data = await state.get_data()
     subscription_id = int(state_data.get("subscription_id"))
+    async with DatabaseContextManager() as session_methods:
+        try:
+            subscription = await session_methods.subscription.get_subscription_by_id(subscription_id)
+            if subscription.status == SubscriptionStatusEnum.EXPIRED:
+                await callback_query.answer(LEXICON_RU["subscription_expired"], show_alert=True, cache_time=5)
+                return
+        except Exception as e:
+            await logger.log_error(f'Пользователь: @{callback_query.from_user.username}\nОшибка при получении подписок', e)
+            await callback_query.answer(LEXICON_RU["error"], show_alert=True, cache_time=5)
+            return
 
     user_id = callback_query.from_user.id
     username = callback_query.from_user.username
