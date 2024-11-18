@@ -69,7 +69,6 @@ async def show_user_subscriptions(user_id, username, message, state: FSMContext)
             subscription_data = await session.subscription.get_subscription(user_id)
 
             await state.update_data(back_target='view_subs')
-            await state.update_data(callback_for_support='view_subs')
 
             # Проверка: если подписок нет
             if subscription_data is None:

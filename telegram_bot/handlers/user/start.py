@@ -125,13 +125,14 @@ async def handle_know_more(callback: CallbackQuery, state: FSMContext):
 
 
 @router.callback_query(lambda c: c.data == 'trial_subs')
-async def handle_know_more(callback: CallbackQuery):
+async def handle_know_more(callback: CallbackQuery, state: FSMContext):
     """Обработчик кнопки 'Узнать больше'."""
     await callback.answer()
     async with DatabaseContextManager() as session:
         try:
             user_id = callback.from_user.id
             user = await session.users.get_user(user_id=user_id)
+            await state.update_data(callback_for_support='trial_subs')
             if not user.trial_used:
                 await callback.message.edit_text(
                         text=LEXICON_RU['trial_offer'],

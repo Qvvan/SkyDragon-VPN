@@ -1,5 +1,6 @@
 from aiogram import Router
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 
 from keyboards.kb_inline import InlineKeyboards
@@ -16,11 +17,13 @@ async def get_support(message: Message):
     )
 
 @router.callback_query(lambda c: c.data == 'help_wizards_callback')
-async def callback_get_support(callback: CallbackQuery):
+async def callback_get_support(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
+    data = await state.get_data()
+    callback_for_support = data.get('callback_for_support', None)
     await callback.message.edit_text(
         text=LEXICON_RU['help_message'],
-        reply_markup=await InlineKeyboards.get_support('trial_subs'),
+        reply_markup=await InlineKeyboards.get_support(callback_for_support),
     )
 
 
