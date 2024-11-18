@@ -18,7 +18,7 @@ async def send_invoice(
         prices = [LabeledPrice(label="XTR", amount=price)]
         await message.answer_invoice(
                 title=f"Защита {service_name}а на {duration_days} дней",
-                description=description,
+                description=description + '\n\n1 звезда ~ 2.09 рубля',
                 prices=prices,
                 payload=f"{service_id}:{duration_days}:{action}:{subscription_id}",
                 currency="XTR",
