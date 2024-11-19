@@ -109,7 +109,7 @@ async def run_bot():
         try:
             await main()
         except Exception as e:
-            await logger.error(f"Бот завершил работу с ошибкой", e)
+            await logger.log_error(f"Бот завершил работу с ошибкой", e)
             await logger.info("Перезапуск бота через 5 секунд...")
             await asyncio.sleep(5)
 

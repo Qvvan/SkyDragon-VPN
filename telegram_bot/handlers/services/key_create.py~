@@ -113,8 +113,7 @@ class BaseKeyManager:
                     data = await response.json()
                     if not data.get("success"):
                         raise ValueError(
-                            f"API Error while fetching key with ID {key_id}: {data.get('msg', 'Unknown error')}"
-                        )
+                            f"API Error while fetching key with ID {key_id}: {data.get('msg', 'Unknown error')}")
 
                     # Получаем объект ключа
                     key_data = data["obj"]

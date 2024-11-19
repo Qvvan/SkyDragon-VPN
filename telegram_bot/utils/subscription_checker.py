@@ -103,7 +103,6 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
                 callback_data="referal_subs"
             )
         )
-        session = await get_session_cookie(sub.server_ip)
         await session_methods.session.commit()
         await bot.send_message(
             chat_id=sub.user_id,
@@ -114,7 +113,13 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
         await logger.log_info(
             f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{user.username}\nИстекла"
         )
-        await BaseKeyManager(server_ip=sub.server_ip, session_cookie=session).update_key_enable(sub.key_id, False)
+        try:
+            session = await get_session_cookie(sub.server_ip)
+            await BaseKeyManager(server_ip=sub.server_ip, session_cookie=session).update_key_enable(sub.key_id, False)
+        except:
+            await logger.log_error(
+                f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при обновлении подписки',
+                'Не удалось обновить ключ')
     except Exception as e:
         await session_methods.session.rollback()
         await logger.log_error(f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при обновлении подписки', e)
@@ -128,13 +133,17 @@ async def handle_subscription_deletion(sub, session_methods):
             await logger.log_error('Не удалось удалить подписку при ее истечении', Exception)
             return
 
-        session = await get_session_cookie(sub.server_ip)
-        await BaseKeyManager(server_ip=sub.server_ip, session_cookie=session).delete_key(sub.key_id)
         await session_methods.session.commit()
         user = await session_methods.users.get_user(sub.user_id)
         await logger.log_info(
             f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{user.username}\nПолностью удалена"
         )
+        try:
+            session = await get_session_cookie(sub.server_ip)
+            await BaseKeyManager(server_ip=sub.server_ip, session_cookie=session).delete_key(sub.key_id)
+        except:
+            await logger.log_error(
+                f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при удалении подписки', 'Не удалось удалить ключ')
     except Exception as e:
         await session_methods.session.rollback()
         await logger.log_error(f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при удалении подписки', e)
