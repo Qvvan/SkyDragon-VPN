@@ -66,15 +66,12 @@ async def send_reminder(bot: Bot, sub, session_methods):
             reminder_sent=1
         )
         await session_methods.session.commit()
-        try:
-            await bot.send_message(
-                chat_id=sub.user_id,
-                text=LEXICON_RU['reminder_sent'],
-                reply_markup=keyboard.as_markup(),
-                parse_mode="HTML"
-            )
-        except:
-            pass
+        await bot.send_message(
+            chat_id=sub.user_id,
+            text=LEXICON_RU['reminder_sent'],
+            reply_markup=keyboard.as_markup(),
+            parse_mode="HTML"
+        )
         user = await session_methods.users.get_user(sub.user_id)
         await logger.log_info(
             f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{user.username}\nИстечет через 3 дня."
@@ -107,14 +104,11 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
             )
         )
         await session_methods.session.commit()
-        try:
-            await bot.send_message(
-                chat_id=sub.user_id,
-                text=LEXICON_RU['expired'],
-                reply_markup=keyboard.as_markup(),
-            )
-        except:
-            pass
+        await bot.send_message(
+            chat_id=sub.user_id,
+            text=LEXICON_RU['expired'],
+            reply_markup=keyboard.as_markup(),
+        )
         user = await session_methods.users.get_user(sub.user_id)
         await logger.log_info(
             f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{user.username}\nИстекла"
