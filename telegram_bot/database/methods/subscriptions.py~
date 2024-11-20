@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from logger.logging_config import logger
-from models.models import Subscriptions, Services, SubscriptionStatusEnum, Servers
+from models.models import Subscriptions, Services, SubscriptionStatusEnum, Servers, Users
 
 
 class SubscriptionMethods:
@@ -30,11 +30,17 @@ class SubscriptionMethods:
                     Services.duration_days,
                     Services.price,
                     Services.service_id,
-                    Servers.name.label('server_name')
+                    Servers.name.label('server_name'),
+                    Users.trial_used,
+                    Users.last_visit,
+                    Users.username,
+                    Users.ban,
+                    Users.created_at
                 )
                 .select_from(Subscriptions)
                 .outerjoin(Services, Subscriptions.service_id == Services.service_id)
                 .outerjoin(Servers, Subscriptions.server_ip == Servers.server_ip)
+                .outerjoin(Users, Subscriptions.user_id == Users.user_id)
                 .filter(Subscriptions.user_id == user_id)
             )
 
@@ -77,8 +83,8 @@ class SubscriptionMethods:
     async def create_sub(self, sub: Subscriptions):
         try:
             self.session.add(sub)
-            await self.session.flush()  # Принудительно записывает объект в базу данных
-            return sub  # Возвращаем сам объект
+            await self.session.flush()
+            return sub
         except SQLAlchemyError as e:
             await logger.log_error(f"Error creating subscription", e)
             return False

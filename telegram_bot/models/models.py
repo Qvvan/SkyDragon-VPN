@@ -9,7 +9,7 @@ Base = declarative_base()
 class SubscriptionStatusEnum(str, Enum):
     ACTIVE = 'активная'
     EXPIRED = 'истекла'
-    CANCELED = 'отменена'
+    OFF = 'отключена'
 
 
 class NameApp(str, Enum):
@@ -33,7 +33,7 @@ class Users(Base):
 
     user_id = Column(BigInteger, primary_key=True, nullable=False)
     username = Column(String)
-    ban = Column(Integer, default=0)
+    ban = Column(Boolean, default=False)
     trial_used = Column(Boolean, default=False)
     last_visit = Column(DateTime, default=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

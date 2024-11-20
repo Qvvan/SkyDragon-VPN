@@ -46,8 +46,6 @@ async def extend_user_subscription(user_id: int, days: int, session_methods):
             )
             if not subscription_created:
                 raise Exception("Ошибка создания подписки")
-
-            print('Вот что я ему верну', subscription)
             return subscription
 
         latest_subscription = max(subscriptions, key=lambda sub: sub.end_date or datetime.min)

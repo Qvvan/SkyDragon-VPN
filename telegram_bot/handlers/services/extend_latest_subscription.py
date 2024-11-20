@@ -4,8 +4,10 @@ from sqlalchemy.sql.functions import now
 
 from handlers.services.active_servers import get_active_server_and_key
 from handlers.services.create_subscription_service import SubscriptionService
+from handlers.services.get_session_cookies import get_session_cookie
+from handlers.services.key_create import BaseKeyManager
 from logger.logging_config import logger
-from models.models import Subscriptions, NameApp
+from models.models import Subscriptions, NameApp, SubscriptionStatusEnum
 
 
 class NoAvailableServersError(Exception):
@@ -57,8 +59,14 @@ async def extend_user_subscription(user_id: int, days: int, session_methods):
         else:
             new_end_date = max(datetime.utcnow(), end_date or datetime.utcnow()) + timedelta(days=days)
 
-        await session_methods.subscription.update_sub(subscription_id, end_date=new_end_date)
-
+        await session_methods.subscription.update_sub(
+            subscription_id=subscription_id,
+            end_date=new_end_date,
+            status=SubscriptionStatusEnum.ACTIVE,
+            reminder_sent=0
+        )
+        session = await get_session_cookie(subscriptions.server_ip)
+        await BaseKeyManager(subscriptions.server_ip, session).update_key_enable(subscriptions.key_id, True)
         return latest_subscription
 
     except Exception as e:

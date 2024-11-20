@@ -22,12 +22,20 @@ class UserPaginationCallback(CallbackData, prefix="user"):
 
 
 class UserSelectCallback(CallbackData, prefix="user_select"):
+    action: str
     user_id: int
 
 
 class ServiceCallbackFactory(CallbackData, prefix='service'):
     service_id: str
     status_pay: str
+
+
+class UserInfoCallbackFactory(CallbackData, prefix='info'):
+    action: str
+    user_id: int
+    ban: Optional[bool] = None
+    trial: Optional[bool] = None
 
 
 class SubscriptionCallbackFactory(CallbackData, prefix="subscription"):
@@ -363,20 +371,32 @@ class InlineKeyboards:
         if hidden_status == 0:
             show_status = InlineKeyboardButton(
                 text="Выключить сервер",
-                callback_data=ServerCallbackData(action="disable", server_ip=server_ip).pack()
+                callback_data=ServerCallbackData(
+                    action="disable",
+                    server_ip=server_ip
+                ).pack()
             )
         else:
             show_status = InlineKeyboardButton(
                 text="Включить сервер",
-                callback_data=ServerCallbackData(action="enable", server_ip=server_ip).pack()
+                callback_data=ServerCallbackData(
+                    action="enable",
+                    server_ip=server_ip
+                ).pack()
             )
         server_name = InlineKeyboardButton(
             text="Изменить имя",
-            callback_data=ServerCallbackData(action="change_name", server_ip=server_ip).pack()
+            callback_data=ServerCallbackData(
+                action="change_name",
+                server_ip=server_ip
+            ).pack()
         )
         server_limit = InlineKeyboardButton(
             text="Изменить лимит",
-            callback_data=ServerCallbackData(action="change_limit", server_ip=server_ip).pack()
+            callback_data=ServerCallbackData(
+                action="change_limit",
+                server_ip=server_ip
+            ).pack()
         )
         keyboard.add(show_status, server_name, server_limit)
 
@@ -552,8 +572,6 @@ class InlineKeyboards:
             ]
         ])
 
-    from aiogram.types import InlineKeyboardMarkup
-
     @staticmethod
     async def get_menu_install_app(name_app, subscription_id) -> InlineKeyboardMarkup:
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -596,3 +614,70 @@ class InlineKeyboards:
             ],
         ])
         return keyboard
+
+    @staticmethod
+    async def user_info(user_id, ban, trial):
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Разбанить" if ban else "Забанить",
+                    callback_data=UserInfoCallbackFactory(
+                        action="user_ban",
+                        user_id=user_id,
+                        ban=not ban
+                    ).pack()
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Обновить",
+                    callback_data=UserInfoCallbackFactory(
+                        action="user_trial",
+                        user_id=user_id,
+                        trial=not trial
+                    ).pack()
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Подписки пользователя",
+                    callback_data=UserSelectCallback(
+                        action='user_subs',
+                        user_id=user_id
+                    ).pack()
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Отмена",
+                    callback_data="cancel"
+                )
+            ]
+        ])
+
+    @staticmethod
+    async def sub_info(user_id):
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Дата окончания",
+                    callback_data=UserSelectCallback(
+                        action='end_date_sub',
+                        user_id=user_id
+                    ).pack())
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Выключить подписку",
+                    callback_data=UserSelectCallback(
+                        action='turn_off_sub',
+                        user_id=user_id
+                    ).pack())
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Назад",
+                    callback_data=''
+                )
+            ],
+        ])
