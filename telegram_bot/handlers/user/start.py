@@ -43,6 +43,8 @@ async def process_start_command(message: Message):
                 await logger.log_info(
                         f"К нам присоединился:\n"
                         f"Имя: @{message.from_user.username}\n"
+                        f"first_name: {message.from_user.first_name}\n"
+                        f"last_name: {message.from_user.last_name}\n"
                         f"ID: {message.from_user.id}"
                         )
                 if referrer_id and referrer_id != message.from_user.id:
