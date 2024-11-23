@@ -1,7 +1,5 @@
 from datetime import datetime, timedelta
 
-from sqlalchemy.sql.functions import now
-
 from handlers.services.active_servers import get_active_server_and_key
 from handlers.services.create_subscription_service import SubscriptionService
 from handlers.services.get_session_cookies import get_session_cookie
@@ -65,8 +63,8 @@ async def extend_user_subscription(user_id: int, days: int, session_methods):
             status=SubscriptionStatusEnum.ACTIVE,
             reminder_sent=0
         )
-        session = await get_session_cookie(subscriptions.server_ip)
-        await BaseKeyManager(subscriptions.server_ip, session).update_key_enable(subscriptions.key_id, True)
+        session = await get_session_cookie(latest_subscription.server_ip)
+        await BaseKeyManager(latest_subscription.server_ip, session).update_key_enable(latest_subscription.key_id, True)
         return latest_subscription
 
     except Exception as e:
