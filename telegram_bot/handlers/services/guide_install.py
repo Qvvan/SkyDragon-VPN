@@ -74,7 +74,7 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Subs
                     inline_keyboard=[
                         [
                             InlineKeyboardButton(
-                                text="🐉 Мои драконы",
+                                text="🐉 Мои подписки",
                                 callback_data="view_subs"
                             )
                         ],

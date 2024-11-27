@@ -49,14 +49,14 @@ async def send_reminder(bot: Bot, sub, session_methods):
         keyboard = InlineKeyboardBuilder()
         keyboard.add(
     InlineKeyboardButton(
-                text='⏳ Продлить защиту',
+                text='⏳ Продлить подписку',
                 callback_data=SubscriptionCallbackFactory(
                     action='extend_subscription',
                     subscription_id=sub.subscription_id
                 ).pack(),
             ),
             InlineKeyboardButton(
-                text="🎁 Дар союзника",
+                text="🎁 Пригласить друга",
                 callback_data="referal_subs"
             )
         )
@@ -95,14 +95,14 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
         keyboard = InlineKeyboardBuilder()
         keyboard.add(
         InlineKeyboardButton(
-            text='⏳ Продлить защиту',
+            text='⏳ Продлить подписку',
             callback_data=SubscriptionCallbackFactory(
                 action='extend_subscription',
                 subscription_id=sub.subscription_id
             ).pack(),
             ),
             InlineKeyboardButton(
-                text="🎁 Дар союзника",
+                text="🎁 Пригласить друга",
                 callback_data="referal_subs"
             )
         )

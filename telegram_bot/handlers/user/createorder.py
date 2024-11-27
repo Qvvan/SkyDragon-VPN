@@ -12,7 +12,7 @@ from handlers.services.invoice_helper import send_invoice
 router = Router()
 
 
-@router.message(Command(commands='dragons_pact'))
+@router.message(Command(commands='new'))
 async def create_order(message: Message, state: FSMContext):
     await message.answer(
         text=LEXICON_RU['createorder'],

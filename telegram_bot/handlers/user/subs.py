@@ -50,7 +50,7 @@ async def get_user_subs_callback(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-@router.message(Command(commands="my_dragons"))
+@router.message(Command(commands="profile"))
 async def get_user_subs_command(message: Message, state: FSMContext):
     await show_user_subscriptions(
         user_id=message.from_user.id,
@@ -63,17 +63,16 @@ async def get_user_subs_command(message: Message, state: FSMContext):
 async def show_user_subscriptions(user_id, username, message, state: FSMContext):
     # Отправляем начальное приветственное сообщение
 
-    async with DatabaseContextManager() as session:
+    async with (DatabaseContextManager() as session):
         try:
             # Получаем данные о подписках пользователя
             subscription_data = await session.subscription.get_subscription(user_id)
 
             await state.update_data(back_target='view_subs')
             await state.update_data(callback_for_support='view_subs')
-
+            user = await session.users.get_user(user_id=user_id)
             # Проверка: если подписок нет
             if subscription_data is None:
-                user = await session.users.get_user(user_id=user_id)
                 if not user.trial_used:
                     await message.answer(
                         text=LEXICON_RU['trial_offer'],
@@ -86,7 +85,7 @@ async def show_user_subscriptions(user_id, username, message, state: FSMContext)
                             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                                 [
                                     InlineKeyboardButton(
-                                        text="🔥 Оформить защиту дракона",
+                                        text="🔥 Оформить подписку",
                                         callback_data="subscribe"
                                     )
                                 ],
@@ -104,7 +103,7 @@ async def show_user_subscriptions(user_id, username, message, state: FSMContext)
                             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                                 [
                                     InlineKeyboardButton(
-                                        text="🔥 Оформить защиту дракона",
+                                        text="🔥 Оформить подписку",
                                         callback_data="subscribe"
                                     )
                                 ],
@@ -112,15 +111,15 @@ async def show_user_subscriptions(user_id, username, message, state: FSMContext)
                         )
                 return
 
-            # Создаём кнопки для каждой подписки
             buttons = []
-            for data in subscription_data:
+            for index, data in enumerate(subscription_data):
                 end_date = data.end_date.date()
                 days_left = (end_date - datetime.now().date()).days
 
-                # Текст на кнопке: либо оставшиеся дни, либо "Дракон спит"
-                button_text = f"Ваша подписка({days_left} дн.)" if days_left >= 0 else "Дракон спит"
-
+                if days_left >= 0:
+                    button_text = f"Ваша подписка({days_left} дн.)"
+                else:
+                    button_text = "Подписка закончилась"
                 buttons.append([
                     InlineKeyboardButton(
                         text=f"📜 {button_text}",
@@ -131,33 +130,28 @@ async def show_user_subscriptions(user_id, username, message, state: FSMContext)
                 # Сохраняем ID подписки в состоянии
                 await state.update_data(subscription_id=data.subscription_id)
 
+            if not user.trial_used:
+                buttons.append([
+                    InlineKeyboardButton(
+                        text="🐲 Пробный период",
+                        callback_data="trial_subs"
+                    )
+                ])
             buttons.append([
                 InlineKeyboardButton(
-                    text="🔥 Оформить защиту дракона",
-                    callback_data="subscribe"
-                )
-            ])
-            buttons.append([
-                InlineKeyboardButton(
-                    text="Помощь хранителей 🧙‍",
-                    callback_data="help_wizards_callback"
-                )
-            ])
-            buttons.append([
-                InlineKeyboardButton(
-                    text="🌌 К началу пути",
-                    callback_data="back_to_start"
+                    text="🌌 Главное меню",
+                    callback_data="main_menu"
                 )
             ])
 
             try:
                 await message.edit_text(
-                    text=LEXICON_RU['intro_text'],
+                    text='<b>Нажми на подписку, чтобы узнать о ней подробнее</b>',
                     reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
                     parse_mode="HTML")
             except:
                 await message.answer(
-                    text=LEXICON_RU['intro_text'],
+                    text='<b>Нажми на подписку, чтобы узнать о ней подробнее</b>',
                     reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
                     parse_mode="HTML")
 
@@ -168,13 +162,6 @@ async def show_user_subscriptions(user_id, username, message, state: FSMContext)
 @router.callback_query(lambda c: c.data.startswith("view_details_"))
 async def show_subscription_details(callback: CallbackQuery, state: FSMContext):
     subscription_id = int(callback.data.split("_")[2])
-    await callback.message.delete()
-
-    # Отправляем новое сообщение text_dragons_overview и сохраняем его ID
-    text_dragons_overview = await callback.message.answer(
-        text=LEXICON_RU['text_dragons_overview']
-    )
-    await state.update_data(text_dragons_overview_id=text_dragons_overview.message_id)
 
     await callback.answer()
     async with DatabaseContextManager() as session:
@@ -189,16 +176,15 @@ async def show_subscription_details(callback: CallbackQuery, state: FSMContext):
                 server_ip = subscription.server_ip
 
                 detailed_info = (
-                    f"<b>🐉 Статус защиты:</b> {'🐲 Дракон на страже' if status == 'активная' else '💀 Покровительство завершено'}\n"
-                    f"<b>🧿 Амулет:</b> {name_app}\n"
-                    f"<b>🌍 Местоположение цитадели:</b> {server_name}\n"
-                    f"<b>📅 Завершение покровительства:</b> {end_date.strftime('%d-%m-%Y')}\n"
-                    f"<b>🐲🔑 Имя дракона:</b>\n"
+                    f"<b>🐉 Статус подписки:</b> {'🐲 Дракон на страже' if status == 'активная' else '💀 Покровительство завершено'}\n"
+                    f"<b>🌍 Локация VPN:</b> {server_name}\n"
+                    f"<b>📅 Окончание подписки:</b> {end_date.strftime('%d-%m-%Y')}\n"
+                    f"<b>🐲🔑 Ключ:</b>\n"
                     f"<pre>{key}</pre>"
                 )
 
                 # Клавиатура для управления подпиской
-                await callback.message.answer(
+                await callback.message.edit_text(
                     text=detailed_info,
                     parse_mode="HTML",
                     reply_markup=await InlineKeyboards.menu_subs(subscription_id, name_app, server_ip)

@@ -96,7 +96,7 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
     :param callback_data: ServerSelectCallback object that contains the selected server information
     :param state: FSMContext object that contains the user's state
     """
-    message = await callback_query.message.edit_text("🔄 Меняем цитадель...")
+    message = await callback_query.message.edit_text("🔄 Меняем локацию...")
     state_data = await state.get_data()
     subscription_id = int(state_data.get("subscription_id"))
     async with DatabaseContextManager() as session_methods:

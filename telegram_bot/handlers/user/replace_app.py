@@ -55,7 +55,7 @@ async def get_support(callback_query: CallbackQuery, state: FSMContext, callback
 @router.callback_query(SubscriptionCallbackFactory.filter(F.action == "name_app"))
 async def handle_server_selection(callback_query: CallbackQuery,
                                   state: FSMContext):
-    message = await callback_query.message.edit_text("🔄 Меняем амулет...")
+    message = await callback_query.message.edit_text("🔄 Меняем приложение...")
 
     state_data = await state.get_data()
     subscription_id = int(state_data.get("subscription_id"))

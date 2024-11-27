@@ -10,6 +10,7 @@ from handlers.services.create_transaction_service import TransactionService
 from handlers.services.extend_latest_subscription import NoAvailableServersError, extend_user_subscription
 from handlers.services.get_session_cookies import get_session_cookie
 from handlers.services.key_create import BaseKeyManager
+from keyboards.kb_inline import InlineKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 from models.models import StatusSubscriptionHistory, SubscriptionStatusEnum, Subscriptions, NameApp
@@ -53,7 +54,7 @@ class SubscriptionsService:
                     raise Exception("Ошибка сохранения транзакции")
 
                 # Получение активного сервера и создание Shadowsocks ключа
-                shadowsocks_manager, server_ip, key, key_id = await get_active_server_and_key(
+                vless_manager, server_ip, key, key_id = await get_active_server_and_key(
                         user_id, username, session_methods
                         )
 
@@ -74,7 +75,7 @@ class SubscriptionsService:
                         key=key,
                         key_id=key_id,
                         server_ip=server_ip,
-                        name_app=NameApp.OUTLINE,
+                        name_app=NameApp.VLESS,
                         start_date=datetime.now(),
                         end_date=datetime.now() + timedelta(days=durations_days)
                     ),
@@ -85,10 +86,9 @@ class SubscriptionsService:
 
                 # Коммит сессии после успешных операций
                 await session_methods.session.commit()
-                await SubscriptionsService.send_success_response(message, key)
+                await SubscriptionsService.send_success_response(message, key, subscription_created.subscription_id)
                 await logger.log_info(f"Пользователь: @{username} оформил подписку на {duration_date} дней")
 
-                # Изолированное начисление бонуса
                 try:
                     await SubscriptionsService.process_referral_bonus(user_id, username, message.bot)
                 except Exception:
@@ -103,14 +103,11 @@ class SubscriptionsService:
 
                 await SubscriptionsService.refund_payment(message)
 
-                # Откат транзакции
                 await session_methods.session.rollback()
 
-                # Удаление ключа при наличии shadowsocks_manager и key_id
-                if shadowsocks_manager and key_id:
-                    await shadowsocks_manager.delete_key(key_id)
+                if vless_manager and key_id:
+                    await vless_manager.delete_key(key_id)
 
-                # Сохранение транзакции с отменой
                 await TransactionService.create_transaction(
                         message, status='отмена', description=str(e), session_methods=session_methods
                         )
@@ -192,7 +189,7 @@ class SubscriptionsService:
                 await session_methods.session.commit()
 
     @staticmethod
-    async def send_success_response(message: Message, vpn_key: str):
+    async def send_success_response(message: Message, vpn_key: str, subscription_id):
         """
         Отправляет пользователю успешное уведомление с VPN ключом.
 
@@ -202,12 +199,13 @@ class SubscriptionsService:
         """
         await message.answer(
                 text=LEXICON_RU[
-                         'purchase_thank_you'] + f'\nИмя твоего дракона 🐉 теперь звучит как:\n<pre>{vpn_key}</pre>',
+                         'purchase_thank_you'] + f'\nКлюч доступа VPN:\n<pre>{vpn_key}</pre>',
                 parse_mode="HTML",
                 )
         await message.answer(
-                text=LEXICON_RU['choose_device'],
-                )
+            text=LEXICON_RU["choose_device"],
+            reply_markup=await InlineKeyboards.get_menu_install_app(NameApp.VLESS, subscription_id)
+        )
 
     @staticmethod
     async def refund_payment(message: Message):

@@ -19,7 +19,7 @@ async def extend_user_subscription(user_id: int, days: int, session_methods):
 
         # Если нет активных подписок, создаем новую подписку на заданное количество дней
         if not subscriptions:
-            shadowsocks_manager, server_ip, key, key_id = await get_active_server_and_key(
+            vless_manager, server_ip, key, key_id = await get_active_server_and_key(
                     user_id, 'Пробный период', session_methods
                     )
 
@@ -36,7 +36,7 @@ async def extend_user_subscription(user_id: int, days: int, session_methods):
                 key=key,
                 key_id=key_id,
                 server_ip=server_ip,
-                name_app=NameApp.OUTLINE,
+                name_app=NameApp.VLESS,
                 start_date=datetime.now(),
                 end_date=datetime.now() + timedelta(days=days)
             )

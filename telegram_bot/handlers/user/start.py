@@ -26,7 +26,7 @@ async def process_start_command(message: Message):
     keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [
-                    InlineKeyboardButton(text="👥 Сколько союзников", callback_data="show_referrals")
+                    InlineKeyboardButton(text="👥 Сколько друзей", callback_data="show_referrals")
                     ]
                 ]
             )
@@ -50,7 +50,7 @@ async def process_start_command(message: Message):
                 if referrer_id and referrer_id != message.from_user.id:
                     await message.bot.send_message(
                             referrer_id,
-                            f"🐲 Ваш союзник @{message.from_user.username} присоединился к кругу! Древние драконы даруют вам бонус силы 🎁",
+                            f"🐲 Ваш друг @{message.from_user.username} присоединился к кругу! Древние драконы даруют вам бонус силы 🎁",
                             reply_markup=keyboard
                             )
                     await logger.log_info(
@@ -112,7 +112,7 @@ async def handle_know_more(callback: CallbackQuery, state: FSMContext):
                     inline_keyboard=[
                         [
                             InlineKeyboardButton(
-                                    text="🔥 Оформить защиту дракона",
+                                    text="🔥 Оформить подписку",
                                     callback_data="subscribe"
                                     )
                             ],
@@ -148,16 +148,10 @@ async def handle_know_more(callback: CallbackQuery, state: FSMContext):
                                 inline_keyboard=[
                                     [
                                         InlineKeyboardButton(
-                                                text="🐉 Мои драконы",
+                                                text="🐉 Мои подписки",
                                                 callback_data="view_subs"
                                                 )
                                         ],
-                                    [
-                                        InlineKeyboardButton(
-                                            text="🧙‍♂️ Поддержка",
-                                            callback_data="help_wizards_callback"
-                                        )
-                                    ],
                                     [
                                         InlineKeyboardButton(
                                                 text="🔙 Назад",

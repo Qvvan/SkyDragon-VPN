@@ -36,4 +36,4 @@ class SubscriptionService:
             await logger.log_error(
                 f"Ошибка при создании подписки для пользователя ID: {subscription.user_id}", e
             )
-            return None
+            return False

@@ -16,7 +16,6 @@ async def get_support(message: Message):
         reply_markup=await InlineKeyboards.get_support(),
     )
 
-
 @router.callback_query(lambda c: c.data == 'help_wizards_callback')
 async def callback_get_support(callback: CallbackQuery, state: FSMContext):
     await callback.answer()

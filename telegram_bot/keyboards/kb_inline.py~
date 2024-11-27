@@ -178,7 +178,7 @@ class InlineKeyboards:
         else:
             keyboard.inline_keyboard.append([
                 InlineKeyboardButton(
-                    text="🌌 К началу пути",
+                    text="🌌 Главное меню",
                     callback_data='back_to_start'
                 )
             ])
@@ -206,18 +206,11 @@ class InlineKeyboards:
                                 subscription_id=subscription_id,
                                 server_ip=server_ip
                             ).pack()),
-                        InlineKeyboardButton(
-                            text='⚔️ Изменить приложение',
-                            callback_data=SubscriptionCallbackFactory(
-                                action='replace_app',
-                                subscription_id=subscription_id,
-                                name_app=name_app
-                            ).pack())
                     )
                 # Добавляем три кнопки с изменённым текстом
                 keyboard.add(
                 InlineKeyboardButton(
-                    text='⏳ Продлить защиту',
+                    text='⏳ Продлить подписку',
                     callback_data=SubscriptionCallbackFactory(
                         action='extend_subscription',
                         subscription_id=subscription_id
@@ -407,7 +400,7 @@ class InlineKeyboards:
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="⚔️ Активировать защиту",
+                    text="⚔️ Активировать подписку",
                     callback_data="activate_trial"
                 )
             ],
@@ -425,7 +418,7 @@ class InlineKeyboards:
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🐉 Мои драконы",
+                    text="🐉 Мои подписки",
                     callback_data="view_subs"
                 )
             ]
@@ -437,20 +430,14 @@ class InlineKeyboards:
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🌌 Испытание дракона",
+                    text="🐲 Пробный период",
                     callback_data="trial_subs"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="🎁 Дар союзника",
-                    callback_data="referal_subs"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🐉 Сага о драконах",
-                    callback_data="dragon_legends"
+                    text="🌌 Главное меню",
+                    callback_data="main_menu"
                 )
             ],
         ],
@@ -462,11 +449,11 @@ class InlineKeyboards:
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🐲 Сила союзников",
+                    text="🐲 Приглашенные друзья",
                     callback_data="show_referrals"
                 ),
                 InlineKeyboardButton(
-                    text="🔗 Призвать союзника",
+                    text="🔗 Пригласить друга",
                     callback_data="get_invite_link"
                 )
             ]
@@ -489,7 +476,7 @@ class InlineKeyboards:
             return InlineKeyboardMarkup(inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text="🐉 Мои драконы",
+                        text="🐉 Мои подписки",
                         callback_data="view_subs"
                     )
                 ],
@@ -504,7 +491,7 @@ class InlineKeyboards:
             return InlineKeyboardMarkup(inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text="🐉 Мои драконы",
+                        text="🐉 Мои подписки",
                         callback_data="view_subs"
                     )
                 ],
@@ -519,7 +506,7 @@ class InlineKeyboards:
             return InlineKeyboardMarkup(inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text="🔥 Оформить защиту дракона",
+                        text="🔥 Оформить подписку",
                         callback_data="subscribe"
                     )
                 ],
@@ -536,31 +523,31 @@ class InlineKeyboards:
         return InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🌍 Сменить цитадель",
+                    text="🌍 Сменить локацию",
                     callback_data="faq_change_territory"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="🧿 Сменить амулет",
+                    text="🧿 Сменить приложение",
                     callback_data="faq_change_app"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="💎 Заключить пакт",
+                    text="💎 Оформить подписку",
                     callback_data="faq_payment"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="⚡ Дракон перестал летать",
+                    text="⚡ VPN плохо работает",
                     callback_data="faq_slow_internet"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="🔮 Установить амулет на орудие",
+                    text="🔮 Как установить",
                     callback_data="faq_install_amulet"
                 )
             ],
@@ -674,4 +661,40 @@ class InlineKeyboards:
                         user_id=user_id
                     ).pack())
             ],
+            [
+                InlineKeyboardButton(
+                    text="Назад",
+                    callback_data=''
+                )
+            ],
         ])
+
+    @staticmethod
+    async def main_menu():
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🐉 Мои подписки",
+                    callback_data="view_subs"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔥 Оформить подписку",
+                    callback_data="faq"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🎁 Пригласить друга",
+                    callback_data="exit"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🧙‍♂️ Поддержка",
+                    callback_data="support_callback"
+                )
+            ],
+        ]
+    )
