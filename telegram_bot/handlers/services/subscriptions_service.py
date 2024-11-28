@@ -226,7 +226,7 @@ class SubscriptionsService:
             try:
                 referrer_id = await session_methods.referrals.update_referral_status_if_invited(user_id)
                 if referrer_id:
-                    await extend_user_subscription(referrer_id, 23, session_methods)
+                    await extend_user_subscription(referrer_id, username, 23, session_methods)
                     await bot.send_message(referrer_id, LEXICON_RU['referrer_message'].format(username=username))
                     await logger.log_info(
                             f"Пользователь с ID: {referrer_id} получает 23 дня подписки по приглашению: @{username}"

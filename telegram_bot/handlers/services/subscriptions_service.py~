@@ -189,7 +189,7 @@ class SubscriptionsService:
                 await session_methods.session.commit()
 
     @staticmethod
-    async def send_success_response(message: Message, vpn_key: str):
+    async def send_success_response(message: Message, vpn_key: str, subscription_id):
         """
         Отправляет пользователю успешное уведомление с VPN ключом.
 
@@ -204,8 +204,7 @@ class SubscriptionsService:
                 )
         await message.answer(
             text=LEXICON_RU["choose_device"],
-            reply_markup=await InlineKeyboards.get_menu_install_app(subscription.name_app,
-                                                                    subscription.subscription_id)
+            reply_markup=await InlineKeyboards.get_menu_install_app(NameApp.VLESS, subscription_id)
         )
 
     @staticmethod

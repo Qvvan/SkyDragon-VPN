@@ -65,7 +65,7 @@ async def process_start_command(message: Message):
                                         bonus_issued=ReferralStatus.INVITED,
                                         )
                                 )
-                        await extend_user_subscription(referrer_id, message.from_user.username, 7, session_methods)
+                        await extend_user_subscription(referrer_id, 7, session_methods)
                     except Exception as e:
                         await logger.log_error(f"Ошибка при начислении бонуса за приглашение: {referrer_id}", e)
             await session_methods.session.commit()
