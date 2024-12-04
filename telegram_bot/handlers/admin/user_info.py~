@@ -155,11 +155,11 @@ async def handle_user_trial(callback_query: CallbackQuery, callback_data: UserSe
             await callback_query.message.answer(f"Произошла ошибка: \n{e}")
 
 
-@router.callback_query(F.is_("turn_off_sub"))
-async def handle_user_trial(callback_query: CallbackQuery, callback_data: UserInfoCallbackFactory):
+@router.callback_query(UserSelectCallback.filter(F.action == "turn_off_sub"))
+async def handle_user_trial(callback_query: CallbackQuery, callback_data: UserSelectCallback):
     await callback_query.message.answer('Вы нажали кнопку выключить подписку')
 
 
-@router.callback_query(F.is_("end_date_sub"))
-async def handle_user_trial(callback_query: CallbackQuery, callback_data: UserInfoCallbackFactory):
+@router.callback_query(UserSelectCallback.filter(F.action == "end_date_sub"))
+async def handle_user_trial(callback_query: CallbackQuery, callback_data: UserSelectCallback):
     await callback_query.message.answer('Вы нажали кнопку настройки даты подписки')

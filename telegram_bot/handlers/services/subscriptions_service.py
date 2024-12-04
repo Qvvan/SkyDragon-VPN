@@ -38,7 +38,6 @@ class SubscriptionsService:
             Exception: Если не удалось сохранить транзакцию или создать подписку.
         """
         async with DatabaseContextManager() as session_methods:
-            shadowsocks_manager = None
             key_id = None
 
             try:
@@ -50,6 +49,7 @@ class SubscriptionsService:
                 transaction_state = await TransactionService.create_transaction(
                         message, 'successful', 'successful', session_methods
                         )
+                print('Транзакция супер')
                 if not transaction_state:
                     raise Exception("Ошибка сохранения транзакции")
 
@@ -65,10 +65,12 @@ class SubscriptionsService:
                             )
                     raise NoAvailableServersError("нет доступных серверов")
 
-                # Создание подписки
+                # Создание подпискиы
                 service_id = int(in_payload[0])
                 durations_days = int(in_payload[1])
-                subscription_created = await SubscriptionService.create_subscription(
+                print('сервис ', service_id)
+                print('дней ', durations_days)
+                subscription_id = await SubscriptionService.create_subscription(
                     Subscriptions(
                         user_id=user_id,
                         service_id=service_id,
@@ -81,12 +83,13 @@ class SubscriptionsService:
                     ),
                     session_methods=session_methods
                 )
-                if not subscription_created:
+                print(subscription_id)
+                if not subscription_id:
                     raise Exception("Ошибка создания подписки")
 
                 # Коммит сессии после успешных операций
                 await session_methods.session.commit()
-                await SubscriptionsService.send_success_response(message, key, subscription_created.subscription_id)
+                await SubscriptionsService.send_success_response(message, key, subscription_id)
                 await logger.log_info(f"Пользователь: @{username} оформил подписку на {duration_date} дней")
 
                 try:
@@ -226,7 +229,7 @@ class SubscriptionsService:
             try:
                 referrer_id = await session_methods.referrals.update_referral_status_if_invited(user_id)
                 if referrer_id:
-                    await extend_user_subscription(referrer_id, username, 23, session_methods)
+                    await extend_user_subscription(referrer_id, str(username), 23, session_methods)
                     await bot.send_message(referrer_id, LEXICON_RU['referrer_message'].format(username=username))
                     await logger.log_info(
                             f"Пользователь с ID: {referrer_id} получает 23 дня подписки по приглашению: @{username}"

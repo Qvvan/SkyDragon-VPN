@@ -31,12 +31,12 @@ async def user_info(message: types.Message, state: FSMContext):
         try:
             user_info = await session_methods.users.get_user(user_id)
             response_user = (
-                f"👤 *Пользователь:* @{user_info.username}\n"
-                f"🆔 *ID пользователя:* {user_info.user_id}\n"
-                f"🚫 *Статус Бана:* {'🟢 Не забанен' if user_info.ban == 0 else '🔴 Забанен'}\n"
-                f"🎁 *Пробная подписка:* {'🟢 Использована' if user_info.trial_used else '🔴 Не использована'}\n"
-                f"⏱️ *Последний визит:* {user_info.last_visit.strftime('%d.%m.%Y %H:%M')}\n"
-                f"📅 *Дата регистрации:* {user_info.created_at.strftime('%d.%m.%Y %H:%M')}\n"
+                f"👤 Пользователь: @{user_info.username}\n"
+                f"🆔 ID пользователя: {user_info.user_id}\n"
+                f"🚫 Статус Бана: {'🟢 Не забанен' if user_info.ban == 0 else '🔴 Забанен'}\n"
+                f"🎁 Пробная подписка: {'🟢 Использована' if user_info.trial_used else '🔴 Не использована'}\n"
+                f"⏱️ Последний визит: {user_info.last_visit.strftime('%d.%m.%Y %H:%M')}\n"
+                f"📅 Дата регистрации: {user_info.created_at.strftime('%d.%m.%Y %H:%M')}\n"
             )
 
             await message.answer(
@@ -45,7 +45,6 @@ async def user_info(message: types.Message, state: FSMContext):
                     user_id=user_id,
                     ban=user_info.ban,
                     trial=user_info.trial_used),
-                parse_mode="Markdown"
             )
 
         except Exception as e:

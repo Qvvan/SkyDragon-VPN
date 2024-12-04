@@ -18,7 +18,12 @@ async def process_trial_subscription_callback(callback: CallbackQuery, state: FS
         try:
             user = await session_methods.users.get_user(user_id=callback.from_user.id)
             if not user.trial_used:
-                subscription = await extend_user_subscription(user.user_id, callback.from_user.username,7, session_methods)
+                subscription = await extend_user_subscription(
+                    user_id=user.user_id,
+                    username=str(callback.from_user.username),
+                    days=7,
+                    session_methods=session_methods,
+                )
                 await callback.answer(
                     text=LEXICON_RU['trial_activated'], show_alert=True, cache_time=3
                 )
@@ -32,7 +37,8 @@ async def process_trial_subscription_callback(callback: CallbackQuery, state: FS
                             name_app=subscription.name_app
                         )
                     )
-                    await logger.log_info(f"Пользователь @{callback.from_user.username} активировал(а) пробную подписку")
+                    await logger.log_info(
+                        f"Пользователь @{callback.from_user.username} активировал(а) пробную подписку")
                     await session_methods.users.update_user(user_id=callback.from_user.id, trial_used=True)
                     await session_methods.session.commit()
             else:

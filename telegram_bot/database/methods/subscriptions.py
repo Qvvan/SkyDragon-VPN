@@ -74,11 +74,11 @@ class SubscriptionMethods:
             await logger.log_error(f"Error updating subscription {subscription_id}", e)
             raise
 
-    async def create_sub(self, sub: Subscriptions):
+    async def create_sub(self, sub: Subscriptions) -> int:
         try:
             self.session.add(sub)
             await self.session.flush()
-            return sub
+            return sub.subscription_id
         except SQLAlchemyError as e:
             await logger.log_error(f"Error creating subscription", e)
             return False
