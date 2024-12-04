@@ -56,3 +56,7 @@ class ChoiceApp(StatesGroup):
 class ServerManagementStates(StatesGroup):
     waiting_for_name = State()
     waiting_for_limit = State()
+
+
+class GetUser(StatesGroup):
+    waiting_user_id = State()
