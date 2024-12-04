@@ -20,7 +20,7 @@ async def extend_user_subscription(user_id: int, username: str, days: int, sessi
         # Если нет активных подписок, создаем новую подписку на заданное количество дней
         if not subscriptions:
             vless_manager, server_ip, key, key_id = await get_active_server_and_key(
-                    user_id, username + ' Пробный период', session_methods
+                    user_id, f"{username} Пробный период", session_methods
                     )
 
             if not server_ip or not key or not key_id:

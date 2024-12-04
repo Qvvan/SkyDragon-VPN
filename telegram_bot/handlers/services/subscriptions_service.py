@@ -49,7 +49,6 @@ class SubscriptionsService:
                 transaction_state = await TransactionService.create_transaction(
                         message, 'successful', 'successful', session_methods
                         )
-                print('Транзакция супер')
                 if not transaction_state:
                     raise Exception("Ошибка сохранения транзакции")
 
@@ -68,8 +67,6 @@ class SubscriptionsService:
                 # Создание подпискиы
                 service_id = int(in_payload[0])
                 durations_days = int(in_payload[1])
-                print('сервис ', service_id)
-                print('дней ', durations_days)
                 subscription_id = await SubscriptionService.create_subscription(
                     Subscriptions(
                         user_id=user_id,
@@ -83,7 +80,6 @@ class SubscriptionsService:
                     ),
                     session_methods=session_methods
                 )
-                print(subscription_id)
                 if not subscription_id:
                     raise Exception("Ошибка создания подписки")
 

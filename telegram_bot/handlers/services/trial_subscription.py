@@ -20,7 +20,7 @@ async def process_trial_subscription_callback(callback: CallbackQuery, state: FS
             if not user.trial_used:
                 subscription = await extend_user_subscription(
                     user_id=user.user_id,
-                    username=str(callback.from_user.username),
+                    username=callback.from_user.username,
                     days=7,
                     session_methods=session_methods,
                 )

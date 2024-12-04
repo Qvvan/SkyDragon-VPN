@@ -83,6 +83,7 @@ class SubscriptionsService:
                     ),
                     session_methods=session_methods
                 )
+                print(subscription_id)
                 if not subscription_id:
                     raise Exception("Ошибка создания подписки")
 

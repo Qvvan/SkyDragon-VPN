@@ -12,7 +12,7 @@ class NoAvailableServersError(Exception):
     pass
 
 
-async def extend_user_subscription(user_id: int, username: str = "Неизвестно", days: int, session_methods):
+async def extend_user_subscription(user_id: int, username: str, days: int, session_methods):
     try:
         # Получаем все подписки пользователя
         subscriptions = await session_methods.subscription.get_subscription(user_id)
