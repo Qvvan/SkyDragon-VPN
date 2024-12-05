@@ -15,8 +15,10 @@ async def start_broadcast(message: types.Message, state: FSMContext):
     async with DatabaseContextManager() as session_methods:
         try:
             users = await session_methods.users.get_all_users()
+            print(users)
             users_dict = {user.user_id: {'user_id': user.user_id, 'username': user.username, 'selected': False} for user in
                           users}
+            print('наш дикт', users_dict)
             await state.update_data(users=users_dict)
         except Exception as e:
             await logger.error('Произошла ошибка при старте pushes', e)
@@ -159,7 +161,9 @@ async def show_users(message: types.Message, page: int, users_dict: dict):
     users = list(users_dict.values())[5 * (page - 1):5 * page]
     has_next = len(users_dict) > page * 5
     try:
+        print(users,page,has_next)
         keyboard = await InlineKeyboards.create_user_pagination_with_users_keyboard(users, page, has_next)
+        print('Клавиатура сделана')
         user_list = "Кому отправим уведомления?"
         if not user_list:
             user_list = "No users found."

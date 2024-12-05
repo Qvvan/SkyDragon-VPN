@@ -278,6 +278,7 @@ class InlineKeyboards:
 
         # Кнопки для пользователей
         for user in users:
+            print('Наши пользаки', user)
             buttons.append([InlineKeyboardButton(
                 text=f"{user['username']} ({user['user_id']}) {'✅' if user['selected'] else ''}",
                 callback_data=UserSelectCallback(user_id=user['user_id']).pack()
@@ -681,19 +682,19 @@ class InlineKeyboards:
             [
                 InlineKeyboardButton(
                     text="🔥 Оформить подписку",
-                    callback_data="faq"
+                    callback_data="subscribe"
                 )
             ],
             [
                 InlineKeyboardButton(
                     text="🎁 Пригласить друга",
-                    callback_data="exit"
+                    callback_data="back_to_call_allies"
                 )
             ],
             [
                 InlineKeyboardButton(
                     text="🧙‍♂️ Поддержка",
-                    callback_data="support_callback"
+                    callback_data="help_wizards_callback"
                 )
             ],
         ]
