@@ -162,7 +162,7 @@ class SubscriptionsService:
                             session = await get_session_cookie(sub.server_ip)
                             await BaseKeyManager(server_ip=sub.server_ip, session_cookie=session).update_key_enable(
                                 sub.key_id, True)
-                            await logger.info("успешно создана подписка", subscription_id)
+                            await logger.info(f"Успешно создана подписка {subscription_id}")
                             await session_methods.session.commit()
                             await message.answer(text=LEXICON_RU['subscription_renewed'])
                             await logger.log_info(

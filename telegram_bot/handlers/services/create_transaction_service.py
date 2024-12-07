@@ -18,7 +18,7 @@ class TransactionService:
                     status=status,
                     description=description,
                     )
-            await logger.info("Транзакция создана", transaction.__dict__)
+            await logger.info(f"Транзакция создан {transaction.__dict__}")
             return transaction
         except Exception as e:
             await logger.log_error(
