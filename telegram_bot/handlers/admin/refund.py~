@@ -24,8 +24,7 @@ async def start_another_feature(message: types.Message, state: FSMContext):
 async def process_another_input(message: types.Message, state: FSMContext):
     transaction_code = message.text
     async with DatabaseContextManager() as session_methods:
-        encrypted_transaction_code = await session_methods.transactions.encrypt_transaction_code(transaction_code)
-        result = await cancel_transaction(encrypted_transaction_code, session_methods, message.bot)
+        result = await cancel_transaction(transaction_code, session_methods, message.bot)
 
         if result['success']:
             await message.answer("Транзакция успешно отменена!")

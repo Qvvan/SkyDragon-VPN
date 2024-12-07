@@ -27,8 +27,7 @@ class TransactionMethods:
         )
 
         try:
-            encrypted_transaction_id = self.cipher_suite.encrypt(transaction_code.encode())
-            transaction.transaction_code = base64.urlsafe_b64encode(encrypted_transaction_id).decode('utf-8')
+            transaction.transaction_code = await self.encrypt_transaction_code(transaction_code)
 
             self.session.add(transaction)
             return transaction
@@ -56,3 +55,7 @@ class TransactionMethods:
         except (base64.binascii.Error, ValueError) as e:
             await logger.log_error(f"Error decoding/encrypting transaction code", e)
             return None, None
+
+    async def encrypt_transaction_code(self, transaction_code: str) -> str:
+        encrypted_transaction_id = self.cipher_suite.encrypt(transaction_code.encode())
+        return base64.urlsafe_b64encode(encrypted_transaction_id).decode('utf-8')
