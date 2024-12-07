@@ -170,7 +170,7 @@ class SubscriptionsService:
                                 f"Продлил подписку на {durations_days} дней"
                                 )
                             return
-                raise
+                raise Exception("Подписки не найдены")
 
             except Exception as e:
                 await logger.error("Ошибка при продление", e)
