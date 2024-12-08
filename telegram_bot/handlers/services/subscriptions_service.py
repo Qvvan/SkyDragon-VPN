@@ -191,13 +191,6 @@ class SubscriptionsService:
 
     @staticmethod
     async def send_success_response(message: Message, vpn_key: str, subscription_id):
-        """
-        Отправляет пользователю успешное уведомление с VPN ключом.
-
-        Args:
-            message (telegram.Message): Сообщение от Telegram, в которое будет отправлено уведомление.
-            vpn_key (str): Ключ доступа VPN, который будет отправлен пользователю.
-        """
         await message.answer(
                 text=LEXICON_RU[
                          'purchase_thank_you'] + f'\nКлюч доступа VPN:\n<pre>{vpn_key}</pre>',

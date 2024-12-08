@@ -95,6 +95,7 @@ async def main():
     dp.include_router(get_user_id.router)
 
     dp.include_router(cancel.router)
+    dp.include_router(just_message.router)
 
     asyncio.create_task(run_checker(bot))
     asyncio.create_task(ping_servers(bot))
