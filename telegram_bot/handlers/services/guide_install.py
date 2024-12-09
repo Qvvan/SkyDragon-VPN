@@ -70,7 +70,7 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Subs
                     disable_web_page_preview=True
                     )
             show_slow_internet = await callback_query.message.answer(
-                text="Если у вас плохо грузит VPN, попробуйте сменить локацию или приложение в своей подписке 👇.",
+                text="Если у вас плохо грузит VPN, попробуйте сменить локацию 👇.",
                 reply_markup=InlineKeyboardMarkup(
                     inline_keyboard=[
                         [

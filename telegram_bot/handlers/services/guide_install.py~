@@ -84,4 +84,4 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Subs
             await state.update_data(show_guide_message=show_guide_message.message_id)
             await state.update_data(show_slow_internet=show_slow_internet.message_id)
         except Exception as e:
-            await logger.log_error("Не удалось получить подписку при показе инструкции", e)
+            await logger.log_error(f"Не удалось получить подписку при показе инструкции {callback_query.from_user.id}", e)
