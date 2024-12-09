@@ -55,10 +55,10 @@ class CustomLogger:
                 reply_markup=keyboard
             )
 
-    async def log_info(self, message: str):
+    async def log_info(self, message: str, keyboard=None):
         """Логгирование информации и отправка уведомления."""
         self.logger.info(message)
-        await self.notify_group(message)
+        await self.notify_group(message, keyboard)
 
     async def log_error(self, message: str, error: Exception, keyboard=None):
         """Логгирование ошибки и отправка уведомления."""

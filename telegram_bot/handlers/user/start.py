@@ -45,7 +45,7 @@ async def process_start_command(message: Message):
                         f"Имя: @{message.from_user.username}\n"
                         f"first_name: {message.from_user.first_name}\n"
                         f"last_name: {message.from_user.last_name}\n"
-                        f"ID: {message.from_user.id}"
+                        f"ID: {message.from_user.id}", await InlineKeyboards.get_user_info(message.from_user.id)
                         )
                 if referrer_id and referrer_id != message.from_user.id:
                     await message.bot.send_message(
@@ -54,7 +54,7 @@ async def process_start_command(message: Message):
                             reply_markup=keyboard
                             )
                     await logger.log_info(
-                            f"Его пригласил пользователь с ID: {referrer_id}"
+                            f"Его пригласил пользователь с ID: {referrer_id}", await InlineKeyboards.get_user_info(referrer_id)
                             )
                     try:
                         await session_methods.referrals.add_referrer(
@@ -162,6 +162,7 @@ async def handle_know_more(callback: CallbackQuery, state: FSMContext):
                                 )
                         )
         except Exception as e:
-            await logger.log_error(f"Error fetching user @{callback.from_user.username}", e)
+            await logger.log_error(f"Error fetching user @{callback.from_user.username}\n"
+                                   f"ID: {callback.from_user.id}", e)
 
 

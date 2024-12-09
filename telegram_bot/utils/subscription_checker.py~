@@ -136,8 +136,7 @@ async def handle_subscription_deletion(sub, session_methods):
     try:
         result = await session_methods.subscription.delete_sub(subscription_id=sub.subscription_id)
         if not result:
-            await logger.log_error('Не удалось удалить подписку при ее истечении\n'
-                                   f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\n', Exception)
+            await logger.log_error('Не удалось удалить подписку при ее истечении', Exception)
             return
 
         await session_methods.session.commit()

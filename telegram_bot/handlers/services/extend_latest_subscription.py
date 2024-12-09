@@ -68,5 +68,5 @@ async def extend_user_subscription(user_id: int, username: str, days: int, sessi
         return latest_subscription
 
     except Exception as e:
-        await logger.log_error("Error extending or creating user subscription", e)
+        await logger.log_error(f"Error extending or creating user subscription, ID {user_id}", e)
         raise "Ошибка при продлении или создании подписки."

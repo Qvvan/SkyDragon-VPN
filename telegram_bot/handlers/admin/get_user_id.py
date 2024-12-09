@@ -27,30 +27,15 @@ async def user_info(message: types.Message, state: FSMContext):
     try:
         user_id = int(message.text)
 
-        # Проверяем, существует ли пользователь
         try:
             user = await message.bot.get_chat(user_id)
         except TelegramBadRequest:
             await message.reply("Ошибка: Пользователь с таким ID не найден!")
             return
 
-        # Если пользователь существует, создаём кнопку
-        user_link = f"tg://user?id={user_id}"
-        keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="Пользователь",
-                        url=user_link
-                    )
-                ]
-            ]
-        )
-
-        # Отправляем сообщение с кнопкой
         await message.reply(
             text=f"Пользователь 👇",
-            reply_markup=keyboard
+            reply_markup=await InlineKeyboards.get_user_info(user_id)
         )
     except ValueError:
         await message.reply("Пожалуйста, введите корректное числовое значение user_id.")

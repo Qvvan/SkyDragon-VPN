@@ -281,7 +281,9 @@ class InlineKeyboards:
             print('Наши пользаки', user)
             buttons.append([InlineKeyboardButton(
                 text=f"{user['username']} ({user['user_id']}) {'✅' if user['selected'] else ''}",
-                callback_data=UserSelectCallback(user_id=user['user_id']).pack()
+                callback_data=UserSelectCallback(
+                    action="select",
+                    user_id=user['user_id']).pack()
             )])
 
         # Кнопки пагинации
@@ -699,3 +701,18 @@ class InlineKeyboards:
             ],
         ]
     )
+
+
+    @staticmethod
+    async def get_user_info(user_id: int):
+        user_link = f"tg://user?id={user_id}"
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="Пользователь",
+                        url=user_link
+                    )
+                ]
+            ]
+        )

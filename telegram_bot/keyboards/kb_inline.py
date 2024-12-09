@@ -209,22 +209,22 @@ class InlineKeyboards:
                     )
                 # Добавляем три кнопки с изменённым текстом
                 keyboard.add(
-                InlineKeyboardButton(
-                    text='⏳ Продлить подписку',
-                    callback_data=SubscriptionCallbackFactory(
-                        action='extend_subscription',
-                        subscription_id=subscription_id
-                    ).pack()),
-                InlineKeyboardButton(
-                    text='Как подключиться ❔',
-                    callback_data=SubscriptionCallbackFactory(
-                        action='get_guide_install_app',
-                        subscription_id=subscription_id,
-                        name_app=name_app
-                    ).pack()),
-                InlineKeyboardButton(
-                    text='🔙 Назад',
-                    callback_data='view_subs',
+                    InlineKeyboardButton(
+                        text='⏳ Продлить подписку',
+                        callback_data=SubscriptionCallbackFactory(
+                            action='extend_subscription',
+                            subscription_id=subscription_id
+                        ).pack()),
+                    InlineKeyboardButton(
+                        text='Как подключиться ❔',
+                        callback_data=SubscriptionCallbackFactory(
+                            action='get_guide_install_app',
+                            subscription_id=subscription_id,
+                            name_app=name_app
+                        ).pack()),
+                    InlineKeyboardButton(
+                        text='🔙 Назад',
+                        callback_data='view_subs',
                     )
                 )
                 keyboard.adjust(2, 1)
@@ -232,7 +232,6 @@ class InlineKeyboards:
                 return keyboard.as_markup()
             except Exception as e:
                 await logger.log_error(f'Произошла ошибка при формирование клавиатуры с подпиской', e)
-
 
     @staticmethod
     async def get_back_button_keyboard(callback: str = "back_to_support_menu") -> InlineKeyboardMarkup:
@@ -700,4 +699,19 @@ class InlineKeyboards:
                 )
             ],
         ]
-    )
+        )
+
+    @staticmethod
+    async def get_user_info(user_id: int):
+        user_link = f"tg://user?id={user_id}"
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="Пользователь",
+                        url=user_link
+                    )
+                ]
+            ]
+        )
+        return keyboard

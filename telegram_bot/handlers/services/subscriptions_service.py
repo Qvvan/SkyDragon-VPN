@@ -59,7 +59,7 @@ class SubscriptionsService:
 
                 if not server_ip or not key or not key_id:
                     await logger.log_error(
-                            message=f"Пользователь: @{username} попытался оформить подписку, но ни один сервер не ответил",
+                            message=f"Пользователь: @{username}, ID {user_id} попытался оформить подписку, но ни один сервер не ответил",
                             error="Не удалось получить сессию ни по одному из серверов"
                             )
                     raise NoAvailableServersError("нет доступных серверов")
@@ -97,7 +97,7 @@ class SubscriptionsService:
                 if isinstance(e, NoAvailableServersError):
                     await message.answer(text=LEXICON_RU['no_servers_available'])
                 else:
-                    await logger.log_error(f"Пользователь: @{username}\nОшибка при обработке транзакции", e)
+                    await logger.log_error(f"Пользователь: @{username}, ID {user_id}\nОшибка при обработке транзакции", e)
                     await message.answer(text=LEXICON_RU['purchase_cancelled'])
 
                 await SubscriptionsService.refund_payment(message)
@@ -176,6 +176,7 @@ class SubscriptionsService:
                 await logger.error("Ошибка при продление", e)
                 await logger.log_error(
                     f"Пользователь: @{message.from_user.username}\n"
+                    f"ID: {message.from_user.id}\n"
                     f"Error during transaction processing", e
                     )
                 await message.answer(text=LEXICON_RU['purchase_cancelled'])

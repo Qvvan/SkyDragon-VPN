@@ -156,7 +156,9 @@ async def show_user_subscriptions(user_id, username, message, state: FSMContext)
                     parse_mode="HTML")
 
         except Exception as e:
-            await logger.log_error(f'Пользователь: @{username}\nОшибка при получении подписок', e)
+            await logger.log_error(f'Пользователь: @{username}\n'
+                                   f'ID: {user_id}\n'
+                                   f'Ошибка при получении подписок', e)
 
 
 @router.callback_query(lambda c: c.data.startswith("view_details_"))
@@ -190,7 +192,8 @@ async def show_subscription_details(callback: CallbackQuery, state: FSMContext):
                     reply_markup=await InlineKeyboards.menu_subs(subscription_id, name_app, server_ip)
                 )
         except Exception as e:
-            await logger.log_error("Ошибка при получении подробностей подписки", e)
+            await logger.log_error("Ошибка при получении подробностей подписки\n"
+                                   f"ID: {callback.from_user.id}\n", e)
 
 
 @router.callback_query(SubscriptionCallbackFactory.filter(F.action == 'extend_subscription'))

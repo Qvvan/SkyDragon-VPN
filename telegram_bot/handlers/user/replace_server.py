@@ -38,7 +38,9 @@ async def get_support(callback_query: CallbackQuery, state: FSMContext, callback
                 await callback_query.answer(LEXICON_RU["subscription_expired"], show_alert=True, cache_time=5)
                 return
         except Exception as e:
-            await logger.log_error(f'Пользователь: @{callback_query.from_user.username}\nОшибка при получении подписок', e)
+            await logger.log_error(f'Пользователь: @{callback_query.from_user.username}\n'
+                                   f'ID: {callback_query.from_user.id}\n'
+                                   f'Ошибка при получении подписок', e)
             await callback_query.answer(LEXICON_RU["error"], show_alert=True, cache_time=5)
             return
 
@@ -106,7 +108,9 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
                 await callback_query.answer(LEXICON_RU["subscription_expired"], show_alert=True, cache_time=5)
                 return
         except Exception as e:
-            await logger.log_error(f'Пользователь: @{callback_query.from_user.username}\nОшибка при получении подписок', e)
+            await logger.log_error(f'Пользователь: @{callback_query.from_user.username}\n'
+                                   f'ID: {callback_query.from_user.id}\n'
+                                   f'Ошибка при получении подписок', e)
             await callback_query.answer(LEXICON_RU["error"], show_alert=True, cache_time=5)
             return
 
@@ -153,7 +157,9 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
                             await old_manager.delete_key(old_key_id)
                     except ServerUnavailableError as e:
                         await logger.log_error(
-                            f'Пользователь: @{callback_query.from_user.username}\nСервер недоступен', e)
+                            f'Пользователь: @{callback_query.from_user.username}\n'
+                            f'ID: {callback_query.from_user.id}\n'
+                            f'Сервер недоступен', e)
 
                 # Обновляем данные подписки
                 await session_methods.subscription.update_sub(
@@ -180,7 +186,9 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
                             await old_manager.delete_key(old_key_id)
                     except ServerUnavailableError as e:
                         await logger.log_error(
-                            f'Пользователь: @{callback_query.from_user.username}\nСервер недоступен', e)
+                            f'Пользователь: @{callback_query.from_user.username}\n'
+                            f'ID: {callback_query.from_user.id}\n'
+                            f'Сервер недоступен', e)
 
                 # Обновляем данные подписки
                 await session_methods.subscription.update_sub(
@@ -204,7 +212,9 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
             await session_methods.session.commit()
 
         except ServerUnavailableError as e:
-            await logger.log_error(f'Пользователь: @{callback_query.from_user.username}\nСервер недоступен', e)
+            await logger.log_error(f'Пользователь: @{callback_query.from_user.username}\n'
+                                   f'ID: {callback_query.from_user.id}\n'
+                                   f'Сервер недоступен', e)
             await callback_query.answer(LEXICON_RU["server_unavailable"], show_alert=True, cache_time=3)
             await callback_query.message.delete()
             await show_user_subscriptions(
@@ -214,6 +224,7 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
                 state=state)
         except Exception as e:
             await logger.log_error(f'Пользователь: @{callback_query.from_user.username}\n'
+                                   f'ID: {callback_query.from_user.id}\n'
                                    f'Ошибка при смене сервера', e)
             await callback_query.answer(text=LEXICON_RU['error'], show_alert=True, cache_time=3)
             await show_user_subscriptions(
