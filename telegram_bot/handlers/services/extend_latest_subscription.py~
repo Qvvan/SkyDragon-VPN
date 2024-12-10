@@ -12,10 +12,6 @@ class NoAvailableServersError(Exception):
     pass
 
 
-class NoActiveSubscriptionsError(Exception):
-    pass
-
-
 async def extend_user_subscription(user_id: int, username: str, days: int, session_methods):
     try:
         # Получаем все подписки пользователя

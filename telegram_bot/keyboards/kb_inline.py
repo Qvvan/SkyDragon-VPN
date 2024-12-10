@@ -277,7 +277,6 @@ class InlineKeyboards:
 
         # Кнопки для пользователей
         for user in users:
-            print('Наши пользаки', user)
             buttons.append([InlineKeyboardButton(
                 text=f"{user['username']} ({user['user_id']}) {'✅' if user['selected'] else ''}",
                 callback_data=UserSelectCallback(
