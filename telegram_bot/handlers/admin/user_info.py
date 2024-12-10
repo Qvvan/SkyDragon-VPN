@@ -116,7 +116,8 @@ async def handle_user_trial(callback_query: CallbackQuery, callback_data: UserIn
             await callback_query.message.edit_text(text=updated_text, reply_markup=updated_keyboard)
 
             await callback_query.answer(f"Пробная подписка {'включена' if trial_status else 'выключена'}.")
-            await logger.info(f"Пробная подписка пользователя {user_id} {'включена' if trial_status else 'выключена'} администратором.")
+            await logger.info(
+                f"Пробная подписка пользователя {user_id} {'включена' if trial_status else 'выключена'} администратором.")
 
         except Exception as e:
             await callback_query.answer(f"Ошибка: {e}", show_alert=True)

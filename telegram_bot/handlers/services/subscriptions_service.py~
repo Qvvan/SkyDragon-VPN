@@ -86,9 +86,7 @@ class SubscriptionsService:
                 # Коммит сессии после успешных операций
                 await session_methods.session.commit()
                 await SubscriptionsService.send_success_response(message, key, subscription_id)
-                await logger.log_info(f"Пользователь: @{username}\n"
-                                      f"ID: {user_id}\n"
-                                      f"Оформил подписку на {duration_date} дней")
+                await logger.log_info(f"Пользователь: @{username} оформил подписку на {duration_date} дней")
 
                 try:
                     await SubscriptionsService.process_referral_bonus(user_id, username, message.bot)
@@ -169,7 +167,6 @@ class SubscriptionsService:
                             await message.answer(text=LEXICON_RU['subscription_renewed'])
                             await logger.log_info(
                                 f"Пользователь: @{message.from_user.username}\n"
-                                f"ID: {message.from_user.id}\n"
                                 f"Продлил подписку на {durations_days} дней"
                                 )
                             return
