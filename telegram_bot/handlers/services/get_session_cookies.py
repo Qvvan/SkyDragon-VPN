@@ -63,7 +63,7 @@ async def get_session_cookie(server_ip: str) -> str:
 
                 except Exception as e:
                     # Логируем любые другие ошибки
-                    await logger.log_error(f"Ошибка соединения с {server_ip}: {str(e)}")
+                    await logger.log_error(f"Ошибка соединения с {server_ip}", e)
                     if attempt == 2:
                         await logger.log_error(f"Не удалось подключиться к {server_ip} после трех попыток", e)
                     else:
