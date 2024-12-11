@@ -61,7 +61,7 @@ async def get_session_cookie(server_ip: str) -> str:
                             break  # Успешный ответ с SSL - выходим из цикла
 
                     except Exception as ssl_error:
-                        await logger.log_error(f"Ошибка подключения с SSL к {server_ip}: {ssl_error}")
+                        await logger.log_error(f"Ошибка подключения с SSL к {server_ip}", ssl_error)
 
                 except Exception as e:
                     # Логируем любые другие ошибки
