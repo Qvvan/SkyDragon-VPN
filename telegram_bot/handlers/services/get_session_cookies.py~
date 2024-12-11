@@ -24,6 +24,7 @@ async def get_session_cookie(server_ip: str) -> str:
                 try:
                     # Сначала пытаемся подключиться без SSL
                     async with session.post(url, json=payload, ssl=False, timeout=timeout) as response:
+                        await logger.log_info(f"Ответ от {server_ip} (без SSL): статус {response.status}")
 
                         # Если подключение прошло успешно
                         if response.status == 200:
@@ -44,6 +45,7 @@ async def get_session_cookie(server_ip: str) -> str:
                     await logger.log_error(f"Ошибка соединения без SSL, пытаемся с SSL", None)
                     try:
                         async with session.post(url, json=payload, ssl=ssl_context, timeout=timeout) as response:
+                            await logger.log_info(f"Ответ от {server_ip} (с SSL): статус {response.status}")
 
                             if response.status == 200:
                                 set_cookie_headers = response.headers.getall("Set-Cookie")
