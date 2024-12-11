@@ -30,11 +30,11 @@ async def process_start_command(message: Message):
                     username=message.from_user.username,
                 )
             )
-            await session_methods.session.commit()
             if status_user:
                 await log_new_user(message)
                 if referrer_id:
-                    await handle_referral(referrer_id, message)
+                    await handle_referral(referrer_id, message, session_methods)
+            await session_methods.session.commit()
         except Exception as e:
             await logger.log_error(
                 f'Пользователь: @{message.from_user.username}\n'
@@ -43,18 +43,18 @@ async def process_start_command(message: Message):
             )
 
 
-async def handle_referral(referrer_id, message):
-    async with DatabaseContextManager() as session_methods:
+async def handle_referral(referrer_id, message, session_methods):
+    try:
+        await message.bot.send_message(
+            referrer_id,
+            f"🐲 Ваш друг @{message.from_user.username} присоединился к кругу! Древние драконы даруют вам бонус силы 🎁",
+            reply_markup=await InlineKeyboards.get_invite_keyboard()
+        )
+        await logger.log_info(
+            f"Его пригласил пользователь с ID: {referrer_id}",
+            await InlineKeyboards.get_user_info(referrer_id)
+        )
         try:
-            await message.bot.send_message(
-                referrer_id,
-                f"🐲 Ваш друг @{message.from_user.username} присоединился к кругу! Древние драконы даруют вам бонус силы 🎁",
-                reply_markup=await InlineKeyboards.get_invite_keyboard()
-            )
-            await logger.log_info(
-                f"Его пригласил пользователь с ID: {referrer_id}",
-                await InlineKeyboards.get_user_info(referrer_id)
-            )
             await session_methods.referrals.add_referrer(
                 referral=Referrals(
                     referrer_id=referrer_id,
@@ -64,9 +64,10 @@ async def handle_referral(referrer_id, message):
                 )
             )
             await extend_user_subscription(referrer_id, message.from_user.username, 7, session_methods)
-            await session_methods.session.commit()
         except Exception as e:
             await logger.log_error(f"Ошибка при начислении бонуса за приглашение: {referrer_id}", e)
+    except Exception as e:
+        await logger.log_error(f"Ошибка при отправке сообщения приглашению: {referrer_id}", e)
 
 
 def get_referrer_id(message):

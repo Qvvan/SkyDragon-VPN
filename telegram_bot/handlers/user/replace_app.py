@@ -82,7 +82,7 @@ async def handle_server_selection(callback_query: CallbackQuery,
             subscription = await session_methods.subscription.get_subscription_by_id(subscription_id)
             old_key_id = subscription.key_id
             if not subscription:
-                raise "Не найдена подписка в базе данных"
+                raise Exception("Не найдена подписка в базе данных")
 
             session_cookie = await get_session_cookie(subscription.server_ip)
             if not session_cookie:

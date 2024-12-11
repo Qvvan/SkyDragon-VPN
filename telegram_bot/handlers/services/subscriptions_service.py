@@ -7,14 +7,17 @@ from database.context_manager import DatabaseContextManager
 from handlers.services.active_servers import get_active_server_and_key
 from handlers.services.create_subscription_service import SubscriptionService
 from handlers.services.create_transaction_service import TransactionService
-from handlers.services.extend_latest_subscription import NoAvailableServersError, extend_user_subscription, \
-    NoActiveSubscriptionsError
+from handlers.services.extend_latest_subscription import NoAvailableServersError, extend_user_subscription
 from handlers.services.get_session_cookies import get_session_cookie
 from handlers.services.key_create import BaseKeyManager
 from keyboards.kb_inline import InlineKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 from models.models import StatusSubscriptionHistory, SubscriptionStatusEnum, Subscriptions, NameApp
+
+
+class NoActiveSubscriptionsError(Exception):
+    pass
 
 
 class SubscriptionsService:
@@ -131,7 +134,7 @@ class SubscriptionsService:
                 service_id = int(in_payload[0])
                 durations_days = int(in_payload[1])
                 user_data = await state.get_data()
-                subscription_id = user_data.get('subscription_id')
+                subscription_id = int(user_data.get('subscription_id'))
 
                 # Получение текущей подписки пользователя
                 subs = await session_methods.subscription.get_subscription(message.from_user.id)

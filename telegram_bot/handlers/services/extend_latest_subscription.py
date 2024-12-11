@@ -12,10 +12,6 @@ class NoAvailableServersError(Exception):
     pass
 
 
-class NoActiveSubscriptionsError(Exception):
-    pass
-
-
 async def extend_user_subscription(user_id: int, username: str, days: int, session_methods):
     try:
         # Получаем все подписки пользователя
@@ -24,14 +20,14 @@ async def extend_user_subscription(user_id: int, username: str, days: int, sessi
         # Если нет активных подписок, создаем новую подписку на заданное количество дней
         if not subscriptions:
             vless_manager, server_ip, key, key_id = await get_active_server_and_key(
-                    user_id, f"{username} Пробный период", session_methods
-                    )
+                user_id, f"{username} Пробный период", session_methods
+            )
 
             if not server_ip or not key or not key_id:
                 await logger.log_error(
-                        message=f"Пользователь c ID: {user_id} попытался оформить пробную подписку, но ни один сервер не ответил",
-                        error="Не удалось получить сессию ни по одному из серверов"
-                        )
+                    message=f"Пользователь c ID: {user_id} попытался оформить пробную подписку, но ни один сервер не ответил",
+                    error="Не удалось получить сессию ни по одному из серверов"
+                )
                 raise NoAvailableServersError("нет доступных серверов")
 
             subscription = Subscriptions(
@@ -73,4 +69,4 @@ async def extend_user_subscription(user_id: int, username: str, days: int, sessi
 
     except Exception as e:
         await logger.log_error(f"Error extending or creating user subscription, ID {user_id}", e)
-        raise "Ошибка при продлении или создании подписки."
+        raise Exception("Ошибка при продлении или создании подписки.")
