@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 
 from handlers.services.active_servers import get_active_server_and_key
 from handlers.services.create_subscription_service import SubscriptionService
-from handlers.services.get_session_cookies import get_session_cookie
 from handlers.services.key_create import BaseKeyManager
 from logger.logging_config import logger
 from models.models import Subscriptions, NameApp, SubscriptionStatusEnum
@@ -14,11 +13,10 @@ class NoAvailableServersError(Exception):
 
 async def extend_user_subscription(user_id: int, username: str, days: int, session_methods):
     try:
-        # Получаем все подписки пользователя
         subscriptions = await session_methods.subscription.get_subscription(user_id)
 
-        # Если нет активных подписок, создаем новую подписку на заданное количество дней
         if not subscriptions:
+            print('Нихуя подписок у пользака не было')
             vless_manager, server_ip, key, key_id = await get_active_server_and_key(
                 user_id, f"{username} Пробный период", session_methods
             )
@@ -63,10 +61,9 @@ async def extend_user_subscription(user_id: int, username: str, days: int, sessi
             status=SubscriptionStatusEnum.ACTIVE,
             reminder_sent=0
         )
-        session = await get_session_cookie(latest_subscription.server_ip)
-        await BaseKeyManager(latest_subscription.server_ip, session).update_key_enable(latest_subscription.key_id, True)
+        await BaseKeyManager(latest_subscription.server_ip).update_key_enable(latest_subscription.key_id, True)
         return latest_subscription
 
     except Exception as e:
         await logger.log_error(f"Error extending or creating user subscription, ID {user_id}", e)
-        raise "Ошибка при продлении или создании подписки."
+        raise Exception("Ошибка при продлении или создании подписки.")

@@ -210,7 +210,7 @@ async def extend_subscription(callback: CallbackQuery, callback_data: Subscripti
             await callback.bot.delete_message(callback.message.chat.id, previous_message_id)
             await state.update_data(text_dragons_overview_id=None)
         except Exception as e:
-            await logger.info(f"Не удалось удалить сообщение с ID {previous_message_id}: {e}")
+            await logger.log_error(f"Не удалось удалить сообщение с ID {previous_message_id}: {e}")
 
     await state.update_data(subscription_id=subscription_id)
     await state.update_data(status_pay=StatusPay.OLD)

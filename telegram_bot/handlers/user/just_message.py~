@@ -1,10 +1,10 @@
-from aiogram import Router, Bot, F
+from aiogram import Router, Bot
 from aiogram.types import Message
 
 router = Router()
 
 
-@router.message(F.text)
+@router.message()
 async def process_start_command(message: Message, bot: Bot):
     await message.answer(
         text="Я пока не научился понимать человеческую речь, поэтому передал ваше сообщение администратору. 📨😊\n\nВернуться в начало — /start"

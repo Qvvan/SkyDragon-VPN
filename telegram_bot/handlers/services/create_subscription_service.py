@@ -1,8 +1,7 @@
-from datetime import datetime, timedelta
 from typing import Optional
 
 from logger.logging_config import logger
-from models.models import NameApp, StatusSubscriptionHistory, Subscriptions
+from models.models import StatusSubscriptionHistory, Subscriptions
 
 
 class SubscriptionService:

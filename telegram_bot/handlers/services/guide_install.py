@@ -4,7 +4,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 
 from database.context_manager import DatabaseContextManager
 from keyboards.kb_inline import InlineKeyboards, SubscriptionCallbackFactory
-from lexicon.lexicon_ru import guide_install
+from lexicon.lexicon_ru import guide_install, LEXICON_RU
 from logger.logging_config import logger
 
 router = Router()
@@ -18,19 +18,25 @@ async def back_to_device_selection(
     data = await state.get_data()
     previous_message_id = data.get("text_dragons_overview_id")
     show_slow_internet_id = data.get("show_slow_internet")
-    if show_slow_internet_id:
+
+    # Функция для безопасного удаления сообщений
+    async def delete_message_safe(message_id):
         try:
-            await callback_query.bot.delete_message(callback_query.message.chat.id, show_slow_internet_id)
-            await state.update_data(show_slow_internet_id=None)
+            await callback_query.bot.delete_message(callback_query.message.chat.id, message_id)
         except Exception as e:
-            await logger.error(f"Не удалось удалить сообщение с ID {show_slow_internet_id}", e)
+            # Логирование ошибки, если сообщение не найдено
+            await logger.info(f"Не удалось удалить сообщение с ID {message_id}")
+
+    # Удаление сообщений с обработкой ошибок
+    if show_slow_internet_id:
+        await delete_message_safe(show_slow_internet_id)
+        await state.update_data(show_slow_internet_id=None)
 
     if previous_message_id:
-        try:
-            await callback_query.bot.delete_message(callback_query.message.chat.id, previous_message_id)
-            await state.update_data(text_dragons_overview_id=None)
-        except Exception as e:
-            await logger.error(f"Не удалось удалить сообщение с ID {previous_message_id}", e)
+        await delete_message_safe(previous_message_id)
+        await state.update_data(text_dragons_overview_id=None)
+
+    # Редактируем текущее сообщение
     name_app = callback_data.name_app
     subscription_id = callback_data.subscription_id
     await callback_query.message.edit_text(
@@ -38,6 +44,7 @@ async def back_to_device_selection(
             reply_markup=await InlineKeyboards.get_menu_install_app(name_app, subscription_id)
             )
     await callback_query.answer()
+
 
 
 @router.callback_query(SubscriptionCallbackFactory.filter())
@@ -49,6 +56,9 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Subs
     async with DatabaseContextManager() as session_methods:
         try:
             subsciption = await session_methods.subscription.get_subscription_by_id(subscription_id)
+            if not subsciption:
+                await callback_query.answer(LEXICON_RU["not_found_subscription"], show_alert=True, cache_time=5)
+
             user_key = subsciption.key
             show_guide_message = await callback_query.message.edit_text(
                     text=guide_install[name_app][name_device].format(key=user_key),

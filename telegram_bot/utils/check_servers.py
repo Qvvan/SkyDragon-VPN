@@ -2,10 +2,8 @@ import asyncio
 from datetime import datetime, timedelta
 
 from aiogram import Bot, Router
-from aiogram.client.session import aiohttp
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from config_data.config import PORT_X_UI, MY_SECRET_URL
 from database.context_manager import DatabaseContextManager
 from handlers.services.get_session_cookies import get_session_cookie
 from keyboards.kb_inline import ServerCallbackData

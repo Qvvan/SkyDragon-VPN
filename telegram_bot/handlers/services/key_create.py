@@ -15,20 +15,8 @@ class ServerUnavailableError(Exception):
 
 
 class BaseKeyManager:
-    def __init__(self, server_ip, session_cookie):
+    def __init__(self, server_ip):
         self.server_ip = server_ip
-        self.headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Encoding": "gzip, deflate, br, zstd",
-            "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Connection": "keep-alive",
-            "Cookie": f"lang=ru-RU; 3x-ui={session_cookie}",
-            "Origin": f"https://{server_ip}:{PORT_X_UI}",
-            "Referer": f"https://{server_ip}:{PORT_X_UI}/{MY_SECRET_URL}/panel/inbounds",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
-            "X-Requested-With": "XMLHttpRequest"
-        }
         self.base_url = f"https://{server_ip}:{PORT_X_UI}/{MY_SECRET_URL}/panel"
 
     @staticmethod
@@ -41,7 +29,8 @@ class BaseKeyManager:
 
     async def get_inbounds(self, session):
         list_api_url = f"{self.base_url}/inbound/list"
-        async with session.post(list_api_url, headers=self.headers, ssl=False) as response:
+        cookies = await get_session_cookie(self.server_ip)
+        async with session.post(list_api_url, cookies=cookies, ssl=False) as response:
             if response.status == 200:
                 return await response.json()
             else:
@@ -60,16 +49,14 @@ class BaseKeyManager:
         delete_api_url = f"{self.base_url}/api/inbounds/del/{key_id}"
 
         async with aiohttp.ClientSession() as session:
-            async with session.post(delete_api_url, headers=self.headers, ssl=False) as response:
+            cookies = await get_session_cookie(self.server_ip)
+            async with session.post(delete_api_url, cookies=cookies, ssl=False) as response:
                 if response.status == 200:
                     print(f"Key with ID {key_id} successfully deleted.")
                 elif response.status == 401:
                     # Получаем новый session_cookie
-                    session_cookie = await get_session_cookie(self.server_ip)
-                    # Обновляем заголовок Cookie
-                    self.headers["Cookie"] = f"lang=ru-RU; 3x-ui={session_cookie}"
-                    # Повторяем запрос с обновленной сессией
-                    async with session.post(delete_api_url, headers=self.headers, ssl=False) as retry_response:
+                    cookies = await get_session_cookie(self.server_ip)
+                    async with session.post(delete_api_url, cookies=cookies, ssl=False) as retry_response:
                         if retry_response.status == 200:
                             print(f"Key with ID {key_id} successfully deleted after refreshing session.")
                         else:
@@ -104,8 +91,8 @@ class BaseKeyManager:
 
         async with aiohttp.ClientSession() as session:
             try:
-                # Запрос текущего объекта
-                async with session.get(get_api_url, headers=self.headers, ssl=False) as response:
+                cookies = await get_session_cookie(self.server_ip)
+                async with session.get(get_api_url, cookies=cookies, ssl=False) as response:
                     if response.status != 200:
                         error_text = await response.text()
                         raise ValueError(f"Failed to fetch key with ID {key_id}: {response.status}, {error_text}")
@@ -136,16 +123,14 @@ class BaseKeyManager:
                 key_data["sniffing"] = json.dumps(key_data["sniffing"])
 
                 # Отправляем обновленный объект на сервер
-                async with session.post(update_api_url, headers=self.headers, json=key_data,
+                async with session.post(update_api_url, cookies=cookies, json=key_data,
                                         ssl=False) as update_response:
                     if update_response.status == 200:
                         print(f"Key with ID {key_id} successfully updated to {'enabled' if enable else 'disabled'}.")
                     elif update_response.status == 401:
-                        # Обновляем session_cookie и повторяем запрос
-                        session_cookie = await get_session_cookie(self.server_ip)
-                        self.headers["Cookie"] = f"lang=ru-RU; 3x-ui={session_cookie}"
+                        cookies = await get_session_cookie(self.server_ip)
 
-                        async with session.post(update_api_url, headers=self.headers, json=key_data,
+                        async with session.post(update_api_url, cookies=cookies, json=key_data,
                                                 ssl=False) as retry_response:
                             if retry_response.status == 200:
                                 print(f"Key with ID {key_id} successfully updated after refreshing session.")
@@ -170,12 +155,13 @@ class BaseKeyManager:
 
 
 class VlessKeyManager(BaseKeyManager):
-    def __init__(self, server_ip, session_cookie):
-        super().__init__(server_ip, session_cookie)
+    def __init__(self, server_ip):
+        super().__init__(server_ip)
         self.get_cert_api_url = f"https://{server_ip}:{PORT_X_UI}/{MY_SECRET_URL}/server/getNewX25519Cert"
 
     async def get_certificate(self, session):
-        async with session.post(self.get_cert_api_url, headers=self.headers, ssl=False) as response:
+        cookies = await get_session_cookie(self.server_ip)
+        async with session.post(self.get_cert_api_url, cookies=cookies, ssl=False) as response:
             if response.status == 200:
                 cert_data = await response.json()
                 if cert_data.get("success"):
@@ -188,85 +174,96 @@ class VlessKeyManager(BaseKeyManager):
                     status=response.status, message=await response.text()
                 )
 
-    async def create_vless_key(self, session, new_client, private_key, public_key, session_cookie):
+    async def create_vless_key(self, session, new_client, private_key, public_key):
         create_api_url = f"{self.base_url}/inbound/add"
-        headers_with_cookie = self.headers.copy()
-        headers_with_cookie["Cookie"] = f"lang=ru-RU; 3x-ui={session_cookie}"
 
-        port = self.generate_port()
-        short_id = uuid.uuid4().hex[:8]
-        new_vless_key_data = {
-            "up": 0,
-            "down": 0,
-            "total": 0,
-            "remark": new_client["remark"],
-            "enable": True,
-            "expiryTime": 0,
-            "listen": "",
-            "port": port,
-            "protocol": "vless",
-            "settings": json.dumps({
-                "clients": [new_client],
-                "decryption": "none",
-                "fallbacks": []
-            }),  # Сериализуем settings в JSON строку
-            "streamSettings": json.dumps({
-                "network": "tcp",
-                "security": "reality",
-                "externalProxy": [],  # Добавлено externalProxy
-                "realitySettings": {
-                    "show": False,
-                    "xver": 0,
-                    "dest": "google.com:443",
-                    "serverNames": ["google.com", "www.google.com"],
-                    "privateKey": private_key,
-                    "minClient": "",
-                    "maxClient": "",
-                    "maxTimediff": 0,
-                    "shortIds": [short_id, "d794e37acfc7557b", "4815a2", "af5b73d52b", "9f57", "d0", "faad19837e6869",
-                                 "ea39de6417ae"],
-                    "settings": {
-                        "publicKey": public_key,
-                        "fingerprint": "firefox",
-                        "serverName": "",
-                        "spiderX": "/"
+        while True:
+            cookies = await get_session_cookie(self.server_ip)
+
+            port = self.generate_port()
+            short_id = uuid.uuid4().hex[:8]
+
+            new_vless_key_data = {
+                "up": 0,
+                "down": 0,
+                "total": 0,
+                "remark": new_client["remark"],
+                "enable": True,
+                "expiryTime": 0,
+                "listen": "",
+                "port": port,
+                "protocol": "vless",
+                "settings": json.dumps({
+                    "clients": [new_client],
+                    "decryption": "none",
+                    "fallbacks": []
+                }),
+                "streamSettings": json.dumps({
+                    "network": "tcp",
+                    "security": "reality",
+                    "externalProxy": [],
+                    "realitySettings": {
+                        "show": False,
+                        "xver": 0,
+                        "dest": "google.com:443",
+                        "serverNames": ["google.com", "www.google.com"],
+                        "privateKey": private_key,
+                        "minClient": "",
+                        "maxClient": "",
+                        "maxTimediff": 0,
+                        "shortIds": [short_id, "d794e37acfc7557b", "4815a2", "af5b73d52b", "9f57", "d0",
+                                     "faad19837e6869", "ea39de6417ae"],
+                        "settings": {
+                            "publicKey": public_key,
+                            "fingerprint": "firefox",
+                            "serverName": "",
+                            "spiderX": "/"
+                        }
+                    },
+                    "tcpSettings": {
+                        "acceptProxyProtocol": False,
+                        "header": {"type": "none"}
                     }
-                },
-                "tcpSettings": {
-                    "acceptProxyProtocol": False,
-                    "header": {"type": "none"}
-                }
-            }),  # Сериализуем streamSettings в JSON строку
-            "sniffing": json.dumps({
-                "enabled": True,
-                "destOverride": ["http", "tls", "quic", "fakedns"],  # Добавлены дополнительные destOverride
-                "metadataOnly": False,
-                "routeOnly": False
-            }),  # Сериализуем sniffing в JSON строку
-            "allocate": json.dumps({
-                "strategy": "always",
-                "refresh": 5,
-                "concurrency": 3
-            })
-        }
+                }),
+                "sniffing": json.dumps({
+                    "enabled": True,
+                    "destOverride": ["http", "tls", "quic", "fakedns"],
+                    "metadataOnly": False,
+                    "routeOnly": False
+                }),
+                "allocate": json.dumps({
+                    "strategy": "always",
+                    "refresh": 5,
+                    "concurrency": 3
+                })
+            }
 
-        async with session.post(create_api_url, headers=headers_with_cookie, json=new_vless_key_data,
-                                ssl=False) as response:
-            if response.status != 200:
-                raise aiohttp.ClientResponseError(
-                    response.request_info, response.history,
-                    status=response.status, message=await response.text()
-                )
-            return await response.json(), port, short_id
+            try:
+                # Попытка отправить запрос с текущими данными
+                async with session.post(
+                        create_api_url,
+                        cookies=cookies,  # Используем актуальные куки
+                        json=new_vless_key_data,
+                        ssl=False
+                ) as response:
+                    if response.status == 200:
+                        # Если запрос успешен, возвращаем результат
+                        return await response.json(), port, short_id
+                    elif response.status == 400 and "port already in use" in await response.text().lower():
+                        print(f"Port {port} is already in use, trying a new port...")
+                        continue
+                    else:
+                        raise aiohttp.ClientResponseError(
+                            response.request_info, response.history,
+                            status=response.status, message=await response.text()
+                        )
+            except aiohttp.ClientError as e:
+                print(f"An error occurred during the request: {e}")
+                raise
 
     async def manage_vless_key(self, tg_id, username):
         async with aiohttp.ClientSession() as session:
             try:
-                # Получаем session_cookie для аутентификации
-                session_cookie = await get_session_cookie(self.server_ip)
-                if not session_cookie:
-                    raise ServerUnavailableError(f"Сервер недоступен: {self.server_ip}")
-
                 new_client = {
                     "id": self.generate_uuid(),
                     "flow": "xtls-rprx-vision",
@@ -285,7 +282,6 @@ class VlessKeyManager(BaseKeyManager):
                     new_client,
                     cert_data["privateKey"],
                     cert_data["publicKey"],
-                    session_cookie
                 )
                 key_id = response.get('obj', {}).get('id')
                 vless_link = self.generate_vless_link(
@@ -307,12 +303,14 @@ class VlessKeyManager(BaseKeyManager):
 
 
 class ShadowsocksKeyManager(BaseKeyManager):
-    async def create_shadowsocks_key(self, session, new_client, new_password, new_port, session_cookie):
+    async def create_shadowsocks_key(self, session, new_client, new_password, new_port):
         create_api_url = f"{self.base_url}/inbound/add"
-        headers_with_cookie = self.headers.copy()
-        headers_with_cookie["Cookie"] = f"lang=ru-RU; 3x-ui={session_cookie}"
 
         while True:
+            # Получаем (или обновляем) куки
+            cookies = await get_session_cookie(self.server_ip)
+
+            # Формируем данные для запроса
             new_ss_key_data = {
                 "up": 0,
                 "down": 0,
@@ -328,7 +326,7 @@ class ShadowsocksKeyManager(BaseKeyManager):
                     "password": new_password,
                     "network": "tcp,udp",
                     "clients": [new_client]
-                }),  # Сериализуем settings в JSON строку
+                }),
                 "streamSettings": json.dumps({
                     "network": "tcp",
                     "security": "none",
@@ -337,46 +335,53 @@ class ShadowsocksKeyManager(BaseKeyManager):
                         "header": {"type": "none"}
                     },
                     "externalProxy": []
-                }),  # Сериализуем streamSettings в JSON строку
+                }),
                 "sniffing": json.dumps({
                     "enabled": False,
                     "destOverride": ["http", "tls", "quic", "fakedns"],
                     "metadataOnly": False,
                     "routeOnly": False
-                }),  # Сериализуем sniffing в JSON строку
+                }),
                 "allocate": json.dumps({
                     "strategy": "always",
                     "refresh": 5,
                     "concurrency": 3
-                })  # Сериализуем allocate в JSON строку
+                })
             }
 
-            async with session.post(create_api_url, headers=headers_with_cookie, json=new_ss_key_data,
-                                    ssl=False) as response:
-                if response.status == 200:
-                    response_data = await response.json()
-                    response_data['password'] = new_password
-                    return response_data
-                elif response.status == 401:
-                    session_cookie = await get_session_cookie(self.server_ip)
-                    headers_with_cookie["Cookie"] = f"lang=ru-RU; 3x-ui={session_cookie}"
-                elif response.status == 400 and "port already in use" in await response.text().lower():
-                    new_port = self.generate_port()
-                    continue
-                else:
-                    raise aiohttp.ClientResponseError(
-                        response.request_info, response.history,
-                        status=response.status, message=await response.text()
-                    )
+            # Выполняем запрос
+            try:
+                async with session.post(
+                        create_api_url,
+                        cookies=cookies,
+                        json=new_ss_key_data,
+                        ssl=False
+                ) as response:
+                    if response.status == 200:
+                        response_data = await response.json()
+                        response_data['password'] = new_password
+                        return response_data
+                    elif response.status == 401:
+                        # Если ошибка авторизации, перезапрашиваем куки
+                        print("Cookies expired, re-authenticating...")
+                        cookies = await get_session_cookie(self.server_ip)
+                        if not cookies:
+                            raise Exception("Re-authentication failed.")
+                    elif response.status == 400 and "port already in use" in await response.text().lower():
+                        new_port = self.generate_port()
+                        continue
+                    else:
+                        raise aiohttp.ClientResponseError(
+                            response.request_info, response.history,
+                            status=response.status, message=await response.text()
+                        )
+            except aiohttp.ClientError as e:
+                print(f"An error occurred during the request: {e}")
+                raise
 
     async def manage_shadowsocks_key(self, tg_id, username):
         async with aiohttp.ClientSession() as session:
             try:
-                # Получаем session_cookie для аутентификации
-                session_cookie = await get_session_cookie(self.server_ip)
-                if not session_cookie:
-                    raise ServerUnavailableError(f"Сервер недоступен: {self.server_ip}")
-
                 new_port = self.generate_port()
                 new_password = uuid.uuid4().hex
                 method = "chacha20-ietf-poly1305"
@@ -393,8 +398,7 @@ class ShadowsocksKeyManager(BaseKeyManager):
                 }
 
                 # Используем session_cookie в create_shadowsocks_key
-                response = await self.create_shadowsocks_key(session, new_client, new_password, new_port,
-                                                             session_cookie)
+                response = await self.create_shadowsocks_key(session, new_client, new_password, new_port)
                 key_id = response.get('obj', {}).get('id')
                 return self.generate_ss_link(new_port, new_password, method, key_id), key_id
             except aiohttp.ClientResponseError as e:

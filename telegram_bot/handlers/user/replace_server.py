@@ -3,7 +3,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from database.context_manager import DatabaseContextManager
-from handlers.services.get_session_cookies import get_session_cookie
 from handlers.services.key_create import ShadowsocksKeyManager, VlessKeyManager, ServerUnavailableError
 from handlers.user.subs import show_user_subscriptions
 from keyboards.kb_inline import InlineKeyboards, ServerSelectCallback, \
@@ -138,14 +137,9 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
             old_key_id = subscription.key_id
             old_server_ip = subscription.server_ip
 
-            # Получаем session_cookie для нового сервера
-            session_cookie = await get_session_cookie(selected_server_ip)
-            if not session_cookie:
-                raise ServerUnavailableError(f"Сервер недоступен: {selected_server_ip}")
-
             # Генерируем новый ключ в зависимости от типа приложения
             if subscription.name_app == NameApp.OUTLINE:
-                shadowsocks_manager = ShadowsocksKeyManager(selected_server_ip, session_cookie)
+                shadowsocks_manager = ShadowsocksKeyManager(selected_server_ip)
                 key, key_id = await shadowsocks_manager.manage_shadowsocks_key(
                     tg_id=str(user_id),
                     username=username,
@@ -154,10 +148,8 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
                 # Удаляем старый ключ, если старый сервер и ключ существуют
                 if old_server_ip and old_key_id:
                     try:
-                        old_session_cookie = await get_session_cookie(old_server_ip)
-                        if old_session_cookie:
-                            old_manager = ShadowsocksKeyManager(old_server_ip, old_session_cookie)
-                            await old_manager.delete_key(old_key_id)
+                        old_manager = ShadowsocksKeyManager(old_server_ip)
+                        await old_manager.delete_key(old_key_id)
                     except ServerUnavailableError as e:
                         await logger.log_error(
                             f'Пользователь: @{callback_query.from_user.username}\n'
@@ -174,7 +166,7 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
                 )
 
             elif subscription.name_app == NameApp.VLESS:
-                vless_manager = VlessKeyManager(selected_server_ip, session_cookie)
+                vless_manager = VlessKeyManager(selected_server_ip)
                 key, key_id = await vless_manager.manage_vless_key(
                     tg_id=str(user_id),
                     username=username,
@@ -183,10 +175,8 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
                 # Удаляем старый ключ, если старый сервер и ключ существуют
                 if old_server_ip and old_key_id:
                     try:
-                        old_session_cookie = await get_session_cookie(old_server_ip)
-                        if old_session_cookie:
-                            old_manager = VlessKeyManager(old_server_ip, old_session_cookie)
-                            await old_manager.delete_key(old_key_id)
+                        old_manager = VlessKeyManager(old_server_ip)
+                        await old_manager.delete_key(old_key_id)
                     except ServerUnavailableError as e:
                         await logger.log_error(
                             f'Пользователь: @{callback_query.from_user.username}\n'

@@ -6,7 +6,6 @@ from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from database.context_manager import DatabaseContextManager
-from handlers.services.get_session_cookies import get_session_cookie
 from handlers.services.key_create import BaseKeyManager
 from keyboards.kb_inline import SubscriptionCallbackFactory, InlineKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
@@ -48,7 +47,7 @@ async def send_reminder(bot: Bot, sub, session_methods):
     try:
         keyboard = InlineKeyboardBuilder()
         keyboard.add(
-    InlineKeyboardButton(
+            InlineKeyboardButton(
                 text='⏳ Продлить подписку',
                 callback_data=SubscriptionCallbackFactory(
                     action='extend_subscription',
@@ -82,7 +81,8 @@ async def send_reminder(bot: Bot, sub, session_methods):
         )
     except Exception as e:
         await session_methods.session.rollback()
-        await logger.log_error(f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при отправке напоминания', e)
+        await logger.log_error(
+            f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при отправке напоминания', e)
 
 
 async def handle_expired_subscription(bot: Bot, sub, session_methods):
@@ -95,12 +95,12 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
         )
         keyboard = InlineKeyboardBuilder()
         keyboard.add(
-        InlineKeyboardButton(
-            text='⏳ Продлить подписку',
-            callback_data=SubscriptionCallbackFactory(
-                action='extend_subscription',
-                subscription_id=sub.subscription_id
-            ).pack(),
+            InlineKeyboardButton(
+                text='⏳ Продлить подписку',
+                callback_data=SubscriptionCallbackFactory(
+                    action='extend_subscription',
+                    subscription_id=sub.subscription_id
+                ).pack(),
             ),
             InlineKeyboardButton(
                 text="🎁 Пригласить друга",
@@ -118,8 +118,7 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
             pass
         user = await session_methods.users.get_user(sub.user_id)
         try:
-            session = await get_session_cookie(sub.server_ip)
-            await BaseKeyManager(server_ip=sub.server_ip, session_cookie=session).update_key_enable(sub.key_id, False)
+            await BaseKeyManager(server_ip=sub.server_ip).update_key_enable(sub.key_id, False)
         except:
             await logger.log_error(
                 f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при обновлении подписки',
@@ -131,7 +130,8 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
         )
     except Exception as e:
         await session_methods.session.rollback()
-        await logger.log_error(f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при обновлении подписки', e)
+        await logger.log_error(
+            f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при обновлении подписки', e)
 
 
 async def handle_subscription_deletion(sub, session_methods):
@@ -146,11 +146,11 @@ async def handle_subscription_deletion(sub, session_methods):
         await session_methods.session.commit()
         user = await session_methods.users.get_user(sub.user_id)
         try:
-            session = await get_session_cookie(sub.server_ip)
-            await BaseKeyManager(server_ip=sub.server_ip, session_cookie=session).delete_key(sub.key_id)
+            await BaseKeyManager(server_ip=sub.server_ip).delete_key(sub.key_id)
         except:
             await logger.log_error(
-                f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при удалении подписки', 'Не удалось удалить ключ')
+                f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при удалении подписки',
+                'Не удалось удалить ключ')
 
         keyboard = await InlineKeyboards.get_user_info(sub.user_id)
         await logger.log_info(
@@ -158,7 +158,8 @@ async def handle_subscription_deletion(sub, session_methods):
         )
     except Exception as e:
         await session_methods.session.rollback()
-        await logger.log_error(f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при удалении подписки', e)
+        await logger.log_error(
+            f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при удалении подписки', e)
 
 
 async def run_checker(bot: Bot):

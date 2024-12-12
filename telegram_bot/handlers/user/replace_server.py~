@@ -104,6 +104,9 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
     async with DatabaseContextManager() as session_methods:
         try:
             subscription = await session_methods.subscription.get_subscription_by_id(subscription_id)
+            if subscription is None:
+                await callback_query.answer(LEXICON_RU["not_found_subscription"], show_alert=True, cache_time=5)
+                return
             if subscription.status == SubscriptionStatusEnum.EXPIRED:
                 await callback_query.answer(LEXICON_RU["subscription_expired"], show_alert=True, cache_time=5)
                 return
@@ -135,14 +138,9 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
             old_key_id = subscription.key_id
             old_server_ip = subscription.server_ip
 
-            # Получаем session_cookie для нового сервера
-            session_cookie = await get_session_cookie(selected_server_ip)
-            if not session_cookie:
-                raise ServerUnavailableError(f"Сервер недоступен: {selected_server_ip}")
-
             # Генерируем новый ключ в зависимости от типа приложения
             if subscription.name_app == NameApp.OUTLINE:
-                shadowsocks_manager = ShadowsocksKeyManager(selected_server_ip, session_cookie)
+                shadowsocks_manager = ShadowsocksKeyManager(selected_server_ip)
                 key, key_id = await shadowsocks_manager.manage_shadowsocks_key(
                     tg_id=str(user_id),
                     username=username,
@@ -153,7 +151,7 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
                     try:
                         old_session_cookie = await get_session_cookie(old_server_ip)
                         if old_session_cookie:
-                            old_manager = ShadowsocksKeyManager(old_server_ip, old_session_cookie)
+                            old_manager = ShadowsocksKeyManager(old_server_ip)
                             await old_manager.delete_key(old_key_id)
                     except ServerUnavailableError as e:
                         await logger.log_error(

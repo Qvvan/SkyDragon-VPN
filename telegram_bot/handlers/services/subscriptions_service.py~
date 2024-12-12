@@ -208,7 +208,6 @@ class SubscriptionsService:
                     message, status='отмена', description=str(e), session_methods=session_methods
                 )
                 await session_methods.session.commit()
-                return
 
     @staticmethod
     async def send_success_response(message: Message, vpn_key: str, subscription_id):
