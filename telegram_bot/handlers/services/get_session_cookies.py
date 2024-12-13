@@ -53,8 +53,11 @@ async def make_request_with_cookies(server_ip):
 
     try:
         async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(url, cookies=cookies, ssl=False) as response:
-                return response.status == 200
+            try:
+                async with session.get(url, cookies=cookies, ssl=False) as response:
+                    return response.status == 200
+            except Exception as e:
+                await logger.info(f"Error making request: {e}")
     except aiohttp.ClientError as e:
         await logger.info(f"Error making request: {e}")
         await logger.log_error(f"Error making request with cookies", e)

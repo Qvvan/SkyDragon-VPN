@@ -12,7 +12,8 @@ DELAY = 3
 
 async def get_session_cookie(server_ip: str):
     if server_ip in cookies_store:
-
+        if await make_request_with_cookies(server_ip):
+            return cookies_store[server_ip]
 
     url = f"https://{server_ip}:{PORT_X_UI}/{MY_SECRET_URL}/login"
     payload = {
@@ -29,9 +30,6 @@ async def get_session_cookie(server_ip: str):
                         cookies = response.cookies
                         cookies_store[server_ip] = cookies
                         return cookies
-                    else:
-                        await logger.error()
-                        return None
         except asyncio.TimeoutError:
             await logger.info("Request timed out. Retrying...")
         except aiohttp.ClientError as e:
@@ -44,7 +42,7 @@ async def get_session_cookie(server_ip: str):
     return None
 
 
-async def make_request_with_cookies(server_ip, PORT_X_UI, MY_SECRET_URL):
+async def make_request_with_cookies(server_ip):
     cookies = cookies_store.get(server_ip)
     if not cookies:
         print(f"No cookies available for {server_ip}")
@@ -56,12 +54,9 @@ async def make_request_with_cookies(server_ip, PORT_X_UI, MY_SECRET_URL):
     try:
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(url, cookies=cookies, ssl=False) as response:
-                print(f"Request to {server_ip} responded with status: {response.status}")
-                if response.status == 200:
-                    print('тут все гуд')
-                    data = await response.text()
-                    return data
+                return response.status == 200
     except aiohttp.ClientError as e:
-        print(f"Request to {server_ip} failed: {e}")
+        await logger.info(f"Error making request: {e}")
+        await logger.log_error(f"Error making request with cookies", e)
 
     return None

@@ -8,7 +8,6 @@ from handlers.services.active_servers import get_active_server_and_key
 from handlers.services.create_subscription_service import SubscriptionService
 from handlers.services.create_transaction_service import TransactionService
 from handlers.services.extend_latest_subscription import NoAvailableServersError, extend_user_subscription
-from handlers.services.get_session_cookies import get_session_cookie
 from handlers.services.key_create import BaseKeyManager
 from keyboards.kb_inline import InlineKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
@@ -175,6 +174,14 @@ class SubscriptionsService:
                                 f"ID: {message.from_user.id}\n"
                                 f"Продлил подписку на {durations_days} дней"
                             )
+                            try:
+                                await SubscriptionsService.process_referral_bonus(
+                                    message.from_user.id,
+                                    message.from_user.username,
+                                    message.bot
+                                )
+                            except Exception:
+                                pass
                             return
                 raise NoActiveSubscriptionsError("Нет активных подписок")
 
@@ -241,10 +248,10 @@ class SubscriptionsService:
             try:
                 referrer_id = await session_methods.referrals.update_referral_status_if_invited(user_id)
                 if referrer_id:
-                    await extend_user_subscription(referrer_id, str(username), 23, session_methods)
+                    await extend_user_subscription(referrer_id, str(username), 15, session_methods)
                     await bot.send_message(referrer_id, LEXICON_RU['referrer_message'].format(username=username))
                     await logger.log_info(
-                        f"Пользователь с ID: {referrer_id} получает 23 дня подписки по приглашению: @{username}"
+                        f"Пользователь с ID: {referrer_id} получает 15 дня подписки по приглашению: @{username}"
                     )
                     await session_methods.session.commit()
             except Exception as error:

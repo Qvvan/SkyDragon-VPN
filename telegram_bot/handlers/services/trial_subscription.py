@@ -21,7 +21,7 @@ async def process_trial_subscription_callback(callback: CallbackQuery, state: FS
                 subscription = await extend_user_subscription(
                     user_id=user.user_id,
                     username=callback.from_user.username,
-                    days=7,
+                    days=5,
                     session_methods=session_methods,
                 )
                 await callback.answer(
@@ -38,7 +38,9 @@ async def process_trial_subscription_callback(callback: CallbackQuery, state: FS
                         )
                     )
                     await logger.log_info(
-                        f"Пользователь @{callback.from_user.username} активировал(а) пробную подписку")
+                        f"Пользователь @{callback.from_user.username}\n"
+                        f"ID: {callback.from_user.id}\n"
+                        f"Активировал(а) пробную подписку")
                     await session_methods.users.update_user(user_id=callback.from_user.id, trial_used=True)
                     await session_methods.session.commit()
             else:

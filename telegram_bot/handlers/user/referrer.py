@@ -59,7 +59,7 @@ async def show_referrals(callback: CallbackQuery):
             referral_details = []
             for referral in list_referrals:
                 invited_username = referral.invited_username or "Неизвестно"
-                days = 30 if referral.bonus_issued == ReferralStatus.SUBSCRIBED else 7
+                days = 20 if referral.bonus_issued == ReferralStatus.SUBSCRIBED else 5
                 referral_details.append(f"👤 @{invited_username} - Бонус: {days} дней")
 
             referral_text = "\n".join(referral_details)

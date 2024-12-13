@@ -63,7 +63,7 @@ async def handle_referral(referrer_id, message):
                     bonus_issued=ReferralStatus.INVITED,
                 )
             )
-            await extend_user_subscription(referrer_id, message.from_user.username, 7, session_methods)
+            await extend_user_subscription(referrer_id, message.from_user.username, 5, session_methods)
             await session_methods.session.commit()
         except Exception as e:
             await logger.log_error(f"Ошибка при начислении бонуса за приглашение: {referrer_id}", e)
