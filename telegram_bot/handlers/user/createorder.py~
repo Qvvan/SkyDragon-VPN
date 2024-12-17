@@ -126,7 +126,7 @@ async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallba
                     f"📋 *Услуга*: {service_list[service_id - 1]}\n"
                     f"💰 *Цена*: `{service.price} ₽`\n\n"
                 ),
-            reply_markup=await InlineKeyboards.card_pay(callback_data),
+                reply_markup=await InlineKeyboards.card_pay(callback_data),
                 parse_mode="Markdown"
             )
         except Exception as e:
@@ -134,3 +134,8 @@ async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallba
                                    f'ID: {callback_query.from_user.id}\n'
                                    f'При формирование кнопки оплаты произошла ошибка', e)
             await callback_query.message.edit_text(text="Что-то пошло не так, обратитесь в техподдержку")
+
+
+@router.callback_query(lambda c: c.data == 'empty')
+async def back_to_services(callback: CallbackQuery):
+    await callback.message.answer("Soon...")
