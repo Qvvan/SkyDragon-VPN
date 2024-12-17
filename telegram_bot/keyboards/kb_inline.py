@@ -166,7 +166,7 @@ class InlineKeyboards:
             [
                 InlineKeyboardButton(
                     text="Оплатить",
-                    callback_data="card_pay"
+                    callback_data="empty"
                 )
             ],
             [
