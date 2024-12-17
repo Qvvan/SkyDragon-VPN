@@ -23,9 +23,6 @@ class MessageLoggingMiddleware(BaseMiddleware):
             await logger.info(f"Пользователь {username} (ID: {user_id}) отправил сообщение: {event.text}")
             await last_visit(user_id)
 
-            sent_message = await event.answer("Пробуждение... 🔄", reply_markup=ReplyKeyboardRemove())
-            await sent_message.delete()
-
         return await handler(event, data)
 
 

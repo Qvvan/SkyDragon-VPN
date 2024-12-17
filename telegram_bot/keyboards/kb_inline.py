@@ -55,6 +55,12 @@ class ServerSelectCallback(CallbackData, prefix="servers"):
     server_name: str
 
 
+class StarsPayCallbackFactory(CallbackData, prefix="stars_pay"):
+    action: str
+    service_id: str
+    status_pay: str
+
+
 class GuideSelectCallback(CallbackData, prefix="guide"):
     action: str
     name_oc: str
@@ -88,7 +94,6 @@ class InlineKeyboards:
                     buttons.append(InlineKeyboardButton(text=service_name, callback_data=callback_data))
                 keyboard.row(*buttons)
 
-                # Добавляем кнопку "Назад" или "Отмена" в зависимости от аргумента
                 if back_target:
                     keyboard.row(
                         InlineKeyboardButton(text='🔙 Назад', callback_data=back_target)
@@ -140,14 +145,73 @@ class InlineKeyboards:
                 await logger.log_error(f'Произошла ошибка при формирование услуг', e)
 
     @staticmethod
-    async def create_pay(price) -> InlineKeyboardMarkup:
+    async def create_pay(callback_data, price) -> InlineKeyboardMarkup:
         keyboard = InlineKeyboardBuilder()
         keyboard.button(text=f"Оплатить {price} ⭐️", pay=True)
-        keyboard.button(text="🔙 Назад", callback_data="back_to_services")
+        keyboard.button(
+            text="🔙 Назад",
+            callback_data=ServiceCallbackFactory(
+                        service_id=callback_data.service_id,
+                        status_pay=callback_data.status_pay
+                    ).pack()
+            )
 
         keyboard.adjust(1, 2)
 
         return keyboard.as_markup()
+
+    @staticmethod
+    async def card_pay(callback_data):
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Оплатить",
+                    callback_data="card_pay"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 Назад",
+                    callback_data=ServiceCallbackFactory(
+                        service_id=callback_data.service_id,
+                        status_pay=callback_data.status_pay
+                    ).pack()
+                )
+            ]
+        ])
+        return keyboard
+
+    @staticmethod
+    async def payment_method(callback_data):
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="💳 Картой",
+                    callback_data=StarsPayCallbackFactory(
+                        action="card_pay",
+                        service_id=callback_data.service_id,
+                        status_pay=callback_data.status_pay
+                    ).pack()
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="✨ Звездами",
+                    callback_data=StarsPayCallbackFactory(
+                        action="stars_pay",
+                        service_id=callback_data.service_id,
+                        status_pay=callback_data.status_pay
+                    ).pack()
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 Назад",
+                    callback_data="back_to_services"
+                )
+            ]
+        ])
+        return keyboard
 
     @staticmethod
     async def get_support(callback_data: str = None) -> InlineKeyboardMarkup:

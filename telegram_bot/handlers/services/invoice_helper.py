@@ -1,7 +1,7 @@
 from aiogram.fsm.context import FSMContext
 from aiogram.types import LabeledPrice, Message
 
-from keyboards.kb_inline import InlineKeyboards
+from keyboards.kb_inline import InlineKeyboards, ServiceCallbackFactory
 from logger.logging_config import logger
 
 
@@ -14,7 +14,8 @@ async def send_invoice(
         duration_days: int,
         action: str,
         subscription_id: int = None,
-        state: FSMContext = None
+        state: FSMContext = None,
+        callback_data: ServiceCallbackFactory = None,
         ):
     try:
         prices = [LabeledPrice(label="XTR", amount=price)]
@@ -29,7 +30,7 @@ async def send_invoice(
                 prices=prices,
                 payload=f"{service_id}:{duration_days}:{action}:{subscription_id}",
                 currency="XTR",
-                reply_markup=await InlineKeyboards.create_pay(price),
+                reply_markup=await InlineKeyboards.create_pay(callback_data,price),
                 )
     except Exception as e:
         await logger.log_error(f"Ошибка при создании инвойса", e)

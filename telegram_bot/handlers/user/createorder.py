@@ -1,13 +1,13 @@
-from aiogram import Router
+from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 
 from database.context_manager import DatabaseContextManager
-from keyboards.kb_inline import InlineKeyboards, ServiceCallbackFactory, StatusPay
+from handlers.services.invoice_helper import send_invoice
+from keyboards.kb_inline import InlineKeyboards, ServiceCallbackFactory, StatusPay, StarsPayCallbackFactory
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
-from handlers.services.invoice_helper import send_invoice
 
 router = Router()
 
@@ -39,34 +39,14 @@ async def handle_subscribe(callback: CallbackQuery, state: FSMContext):
 
 
 @router.callback_query(ServiceCallbackFactory.filter())
-async def handle_service_callback(callback_query: CallbackQuery, callback_data: ServiceCallbackFactory, state: FSMContext):
-    service_id = int(callback_data.service_id)
-    status_pay = StatusPay(callback_data.status_pay)
-    await callback_query.message.delete()
-
-    async with DatabaseContextManager() as session_methods:
-        try:
-            service = await session_methods.services.get_service_by_id(service_id)
-            service_list = ["Краткосрочная мощь духа дракона, дарующая защиту на время одного полного круга луны.",
-                            "Щит древности, что бережёт вас в течение трёх смен времён года, словно хранитель древних тайн.",
-                            "Мистический амулет силы, надёжный на долгие месяцы, когда солнце и тьма сменяют друг друга.",
-                            "Легендарный защитник, символ вечной мощи, что оберегает вас весь круговорот времени, от зимы до лета."
-                            ]
-            await send_invoice(
-                message=callback_query.message,
-                price=service.price,
-                description=service_list[service_id - 1],
-                service_name=service.name,
-                service_id=service_id,
-                duration_days=service.duration_days,
-                action=status_pay.value,
-                state=state
-            )
-        except Exception as e:
-            await logger.log_error(f'Пользователь: @{callback_query.from_user.username}'
-                                   f'ID: {callback_query.from_user.id}\n'
-                                   f'При формирование кнопки оплаты произошла ошибка', e)
-            await callback_query.message.edit_text(text="Что-то пошло не так, обратитесь в техподдержку")
+async def handle_service_callback(callback_query: CallbackQuery, callback_data: ServiceCallbackFactory):
+    try:
+        await callback_query.message.edit_text("Выберите способ оплаты",
+                                               reply_markup=await InlineKeyboards.payment_method(callback_data))
+    except:
+        await callback_query.message.delete()
+        await callback_query.message.answer("Выберите способ оплаты",
+                                            reply_markup=await InlineKeyboards.payment_method(callback_data))
 
 
 @router.callback_query(lambda c: c.data == 'back_to_services')
@@ -95,3 +75,44 @@ async def back_to_services(callback: CallbackQuery, state: FSMContext):
         parse_mode="HTML"
     )
     await callback.message.delete()
+
+
+@router.callback_query(StarsPayCallbackFactory.filter(F.action == 'stars_pay'))
+async def stars_pay(callback_query: CallbackQuery, callback_data: ServiceCallbackFactory,
+                    state: FSMContext):
+    service_id = int(callback_data.service_id)
+    status_pay = StatusPay(callback_data.status_pay)
+    await callback_query.message.delete()
+    async with DatabaseContextManager() as session_methods:
+        try:
+            service = await session_methods.services.get_service_by_id(service_id)
+            service_list = ["Краткосрочная мощь духа дракона, дарующая защиту на время одного полного круга луны.",
+                            "Щит древности, что бережёт вас в течение трёх смен времён года, словно хранитель древних тайн.",
+                            "Мистический амулет силы, надёжный на долгие месяцы, когда солнце и тьма сменяют друг друга.",
+                            "Легендарный защитник, символ вечной мощи, что оберегает вас весь круговорот времени, от зимы до лета."
+                            ]
+            await send_invoice(
+                message=callback_query.message,
+                price=int(service.price / 2),
+                description=service_list[service_id - 1],
+                service_name=service.name,
+                service_id=service_id,
+                duration_days=service.duration_days,
+                action=status_pay.value,
+                state=state,
+                callback_data=callback_data
+            )
+        except Exception as e:
+            await logger.log_error(f'Пользователь: @{callback_query.from_user.username}'
+                                   f'ID: {callback_query.from_user.id}\n'
+                                   f'При формирование кнопки оплаты произошла ошибка', e)
+            await callback_query.message.edit_text(text="Что-то пошло не так, обратитесь в техподдержку")
+
+
+@router.callback_query(StarsPayCallbackFactory.filter(F.action == 'card_pay'))
+async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallbackFactory):
+    print(callback_data.status_pay)
+    await callback_query.message.edit_text(
+        text="Вы выбрали оплату картой, но мы ещё не готовы к этому, сорри :(",
+        reply_markup=await InlineKeyboards.card_pay(callback_data)
+    )

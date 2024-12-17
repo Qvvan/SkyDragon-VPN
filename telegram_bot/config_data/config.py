@@ -18,3 +18,6 @@ MY_SECRET_URL = env.str("MY_SECRET_URL", "mysecreturl")
 LOGIN_X_UI_PANEL = env.str("LOGIN_X_UI_PANEL", "admin")
 PASSWORD_X_UI_PANEL = env.str("PASSWORD_X_UI_PANEL", "admin")
 PORT_X_UI = env.int("PORT_X_UI", 54321)
+
+SHOP_ID = env.str("SHOP_ID")
+SHOP_API_TOKEN = env.str("SHOP_API_TOKEN")
