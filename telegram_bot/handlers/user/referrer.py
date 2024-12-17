@@ -1,3 +1,5 @@
+from datetime import datetime, date
+
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -59,7 +61,11 @@ async def show_referrals(callback: CallbackQuery):
             referral_details = []
             for referral in list_referrals:
                 invited_username = referral.invited_username or "Неизвестно"
-                days = 20 if referral.bonus_issued == ReferralStatus.SUBSCRIBED else 5
+                comparison_date = date(2024, 12, 13)
+                if referral.bonus_issued == ReferralStatus.INVITED:
+                    days = 5 if referral.created_at.date() > comparison_date else 7
+                elif referral.bonus_issued == ReferralStatus.SUBSCRIBED:
+                    days = 20 if referral.created_at.date() > comparison_date else 30
                 referral_details.append(f"👤 @{invited_username} - Бонус: {days} дней")
 
             referral_text = "\n".join(referral_details)
