@@ -49,12 +49,6 @@ class SubscriptionsService:
                 user_id = message.from_user.id
                 username = message.from_user.username
 
-                transaction_state = await TransactionService.create_transaction(
-                    message, 'successful', 'successful', session_methods
-                )
-                if not transaction_state:
-                    raise Exception("Ошибка сохранения транзакции")
-
                 # Получение активного сервера и создание Shadowsocks ключа
                 vless_manager, server_ip, key, key_id = await get_active_server_and_key(
                     user_id, username, session_methods
@@ -113,9 +107,6 @@ class SubscriptionsService:
                 if vless_manager and key_id:
                     await vless_manager.delete_key(key_id)
 
-                await TransactionService.create_transaction(
-                    message, status='отмена', description=str(e), session_methods=session_methods
-                )
                 await session_methods.session.commit()
 
     @staticmethod
@@ -137,12 +128,6 @@ class SubscriptionsService:
 
                 subs = await session_methods.subscription.get_subscription(message.from_user.id)
                 if subs:
-                    transaction_state = await TransactionService.create_transaction(
-                        message, 'successful', 'successful', session_methods
-                    )
-                    if not transaction_state:
-                        raise Exception("Ошибка сохранения транзакции")
-
                     for sub in subs:
                         if sub.subscription_id == subscription_id:
                             if datetime.now() > sub.end_date:
@@ -175,9 +160,11 @@ class SubscriptionsService:
                                 f"Продлил подписку на {durations_days} дней"
                             )
                             try:
-                                await SubscriptionsService.process_referral_bonus(message.from_user.id,
-                                                                                  message.from_user.username,
-                                                                                  message.bot)
+                                await SubscriptionsService.process_referral_bonus(
+                                    message.from_user.id,
+                                    message.from_user.username,
+                                    message.bot
+                                )
                             except Exception:
                                 pass
                             return
@@ -208,10 +195,6 @@ class SubscriptionsService:
                 await SubscriptionsService.refund_payment(message)
 
                 await session_methods.session.rollback()
-
-                await TransactionService.create_transaction(
-                    message, status='отмена', description=str(e), session_methods=session_methods
-                )
                 await session_methods.session.commit()
                 return
 
@@ -246,10 +229,10 @@ class SubscriptionsService:
             try:
                 referrer_id = await session_methods.referrals.update_referral_status_if_invited(user_id)
                 if referrer_id:
-                    await extend_user_subscription(referrer_id, str(username), 23, session_methods)
+                    await extend_user_subscription(referrer_id, str(username), 15, session_methods)
                     await bot.send_message(referrer_id, LEXICON_RU['referrer_message'].format(username=username))
                     await logger.log_info(
-                        f"Пользователь с ID: {referrer_id} получает 23 дня подписки по приглашению: @{username}"
+                        f"Пользователь с ID: {referrer_id} получает 15 дня подписки по приглашению: @{username}"
                     )
                     await session_methods.session.commit()
             except Exception as error:

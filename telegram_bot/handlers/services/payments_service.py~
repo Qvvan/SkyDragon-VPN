@@ -1,0 +1,25 @@
+from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
+from aiogram.types import Message, PreCheckoutQuery
+
+from handlers.services.subscriptions_service import SubscriptionsService
+
+router = Router()
+
+
+@router.pre_checkout_query()
+async def pre_checkout_query(query: PreCheckoutQuery):
+    await query.answer(ok=True)
+
+
+@router.message(F.successful_payment)
+async def successful_payment(message: Message, state: FSMContext):
+    payload = message.successful_payment.invoice_payload
+    service_id, durations_days, action, *rest = payload.split(':')
+    user_id = message.from_user.id
+    username = message.from_user.username
+    if action == 'new':
+        await SubscriptionsService.process_new_subscription(message.bot, user_id, username, int(service_id),
+                                                            int(durations_days))
+    elif action == 'old':
+        await SubscriptionsService.extend_sub_successful_payment(message, state)

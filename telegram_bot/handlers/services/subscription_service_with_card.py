@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
-from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram import Bot
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from database.context_manager import DatabaseContextManager
 from handlers.services.active_servers import get_active_server_and_key
@@ -18,37 +18,14 @@ class NoActiveSubscriptionsError(Exception):
     pass
 
 
-class SubscriptionsService:
-    """
-    Сервис для обработки подписок в системе.
-
-    Этот класс управляет процессом создания и продления подписок, а также обработкой транзакций.
-    """
-
+class SubscriptionsServiceCard:
     @staticmethod
-    async def process_new_subscription(message: Message):
-        """
-        Обрабатывает новую подписку при успешном платеже.
-
-        Принимает сообщение с информацией о платеже, создает транзакцию и подписку,
-        а затем отправляет пользователю уведомление с ключом доступа.
-
-        Args:
-            message (telegram.Message): Сообщение от Telegram, содержащее информацию о платеже.
-
-        Raises:
-            Exception: Если не удалось сохранить транзакцию или создать подписку.
-        """
+    async def process_new_subscription(bot: Bot, user_id: int, username: str, service_id: int):
         async with DatabaseContextManager() as session_methods:
             key_id = None
-
+            service = await session_methods.services.get_service_by_id(service_id)
+            durations_days = service.duration_days
             try:
-                in_payload = message.successful_payment.invoice_payload.split(':')
-                duration_date = in_payload[1]
-                user_id = message.from_user.id
-                username = message.from_user.username
-
-                # Получение активного сервера и создание Shadowsocks ключа
                 vless_manager, server_ip, key, key_id = await get_active_server_and_key(
                     user_id, username, session_methods
                 )
@@ -60,9 +37,6 @@ class SubscriptionsService:
                     )
                     raise NoAvailableServersError("нет доступных серверов")
 
-                # Создание подпискиы
-                service_id = int(in_payload[0])
-                durations_days = int(in_payload[1])
                 subscription_id = await SubscriptionService.create_subscription(
                     Subscriptions(
                         user_id=user_id,
@@ -79,27 +53,24 @@ class SubscriptionsService:
                 if not subscription_id:
                     raise Exception("Ошибка создания подписки")
 
-                # Коммит сессии после успешных операций
                 await session_methods.session.commit()
-                await SubscriptionsService.send_success_response(message, key, subscription_id)
+                await SubscriptionsServiceCard.send_success_response(bot, user_id, key, subscription_id)
                 await logger.log_info(f"Пользователь: @{username}\n"
                                       f"ID: {user_id}\n"
-                                      f"Оформил подписку на {duration_date} дней")
+                                      f"Оформил подписку на {durations_days} дней")
 
                 try:
-                    await SubscriptionsService.process_referral_bonus(user_id, username, message.bot)
+                    await SubscriptionsServiceCard.process_referral_bonus(user_id, username, bot)
                 except Exception:
                     pass
 
             except Exception as e:
                 if isinstance(e, NoAvailableServersError):
-                    await message.answer(text=LEXICON_RU['no_servers_available'])
+                    await bot.send_message(chat_id=user_id, text=LEXICON_RU['no_servers_available'])
                 else:
                     await logger.log_error(f"Пользователь: @{username}, ID {user_id}\nОшибка при обработке транзакции",
                                            e)
-                    await message.answer(text=LEXICON_RU['purchase_cancelled'])
-
-                await SubscriptionsService.refund_payment(message)
+                    await bot.send_message(chat_id=user_id, text=LEXICON_RU['purchase_cancelled'])
 
                 await session_methods.session.rollback()
 
@@ -109,23 +80,12 @@ class SubscriptionsService:
                 await session_methods.session.commit()
 
     @staticmethod
-    async def extend_sub_successful_payment(message: Message, state: FSMContext):
-        """
-        Обрабатывает успешное продление подписки для пользователя.
-
-        Args:
-            message (Message): Сообщение от Telegram, содержащее информацию о платеже.
-            state (FSMContext): Состояние для подписки, которую будем продлять.
-        """
+    async def extend_sub_successful_payment(bot: Bot, user_id, username, subscription_id, service_id):
         async with DatabaseContextManager() as session_methods:
             try:
-                in_payload = message.successful_payment.invoice_payload.split(':')
-                service_id = int(in_payload[0])
-                durations_days = int(in_payload[1])
-                user_data = await state.get_data()
-                subscription_id = int(user_data.get('subscription_id')) if user_data.get('subscription_id') else None
-
-                subs = await session_methods.subscription.get_subscription(message.from_user.id)
+                subs = await session_methods.subscription.get_subscription(user_id)
+                service = await session_methods.services.get_service_by_id(service_id)
+                durations_days = service.duration_days
                 if subs:
                     for sub in subs:
                         if sub.subscription_id == subscription_id:
@@ -142,7 +102,7 @@ class SubscriptionsService:
                                 reminder_sent=0
                             )
                             await session_methods.subscription_history.create_history_entry(
-                                user_id=message.from_user.id,
+                                user_id=user_id,
                                 service_id=sub.service_id,
                                 start_date=sub.start_date,
                                 end_date=new_end_date,
@@ -152,17 +112,17 @@ class SubscriptionsService:
                                 sub.key_id, True)
                             await logger.info(f"Успешно создана подписка {subscription_id}")
                             await session_methods.session.commit()
-                            await message.answer(text=LEXICON_RU['subscription_renewed'])
+                            await bot.send_message(chat_id=user_id, text=LEXICON_RU['subscription_renewed'])
                             await logger.log_info(
-                                f"Пользователь: @{message.from_user.username}\n"
-                                f"ID: {message.from_user.id}\n"
+                                f"Пользователь: @{username}\n"
+                                f"ID: {user_id}\n"
                                 f"Продлил подписку на {durations_days} дней"
                             )
                             try:
-                                await SubscriptionsService.process_referral_bonus(
-                                    message.from_user.id,
-                                    message.from_user.username,
-                                    message.bot
+                                await SubscriptionsServiceCard.process_referral_bonus(
+                                    user_id,
+                                    username,
+                                    bot
                                 )
                             except Exception:
                                 pass
@@ -171,56 +131,41 @@ class SubscriptionsService:
 
             except Exception as e:
                 if isinstance(e, NoActiveSubscriptionsError):
-                    await message.answer(
-                        text="У вас нет активных подписок\n\nОформите новую подписку",
-                        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                            [
-                                InlineKeyboardButton(
-                                    text="🐲 Оформить подписку",
-                                    callback_data="subscribe"
-                                )
-                            ]
-                        ])
-                    )
+                    await bot.send_message(chat_id=user_id,
+                                           text="У вас нет активных подписок\n\nОформите новую подписку",
+                                           reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                                               [
+                                                   InlineKeyboardButton(
+                                                       text="🐲 Оформить подписку",
+                                                       callback_data="subscribe"
+                                                   )
+                                               ]
+                                           ])
+                                           )
                 else:
-                    await message.answer(text=LEXICON_RU['purchase_cancelled'])
+                    await bot.send_message(chat_id=user_id, text=LEXICON_RU['purchase_cancelled'])
                 await logger.error("Ошибка при продление", e)
                 await logger.log_error(
-                    f"Пользователь: @{message.from_user.username}\n"
-                    f"ID: {message.from_user.id}\n"
+                    f"Пользователь: @{username}\n"
+                    f"ID: {user_id}\n"
                     f"Error during transaction processing", e
                 )
-
-                await SubscriptionsService.refund_payment(message)
 
                 await session_methods.session.rollback()
                 await session_methods.session.commit()
                 return
 
     @staticmethod
-    async def send_success_response(message: Message, vpn_key: str, subscription_id):
-        await message.answer(
-            text=LEXICON_RU[
-                     'purchase_thank_you'] + f'\nКлюч доступа VPN:\n<pre>{vpn_key}</pre>',
-            parse_mode="HTML",
-        )
-        await message.answer(
-            text=LEXICON_RU["choose_device"],
-            reply_markup=await InlineKeyboards.get_menu_install_app(NameApp.VLESS, subscription_id)
-        )
-
-    @staticmethod
-    async def refund_payment(message: Message):
-        """
-        Обрабатывает возврат платежа через Telegram.
-
-        Args:
-            message (telegram.Message): Сообщение от Telegram, содержащее информацию о платеже.
-        """
-        await message.bot.refund_star_payment(
-            message.from_user.id,
-            message.successful_payment.telegram_payment_charge_id
-        )
+    async def send_success_response(bot: Bot, user_id: int, vpn_key: str, subscription_id):
+        await bot.send_message(chat_id=user_id,
+                               text=LEXICON_RU[
+                                        'purchase_thank_you'] + f'\nКлюч доступа VPN:\n<pre>{vpn_key}</pre>',
+                               parse_mode="HTML",
+                               )
+        await bot.send_message(chat_id=user_id,
+                               text=LEXICON_RU["choose_device"],
+                               reply_markup=await InlineKeyboards.get_menu_install_app(NameApp.VLESS, subscription_id)
+                               )
 
     @staticmethod
     async def process_referral_bonus(user_id: int, username: str, bot):

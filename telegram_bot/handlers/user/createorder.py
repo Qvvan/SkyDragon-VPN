@@ -1,13 +1,15 @@
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
 from database.context_manager import DatabaseContextManager
+from handlers.services.card_service import create_payment
 from handlers.services.invoice_helper import send_invoice
 from keyboards.kb_inline import InlineKeyboards, ServiceCallbackFactory, StatusPay, StarsPayCallbackFactory
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
+from models.models import Payments
 
 router = Router()
 
@@ -110,30 +112,68 @@ async def stars_pay(callback_query: CallbackQuery, callback_data: ServiceCallbac
 
 
 @router.callback_query(StarsPayCallbackFactory.filter(F.action == 'card_pay'))
-async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallbackFactory):
-    service_list = ["Краткосрочная мощь духа дракона, дарующая защиту на время одного полного круга луны.",
-                    "Щит древности, что бережёт вас в течение трёх смен времён года, словно хранитель древних тайн.",
-                    "Мистический амулет силы, надёжный на долгие месяцы, когда солнце и тьма сменяют друг друга.",
-                    "Легендарный защитник, символ вечной мощи, что оберегает вас весь круговорот времени, от зимы до лета."
-                    ]
+async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallbackFactory, state: FSMContext):
+    service_list = [
+        "Краткосрочная мощь духа дракона, дарующая защиту на время одного полного круга луны.",
+        "Щит древности, что бережёт вас в течение трёх смен времён года, словно хранитель древних тайн.",
+        "Мистический амулет силы, надёжный на долгие месяцы, когда солнце и тьма сменяют друг друга.",
+        "Легендарный защитник, символ вечной мощи, что оберегает вас весь круговорот времени, от зимы до лета."
+    ]
+
     service_id = int(callback_data.service_id)
+    status_pay = StatusPay(callback_data.status_pay)
+    user_data = await state.get_data()
+    subscription_id = int(user_data.get('subscription_id')) if user_data.get('subscription_id') else None
     async with DatabaseContextManager() as session_methods:
         try:
             service = await session_methods.services.get_service_by_id(service_id)
+            payment_data = create_payment(
+                amount=service.price,
+                description=f"Оплата за услугу: {service.name}",
+                return_url="https://t.me/SkyDragonVPNBot",
+                service_id=service_id,
+                service_type=status_pay.value,
+                user_id=callback_query.from_user.id,
+                username=callback_query.from_user.username,
+                subscription_id=subscription_id
+            )
+
+            payment_url = payment_data['confirmation']['confirmation_url']
+            payment_id = payment_data['id']
+
+            payment_kb = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="Оплатить",
+                            url=payment_url
+                        )
+                    ]
+                ])
+
             await callback_query.message.edit_text(
                 text=(
                     f"*Защита {service.name}а на {service.duration_days} дней* 🕒\n\n"
                     f"📋 *Услуга*: {service_list[service_id - 1]}\n"
                     f"💰 *Цена*: `{service.price} ₽`\n\n"
+                    f"Нажмите на кнопку ниже для оплаты:"
                 ),
-                reply_markup=await InlineKeyboards.card_pay(callback_data),
+                reply_markup=payment_kb,
                 parse_mode="Markdown"
             )
+            await session_methods.payments.create_payments(
+                Payments(
+                    payment_id=payment_id,
+                    user_id=callback_query.from_user.id,
+                    service_id=service_id
+                )
+            )
+            await session_methods.session.commit()
         except Exception as e:
             await logger.log_error(f'Пользователь: @{callback_query.from_user.username}'
                                    f'ID: {callback_query.from_user.id}\n'
-                                   f'При формирование кнопки оплаты произошла ошибка', e)
-            await callback_query.message.edit_text(text="Что-то пошло не так, обратитесь в техподдержку")
+                                   f'Ошибка при создании платежа', e)
+            await callback_query.message.edit_text(text="Что-то пошло не так, обратитесь в техподдержку.")
 
 
 @router.callback_query(lambda c: c.data == 'empty')

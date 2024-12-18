@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, String, Integer, DateTime, Enum, BigInteger, ARRAY, Boolean
+from sqlalchemy import Column, String, Integer, DateTime, Enum, BigInteger, ARRAY, Boolean, DECIMAL
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -101,6 +101,18 @@ class Transactions(Base):
     description = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Payments(Base):
+    __tablename__ = 'payments'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    payment_id = Column(String, nullable=False, unique=True)
+    user_id = Column(BigInteger, nullable=False)
+    service_id = Column(Integer, nullable=True)
+    status = Column(String, nullable=False, default='pending')
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 
 class Servers(Base):

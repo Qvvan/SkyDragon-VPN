@@ -10,6 +10,7 @@ from database.init_db import DataBase
 from handlers.admin import add_server, user_info, unban_user, block_key, cancel, refund, del_key, \
     unblock_key, help_info, ban_user, pushes, show_servers, get_user_id
 from handlers.services import payments_service, guide_install, trial_subscription
+from handlers.services.card_service import payment_status_checker
 from handlers.user import subs, replace_server, replace_app, referrer, menu, just_message, stars
 from handlers.user import start, support, createorder
 from keyboards.set_menu import set_main_menu
@@ -100,6 +101,7 @@ async def main():
 
     asyncio.create_task(run_checker(bot))
     asyncio.create_task(ping_servers(bot))
+    asyncio.create_task(payment_status_checker(bot))
 
     await bot.delete_webhook(drop_pending_updates=True)
     try:
