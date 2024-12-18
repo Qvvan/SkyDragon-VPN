@@ -61,7 +61,7 @@ class PaymentsMethods:
             await logger.log_error(f"Error updating payment status", e)
             return False
 
-    async def delete_payment(self, payment_id: int):
+    async def delete_payment(self, payment_id: str):
         try:
             payment = await self.session.get(Payments, payment_id)
             if payment:
