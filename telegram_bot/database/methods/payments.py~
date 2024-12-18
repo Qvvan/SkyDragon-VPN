@@ -63,11 +63,13 @@ class PaymentsMethods:
 
     async def delete_payment(self, payment_id: str):
         try:
+            # Поиск платежа по `payment_id`
             result = await self.session.execute(select(Payments).where(Payments.payment_id == payment_id))
             payment = result.scalars().first()
 
             if payment:
                 await self.session.delete(payment)
+                await self.session.commit()
                 return True
             return False
         except SQLAlchemyError as e:
