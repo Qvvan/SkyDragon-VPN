@@ -138,4 +138,4 @@ async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallba
 
 @router.callback_query(lambda c: c.data == 'empty')
 async def back_to_services(callback: CallbackQuery):
-    await callback.answer("Soon...")
+    await callback.answer("Soon...", show_alert=True, cache_time=3)

@@ -32,7 +32,7 @@ async def check_subscriptions(bot: Bot):
 async def process_subscription(bot: Bot, sub, current_date, session_methods):
     days_since_expiration = (current_date - sub.end_date).days
     days_until_end = (sub.end_date - current_date).days
-    if days_until_end == 3 and not sub.reminder_sent:
+    if days_until_end == 2 and not sub.reminder_sent:
         await send_reminder(bot, sub, session_methods)
 
     elif sub.end_date < current_date and sub.status != SubscriptionStatusEnum.EXPIRED:
