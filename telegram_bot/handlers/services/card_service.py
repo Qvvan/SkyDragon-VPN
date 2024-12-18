@@ -9,7 +9,6 @@ from database.context_manager import DatabaseContextManager
 from handlers.services.subscription_service_with_card import SubscriptionsServiceCard
 from logger.logging_config import logger
 
-# Конфигурация Юкассы
 Configuration.account_id = SHOP_ID
 Configuration.secret_key = SHOP_API_TOKEN
 

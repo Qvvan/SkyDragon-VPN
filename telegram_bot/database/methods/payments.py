@@ -22,7 +22,7 @@ class PaymentsMethods:
             await logger.log_error(f"Ошибка получения списка платежей", e)
             return []
 
-    async def get_payment_by_id(self, payment_id: int):
+    async def get_payment_by_id(self, payment_id: str):
         try:
             result = await self.session.execute(
                 select(Payments).filter(Payments.payment_id == payment_id)
@@ -52,7 +52,7 @@ class PaymentsMethods:
             await logger.log_error(f"Error getting unpaid payments", e)
             return []
 
-    async def update_payment_status(self, payment_id: int, status: str):
+    async def update_payment_status(self, payment_id: str, status: str):
         try:
             stmt = update(Payments).where(Payments.payment_id == payment_id).values(status=status)
             await self.session.execute(stmt)

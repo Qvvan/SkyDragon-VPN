@@ -60,7 +60,6 @@ async def payment_status_checker(bot):
                         continue
 
                     payment_response = await check_payment_status(payment.payment_id)
-                    print(payment_response.__dict__)
                     if payment_response.status == 'succeeded':
                         user_id = payment.user_id
                         await session_methods.payments.update_payment_status(payment.payment_id, 'succeeded')
