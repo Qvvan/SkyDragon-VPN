@@ -72,6 +72,11 @@ class StatusPay(Enum):
     OLD = "old"
 
 
+class AutoRenewalCallbackFactory(CallbackData, prefix="auto_renewal"):
+    action: str
+    auto_renewal_enabled: Optional[bool] = None
+
+
 class InlineKeyboards:
     @staticmethod
     async def create_order_keyboards(status_pay: StatusPay, back_target: str = None) -> InlineKeyboardMarkup:
@@ -285,6 +290,12 @@ class InlineKeyboards:
                             action='get_guide_install_app',
                             subscription_id=subscription_id,
                             name_app=name_app
+                        ).pack()),
+                    InlineKeyboardButton(
+                        text='🔄 Автопродление',
+                        callback_data=AutoRenewalCallbackFactory(
+                            action='auto_renewal',
+                            auto_renewal_enabled=False
                         ).pack()),
                     InlineKeyboardButton(
                         text='🔙 Назад',

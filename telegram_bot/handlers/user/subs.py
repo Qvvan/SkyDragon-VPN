@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
 from database.context_manager import DatabaseContextManager
-from keyboards.kb_inline import InlineKeyboards, SubscriptionCallbackFactory, StatusPay
+from keyboards.kb_inline import InlineKeyboards, SubscriptionCallbackFactory, StatusPay, AutoRenewalCallbackFactory
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 
@@ -178,11 +178,13 @@ async def show_subscription_details(callback: CallbackQuery):
                 name_app = subscription.name_app
                 server_name = subscription.server_name
                 server_ip = subscription.server_ip
+                auto_renewal = False
 
                 detailed_info = (
                     f"<b>🐉 Статус подписки:</b> {'🐲 Дракон на страже' if status == 'активная' else '💀 Покровительство завершено'}\n"
                     f"<b>🌍 Локация VPN:</b> {server_name}\n"
                     f"<b>📅 Окончание подписки:</b> {end_date.strftime('%d-%m-%Y')}\n"
+                    f"<b>🔄 Автопродление:</b> {"✅" if auto_renewal else "❌"}\n"
                     f"<b>🐲🔑 Ключ:</b>\n"
                     f"<pre>{key}</pre>"
                 )
@@ -219,3 +221,34 @@ async def extend_subscription(callback: CallbackQuery, callback_data: Subscripti
         text=LEXICON_RU['createorder'],
         reply_markup=await InlineKeyboards.create_order_keyboards(StatusPay.OLD, f'view_details_{subscription_id}'),
     )
+
+
+@router.callback_query(AutoRenewalCallbackFactory.filter(F.action == 'auto_renewal'))
+async def toggle_auto_renewal(callback: CallbackQuery, callback_data: AutoRenewalCallbackFactory):
+    # Проверяем текущее состояние автопродления
+    is_auto_renewal_enabled = callback_data.auto_renewal_enabled
+
+    # Формируем текст сообщения
+    text = (
+        f"🔔 Автопродление подписки: {'✅ Включено' if is_auto_renewal_enabled else '❌ Отключено'}\n\n"
+        "Вы можете изменить статус автопродления, нажав на соответствующую кнопку ниже."
+    )
+
+    # Создаем клавиатуру
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="✔️ Включить" if not is_auto_renewal_enabled else "❌ Отключить",
+                callback_data=AutoRenewalCallbackFactory(
+                    action="off_or_on",
+                    auto_renewal_enabled=not is_auto_renewal_enabled).pack()
+            )
+        ]
+    ])
+
+    await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=keyboard)
+
+
+@router.callback_query(AutoRenewalCallbackFactory.filter(F.action == 'off_or_on'))
+async def toggle_auto_renewal(callback: CallbackQuery, callback_data: AutoRenewalCallbackFactory):
+    await callback.answer("Пока что эта функция не реализована.", show_alert=True, cache_time=5)
