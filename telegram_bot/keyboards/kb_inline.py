@@ -75,6 +75,7 @@ class StatusPay(Enum):
 class AutoRenewalCallbackFactory(CallbackData, prefix="auto_renewal"):
     action: str
     auto_renewal_enabled: Optional[bool] = None
+    subscription_id: Optional[int] = None
 
 
 class InlineKeyboards:
@@ -295,7 +296,8 @@ class InlineKeyboards:
                         text='🔄 Автопродление',
                         callback_data=AutoRenewalCallbackFactory(
                             action='auto_renewal',
-                            auto_renewal_enabled=False
+                            auto_renewal_enabled=False,
+                            subscription_id=subscription_id,
                         ).pack()),
                     InlineKeyboardButton(
                         text='🔙 Назад',

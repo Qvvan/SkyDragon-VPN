@@ -227,8 +227,8 @@ async def extend_subscription(callback: CallbackQuery, callback_data: Subscripti
 async def toggle_auto_renewal(callback: CallbackQuery, callback_data: AutoRenewalCallbackFactory):
     # Проверяем текущее состояние автопродления
     is_auto_renewal_enabled = callback_data.auto_renewal_enabled
+    subscription_id = callback_data.subscription_id
 
-    # Формируем текст сообщения
     text = (
         f"🔔 Автопродление подписки: {'✅ Включено' if is_auto_renewal_enabled else '❌ Отключено'}\n\n"
         "Вы можете изменить статус автопродления, нажав на соответствующую кнопку ниже."
@@ -242,6 +242,10 @@ async def toggle_auto_renewal(callback: CallbackQuery, callback_data: AutoRenewa
                 callback_data=AutoRenewalCallbackFactory(
                     action="off_or_on",
                     auto_renewal_enabled=not is_auto_renewal_enabled).pack()
+            ),
+            InlineKeyboardButton(
+                text='🔙 Назад',
+                callback_data=f'view_details_{subscription_id}'
             )
         ]
     ])
