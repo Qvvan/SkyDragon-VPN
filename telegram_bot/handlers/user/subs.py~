@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
 from database.context_manager import DatabaseContextManager
-from keyboards.kb_inline import InlineKeyboards, SubscriptionCallbackFactory, StatusPay
+from keyboards.kb_inline import InlineKeyboards, SubscriptionCallbackFactory, StatusPay, AutoRenewalCallbackFactory
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 
@@ -223,8 +223,8 @@ async def extend_subscription(callback: CallbackQuery, callback_data: Subscripti
     )
 
 
-@router.callback_query(SubscriptionCallbackFactory.filter(F.action == 'auto_renewal'))
-async def toggle_auto_renewal(callback: CallbackQuery, callback_data: SubscriptionCallbackFactory, state: FSMContext):
+@router.callback_query(AutoRenewalCallbackFactory.filter(F.action == 'auto_renewal'))
+async def toggle_auto_renewal(callback: CallbackQuery, callback_data: AutoRenewalCallbackFactory):
     # Проверяем текущее состояние автопродления
     is_auto_renewal_enabled = callback_data.auto_renewal_enabled
 
@@ -239,13 +239,16 @@ async def toggle_auto_renewal(callback: CallbackQuery, callback_data: Subscripti
         [
             InlineKeyboardButton(
                 text="✔️ Включить" if not is_auto_renewal_enabled else "❌ Отключить",
-                callback_data=SubscriptionCallbackFactory(action="auto_renewal",
-                                                          auto_renewal_enabled=not is_auto_renewal_enabled).pack()
+                callback_data=AutoRenewalCallbackFactory(
+                    action="off_or_on",
+                    auto_renewal_enabled=not is_auto_renewal_enabled).pack()
             )
         ]
     ])
 
     await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=keyboard)
 
-    # Логика изменения состояния автопродления в базе данных или другом хранилище
-    # Например: await update_auto_renewal_state(user_id=callback.from_user.id, enabled=not is_auto_renewal_enabled)
+
+@router.callback_query(AutoRenewalCallbackFactory.filter(F.action == 'off_or_on'))
+async def toggle_auto_renewal(callback: CallbackQuery, callback_data: AutoRenewalCallbackFactory):
+    await callback.answer("Пока что эта функция не реализована.", show_alert=True, cache_time=5)
