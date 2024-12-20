@@ -44,7 +44,7 @@ async def handle_subscribe(callback: CallbackQuery, state: FSMContext):
     back_target = data.get('back_target')
     async with DatabaseContextManager() as session_methods:
         try:
-            subs = await session_methods.subscription.get_subscription_by_id(callback.from_user.id)
+            subs = await session_methods.subscription.get_subscription(callback.from_user.id)
             if subs:
                 await callback.message.answer(
                     text="Мы заметили, что у вас уже есть подписка, может вы хотите продлить ее?",
