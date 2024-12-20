@@ -157,10 +157,10 @@ class InlineKeyboards:
         keyboard.button(
             text="🔙 Назад",
             callback_data=ServiceCallbackFactory(
-                        service_id=callback_data.service_id,
-                        status_pay=callback_data.status_pay
-                    ).pack()
-            )
+                service_id=callback_data.service_id,
+                status_pay=callback_data.status_pay
+            ).pack()
+        )
 
         keyboard.adjust(1, 2)
 
@@ -789,5 +789,24 @@ class InlineKeyboards:
                     )
                 ]
             ]
+        )
+        return keyboard
+
+    @staticmethod
+    async def create_or_extend():
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🐉 Мои подписки",
+                    callback_data="view_subs"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔥 Оформить подписку",
+                    callback_data="create_order"
+                )
+            ],
+        ],
         )
         return keyboard

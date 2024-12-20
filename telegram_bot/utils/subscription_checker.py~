@@ -86,7 +86,6 @@ async def send_reminder(bot: Bot, sub, session_methods):
 
 
 async def handle_expired_subscription(bot: Bot, sub, session_methods):
-    # TODO Переделать удаление ключа перед коммитом
     user = Users(username='None')
     try:
         await session_methods.subscription.update_sub(
