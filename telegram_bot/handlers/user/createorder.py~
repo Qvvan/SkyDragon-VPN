@@ -19,25 +19,49 @@ async def create_order(message: Message, state: FSMContext):
     async with DatabaseContextManager() as session_methods:
         try:
             subs = await session_methods.subscription.get_subscription_by_id(message.from_user.id)
+            await state.update_data(status_pay=StatusPay.NEW)
             if subs:
                 await message.answer(
                     text="Мы заметили, что у вас уже есть подписка, может вы хотите продлить ее?",
                     reply_markup=await InlineKeyboards.create_or_extend()
                 )
+            else:
+                await message.answer(
+                    text=LEXICON_RU['createorder'],
+                    reply_markup=await InlineKeyboards.create_order_keyboards(StatusPay.NEW),
+                    parse_mode="HTML"
+                )
         except Exception as e:
-            pass
-    await message.answer(
-        text=LEXICON_RU['createorder'],
-        reply_markup=await InlineKeyboards.create_order_keyboards(StatusPay.NEW),
-        parse_mode="HTML"
-    )
-
-    await state.update_data(status_pay=StatusPay.NEW)
+            await logger.log_error(f"Error creating order", e)
 
 
 @router.callback_query(lambda c: c.data == 'subscribe')
 async def handle_subscribe(callback: CallbackQuery, state: FSMContext):
     """Обработчик кнопки 'Оформить подписку' в главном меню."""
+    await callback.answer()
+
+    data = await state.get_data()
+    back_target = data.get('back_target')
+    async with DatabaseContextManager() as session_methods:
+        try:
+            subs = await session_methods.subscription.get_subscription_by_id(callback.from_user.id)
+            if subs:
+                await callback.message.answer(
+                    text="Мы заметили, что у вас уже есть подписка, может вы хотите продлить ее?",
+                    reply_markup=await InlineKeyboards.create_or_extend()
+                )
+            else:
+                await callback.message.edit_text(
+                    text=LEXICON_RU['createorder'],
+                    reply_markup=await InlineKeyboards.create_order_keyboards(StatusPay.NEW, back_target=back_target),
+                    parse_mode="HTML"
+                )
+        except Exception as e:
+            await logger.log_error(f"Error creating order", e)
+
+
+@router.callback_query(lambda c: c.data == 'create_order')
+async def handle_subscribe(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
     data = await state.get_data()
