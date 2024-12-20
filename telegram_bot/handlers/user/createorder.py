@@ -46,7 +46,7 @@ async def handle_subscribe(callback: CallbackQuery, state: FSMContext):
         try:
             subs = await session_methods.subscription.get_subscription(callback.from_user.id)
             if subs:
-                await callback.message.answer(
+                await callback.message.edit_text(
                     text="Мы заметили, что у вас уже есть подписка, может вы хотите продлить ее?",
                     reply_markup=await InlineKeyboards.create_or_extend()
                 )
