@@ -25,15 +25,7 @@ class GiftCallback(CallbackData, prefix="gift"):
 async def process_start_command(message: Message, state: FSMContext):
     await message.answer(
         text="Введите @username пользователя, которому вы хотите подарить подписку",
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="Отмена",
-                    callback_data="cancel"
-                )
-            ],
-        ])
+        parse_mode="Markdown"
     )
     await state.set_state(Gift.waiting_username)
 
