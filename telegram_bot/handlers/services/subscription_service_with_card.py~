@@ -209,7 +209,7 @@ class SubscriptionsServiceCard:
                         f"Пользователь: @{receiver_username}\n"
                         f"Получил подарок от пользователя: @{username}\n"
                         f"Подарок: {service.name} на {service.duration_days} дней\n\n"
-                        f"❕Но пока пользователь не зарегистрирован в нашем боте❗"
+                        f"Но пока пользователь не зарегистрирован в нашем боте"
                     )
                 else:
                     await session_methods.gifts.add_gift(Gifts(
