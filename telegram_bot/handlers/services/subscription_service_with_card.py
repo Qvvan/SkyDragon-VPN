@@ -203,8 +203,12 @@ class SubscriptionsServiceCard:
                     await extend_user_subscription(user.user_id, receiver_username, service.duration_days,
                                                    session_methods)
                     await bot.send_message(user.user_id,
-                                           f"Вам подарок от {'@' + username if username else 'Неизвестного пользователя'}"
-                                           f"\n\nЗащита {service.name}а на {service.duration_days} дней")
+                                           f"🎁 Вам подарок! 🎉\n\n"
+                                           f"Ваш друг {'@' + username if username else 'Неизвестный пользователь'} решил сделать вам приятный сюрприз! ✨\n\n"
+                                           f"💪 Защита {service.name}а на {service.duration_days} дней 🛡️\n\n"
+                                           f"🌐 Подписка уже активирована, для большей информации зайдите в /profile 🔒"
+                                           )
+
                     await session_methods.session.commit()
 
             except Exception as e:

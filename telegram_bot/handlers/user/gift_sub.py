@@ -42,7 +42,11 @@ async def process_start_command(message: Message, state: FSMContext):
 async def handle_know_more(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     await callback.message.edit_text(
-        text="Введите @username пользователя, которому вы хотите подарить подписку",
+        text=(
+            "🎁 *Введите @username пользователя, которому вы хотите подарить подписку* ✨\n\n"
+            "🔄 Если у пользователя уже есть активная подписка, она будет продлена автоматически! 🕒\n\n"
+            "Сделайте день этого пользователя особенным! 😊"
+        ),
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [
