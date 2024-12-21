@@ -21,10 +21,16 @@ async def create_order(message: Message, state: FSMContext):
             subs = await session_methods.subscription.get_subscription(message.from_user.id)
             await state.update_data(status_pay=StatusPay.NEW)
             if subs:
-                await message.answer(
-                    text="Мы заметили, что у вас уже есть подписка, может вы хотите продлить ее?",
-                    reply_markup=await InlineKeyboards.create_or_extend()
-                )
+                if len(subs) == 1:
+                    await message.answer(
+                        text="Мы заметили, что у вас уже есть подписка, может вы хотите продлить ее?",
+                        reply_markup=await InlineKeyboards.create_or_extend(subs[0].subscription_id)
+                    )
+                else:
+                    await message.answer(
+                        text="Мы заметили, что у вас несколько подписок, может вы хотите продлить какую-нибудь?",
+                        reply_markup=await InlineKeyboards.create_or_extend()
+                    )
             else:
                 await message.answer(
                     text=LEXICON_RU['createorder'],
@@ -46,10 +52,16 @@ async def handle_subscribe(callback: CallbackQuery, state: FSMContext):
         try:
             subs = await session_methods.subscription.get_subscription(callback.from_user.id)
             if subs:
-                await callback.message.edit_text(
-                    text="Мы заметили, что у вас уже есть подписка, может вы хотите продлить ее?",
-                    reply_markup=await InlineKeyboards.create_or_extend()
-                )
+                if len(subs) == 1:
+                    await callback.edit_text(
+                        text="Мы заметили, что у вас уже есть подписка, может вы хотите продлить ее?",
+                        reply_markup=await InlineKeyboards.create_or_extend(subs[0].subscription_id)
+                    )
+                else:
+                    await callback.edit_text(
+                        text="Мы заметили, что у вас несколько подписок, может вы хотите продлить какую-нибудь?",
+                        reply_markup=await InlineKeyboards.create_or_extend()
+                    )
             else:
                 await callback.message.edit_text(
                     text=LEXICON_RU['createorder'],
@@ -105,12 +117,15 @@ async def back_to_services(callback: CallbackQuery, state: FSMContext):
     except ValueError:
         status_pay = StatusPay.NEW
 
-    await callback.message.answer(
-        text=LEXICON_RU['createorder'],
-        reply_markup=await InlineKeyboards.create_order_keyboards(status_pay),
-        parse_mode="HTML"
-    )
-    await callback.message.delete()
+    try:
+        await callback.message.answer(
+            text=LEXICON_RU['createorder'],
+            reply_markup=await InlineKeyboards.create_order_keyboards(status_pay),
+            parse_mode="HTML"
+        )
+        await callback.message.delete()
+    except Exception as e:
+        await logger.log_error(f"Ошибка: Невозможно удалить сообщение", e)
 
 
 @router.callback_query(StarsPayCallbackFactory.filter(F.action == 'stars_pay'))

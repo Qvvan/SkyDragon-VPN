@@ -793,7 +793,7 @@ class InlineKeyboards:
         return keyboard
 
     @staticmethod
-    async def create_or_extend(subscription_id: int = None):
+    async def create_or_extend(subscription_id: int):
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -801,7 +801,7 @@ class InlineKeyboards:
                     callback_data=SubscriptionCallbackFactory(
                         action='extend_subscription',
                         subscription_id=subscription_id
-                    ).pack()) if subscription_id else "view_subs"
+                    ).pack()),
             ],
             [
                 InlineKeyboardButton(
