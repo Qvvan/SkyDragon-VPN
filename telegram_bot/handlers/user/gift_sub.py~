@@ -177,13 +177,13 @@ async def handle_know_more(callback_query: CallbackQuery, callback_data: GiftCal
 
             await callback_query.message.edit_text(
                 text=(
-                    f"<b>Подарок для @{receiver_username}!</b> 🎁<br><br>"
-                    f"<b>Вы дарите защиту {service.name}а на {service.duration_days} дней</b> 🕒<br><br>"
-                    f"📋 <b>Услуга:</b> {service_list[service_id - 1]}<br>"
-                    f"💰 <b>Цена:</b> {service.price} ₽<br><br>"
+                    f"*Подарок для @{receiver_username}!* 🎁\n\n"
+                    f"*Вы дарите защиту {service.name}а на {service.duration_days} дней* 🕒\n\n"
+                    f"📋 *Услуга*: {service_list[service_id - 1]}\n"
+                    f"💰 *Цена*: `{service.price} ₽`\n\n"
                     f"Нажмите на кнопку ниже для оплаты. После оплаты @{receiver_username} сможет активировать подписку!"
                 ),
-                parse_mode="HTML",
+                parse_mode="Markdown",
                 reply_markup=payment_kb,
             )
             await session_methods.payments.create_payments(
