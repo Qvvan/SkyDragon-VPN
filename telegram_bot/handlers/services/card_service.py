@@ -6,6 +6,7 @@ from yookassa import Configuration, Payment
 
 from config_data.config import SHOP_ID, SHOP_API_TOKEN
 from database.context_manager import DatabaseContextManager
+from handlers.services.extend_latest_subscription import extend_user_subscription
 from handlers.services.subscription_service_with_card import SubscriptionsServiceCard
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
@@ -94,4 +95,12 @@ async def successful_payment(bot, payment_response):
                                                                      service_id)
     elif service_type == 'gift':
         await bot.send_message(chat_id=user_id, text=LEXICON_RU['gift_thank_you'])
+        async with DatabaseContextManager() as session_methods:
+            try:
+                await extend_user_subscription(user_id, username, service_id, session_methods)
+                await session_methods.session.commit()
+            except Exception as e:
+                await session_methods.session.rollback()
+                await logger.log_error(f"Пользователь: @{username}\nID: {user_id}\nError during transaction processing",
+                                       e)
         await SubscriptionsServiceCard.gift_for_friend(bot, user_id, username, receiver_username, service_id)

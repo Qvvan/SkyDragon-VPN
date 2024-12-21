@@ -202,7 +202,6 @@ class SubscriptionsServiceCard:
                 else:
                     await extend_user_subscription(user.user_id, receiver_username, service.duration_days,
                                                    session_methods)
-                    await bot.send_message(user_id, "Подписка успешно подарена!")
                     await bot.send_message(user.user_id,
                                            f"Вам подарок от {'@' + username if username else 'Неизвестного пользователя'}"
                                            f"\n\nЗащита {service.name}а на {service.duration_days} дней")
