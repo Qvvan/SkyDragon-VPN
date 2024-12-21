@@ -183,8 +183,8 @@ async def handle_know_more(callback_query: CallbackQuery, callback_data: GiftCal
                     f"💰 *Цена*: `{service.price} ₽`\n\n"
                     f"Нажмите на кнопку ниже для оплаты. После оплаты @{receiver_username} сможет активировать подписку!"
                 ),
+                parse_mode="Markdown",
                 reply_markup=payment_kb,
-                parse_mode="Markdown"
             )
             await session_methods.payments.create_payments(
                 Payments(
