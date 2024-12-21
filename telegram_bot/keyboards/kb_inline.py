@@ -794,21 +794,24 @@ class InlineKeyboards:
 
     @staticmethod
     async def create_or_extend(subscription_id: int = None):
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text='⏳ Продлить подписку',
-                    callback_data=SubscriptionCallbackFactory(
-                        action='extend_subscription',
-                        subscription_id=subscription_id
-                    ).pack()) if subscription_id else "view_subs"
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🔥 Оформить подписку",
-                    callback_data="create_order"
-                )
-            ],
-        ],
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text='⏳ Продлить подписку',
+                        callback_data=SubscriptionCallbackFactory(
+                            action='extend_subscription',
+                            subscription_id=subscription_id
+                        ).pack() if subscription_id else "view_subs"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="🔥 Оформить подписку",
+                        callback_data="create_order"
+                    )
+                ],
+            ]
         )
         return keyboard
+
