@@ -42,7 +42,7 @@ class SubscriptionCallbackFactory(CallbackData, prefix="subscription"):
     action: str
     subscription_id: Optional[int] = None
     name_app: Optional[str] = None
-    back: str = None
+    back: Optional[str] = None
 
 
 class ReplaceServerCallbackFactory(CallbackData, prefix="serv"):
@@ -617,13 +617,7 @@ class InlineKeyboards:
             ],
             [
                 InlineKeyboardButton(
-                    text="🧿 Сменить приложение",
-                    callback_data="faq_change_app"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="💎 Оформить подписку",
+                    text="🔥 Оформить подписку",
                     callback_data="faq_payment"
                 )
             ],

@@ -65,15 +65,6 @@ async def handle_change_territory(callback: CallbackQuery):
     )
 
 
-@router.callback_query(lambda c: c.data == 'faq_change_app')
-async def handle_change_app(callback: CallbackQuery):
-    await callback.answer()
-    await callback.message.edit_text(
-        text=LEXICON_RU["faq_change_app"],
-        reply_markup=await InlineKeyboards.get_back_to_faq_keyboard('faq_change_app')
-    )
-
-
 @router.callback_query(lambda c: c.data == 'faq_payment')
 async def handle_payment(callback: CallbackQuery):
     await callback.answer()
