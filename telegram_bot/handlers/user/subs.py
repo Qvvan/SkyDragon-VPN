@@ -160,7 +160,7 @@ async def show_user_subscriptions(user_id, username, message, state: FSMContext)
 
 
 @router.callback_query(lambda c: c.data.startswith("view_details_"))
-async def show_subscription_details(callback: CallbackQuery):
+async def show_subscription_details(callback: CallbackQuery, state: FSMContext):
     subscription_id = int(callback.data.split("_")[2])
 
     await callback.answer()
@@ -184,7 +184,7 @@ async def show_subscription_details(callback: CallbackQuery):
                     f"<b>🐲🔑 Ключ:</b>\n"
                     f"<pre>{key}</pre>"
                 )
-
+                await state.update_data(back_target=f"view_details_{subscription_id}")
                 # Клавиатура для управления подпиской
                 await callback.message.edit_text(
                     text=detailed_info,
@@ -196,9 +196,10 @@ async def show_subscription_details(callback: CallbackQuery):
                                    f"ID: {callback.from_user.id}\n", e)
 
 
-@router.callback_query(SubscriptionCallbackFactory.filter(F.action == 'extend_subscription'))
+@router.callback_query(SubscriptionCallbackFactory.filter(F.action == 'extend_sub'))
 async def extend_subscription(callback: CallbackQuery, callback_data: SubscriptionCallbackFactory, state: FSMContext):
     subscription_id = callback_data.subscription_id
+    back = callback_data.back
     await callback.answer()
 
     data = await state.get_data()
@@ -215,7 +216,7 @@ async def extend_subscription(callback: CallbackQuery, callback_data: Subscripti
 
     await callback.message.edit_text(
         text=LEXICON_RU['createorder'],
-        reply_markup=await InlineKeyboards.create_order_keyboards(StatusPay.OLD, f'view_details_{subscription_id}'),
+        reply_markup=await InlineKeyboards.create_order_keyboards(StatusPay.OLD, back),
     )
 
 

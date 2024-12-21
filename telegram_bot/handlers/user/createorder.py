@@ -6,7 +6,8 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from database.context_manager import DatabaseContextManager
 from handlers.services.card_service import create_payment
 from handlers.services.invoice_helper import send_invoice
-from keyboards.kb_inline import InlineKeyboards, ServiceCallbackFactory, StatusPay, StarsPayCallbackFactory
+from keyboards.kb_inline import InlineKeyboards, ServiceCallbackFactory, StatusPay, StarsPayCallbackFactory, \
+    DefaultCallback
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 from models.models import Payments
@@ -50,6 +51,7 @@ async def handle_subscribe(callback: CallbackQuery, state: FSMContext):
     # data = await state.get_data()
     # back_target = data.get('back_target')
     back_target = "subscribe"
+    await state.update_data(back_target='subscribe')
     async with DatabaseContextManager() as session_methods:
         try:
             subs = await session_methods.subscription.get_subscription(callback.from_user.id)
@@ -74,12 +76,11 @@ async def handle_subscribe(callback: CallbackQuery, state: FSMContext):
             await logger.log_error(f"Error creating order", e)
 
 
-@router.callback_query(lambda c: c.data == 'create_order')
-async def handle_subscribe(callback: CallbackQuery, state: FSMContext):
+@router.callback_query(DefaultCallback.filter(F.action == "create_order"))
+async def handle_subscribe(callback: CallbackQuery, callback_data: DefaultCallback):
     await callback.answer()
 
-    data = await state.get_data()
-    back_target = data.get('back_target')
+    back_target = callback_data.back
 
     await callback.message.edit_text(
         text=LEXICON_RU['createorder'],
@@ -89,14 +90,22 @@ async def handle_subscribe(callback: CallbackQuery, state: FSMContext):
 
 
 @router.callback_query(ServiceCallbackFactory.filter())
-async def handle_service_callback(callback_query: CallbackQuery, callback_data: ServiceCallbackFactory):
+async def handle_service_callback(callback_query: CallbackQuery, callback_data: ServiceCallbackFactory,
+                                  state: FSMContext):
+    user_data = await state.get_data()
+    subscription_id = int(user_data.get('subscription_id')) if user_data.get('subscription_id') else None
+    back_target = user_data.get('back_target')
     try:
         await callback_query.message.edit_text("Выберите способ оплаты",
-                                               reply_markup=await InlineKeyboards.payment_method(callback_data))
+                                               reply_markup=await InlineKeyboards.payment_method(callback_data,
+                                                                                                 subscription_id,
+                                                                                                 back_target))
     except:
         await callback_query.message.delete()
         await callback_query.message.answer("Выберите способ оплаты",
-                                            reply_markup=await InlineKeyboards.payment_method(callback_data))
+                                            reply_markup=await InlineKeyboards.payment_method(callback_data,
+                                                                                              subscription_id,
+                                                                                              back_target))
 
 
 @router.callback_query(lambda c: c.data == 'back_to_services')
@@ -109,8 +118,8 @@ async def back_to_services(callback: CallbackQuery, state: FSMContext):
         try:
             await callback.bot.delete_message(callback.message.chat.id, show_stars_guide)
             await state.update_data(show_slow_internet_id=None)
-        except Exception as e:
-            await logger.error(f"Не удалось удалить сообщение с ID {show_stars_guide}", e)
+        except:
+            await logger.info(f"Не удалось удалить сообщение с ID {show_stars_guide}")
 
     status_pay_value = user_data.get('status_pay', StatusPay.NEW.value)
 
@@ -199,7 +208,16 @@ async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallba
                             text="Оплатить",
                             url=payment_url
                         )
-                    ]
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            text="🔙 Назад",
+                            callback_data=ServiceCallbackFactory(
+                                service_id=str(service_id),
+                                status_pay=status_pay.value
+                            ).pack()
+                        )
+                    ],
                 ])
 
             await callback_query.message.edit_text(

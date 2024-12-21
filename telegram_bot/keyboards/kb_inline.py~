@@ -828,7 +828,7 @@ class InlineKeyboards:
                 [
                     InlineKeyboardButton(
                         text="🌌 Главное меню",
-                        callback_data='main_menu'
+                        callback_data='back_to_start'
                     )
                 ]
             ]
