@@ -54,7 +54,7 @@ async def get_new_gift(gifts, message):
             for gift in gifts:
                 if gift.status == "used":
                     continue
-                user = await session_methods.users.get_user(gift.user_id)
+                giver = await session_methods.users.get_user(gift.giver_id)
                 service = await session_methods.services.get_service_by_id(gift.service_id)
                 await extend_user_subscription(message.from_user.id, message.from_user.username, service.duration_days,
                                                session_methods)
@@ -62,8 +62,16 @@ async def get_new_gift(gifts, message):
                                                         activated_at=datetime.utcnow())
                 await message.answer(
                     text="У вас есть новый подарок! 🎁\n\n"
-                         f"От {'@' + user.username if user.username else 'Неизвестного пользователя'}:\n"
+                         f"От {'@' + giver.username if giver.username else 'Неизвестного пользователя'}:\n"
                          f"{service.name} на {service.duration_days} дней",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text="🐉 Мои подписки",
+                                callback_data="view_subs"
+                            )
+                        ],
+                    ])
                 )
                 await session_methods.session.commit()
         except Exception as e:

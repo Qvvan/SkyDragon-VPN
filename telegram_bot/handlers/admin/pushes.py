@@ -3,6 +3,7 @@ import asyncio
 from aiogram import Router, types
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from database.context_manager import DatabaseContextManager
 from keyboards.kb_inline import UserPaginationCallback, InlineKeyboards, UserSelectCallback
@@ -111,20 +112,30 @@ async def send_notification(callback_query: types.CallbackQuery, state: FSMConte
         await callback_query.answer("Текст уведомления отсутствует. Пожалуйста, задайте текст перед отправкой.",
                                     show_alert=True)
         return
-    await callback_query.answer("Начинаю рассылку...", show_alert=False)
+    await callback_query.answer("Начинаю рассылку...", show_alert=False, cache_time=3)
     count = 0
     successful_user_ids = []
 
     for user in selected_users:
         try:
-            await callback_query.bot.send_message(chat_id=user['user_id'], text=message_text)
-            successful_user_ids.append(user['user_id'])  # Сохраняем ID успешного отправления
+            await callback_query.bot.send_message(
+                chat_id=user['user_id'],
+                text=message_text,
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                                [
+                                    InlineKeyboardButton(
+                                        text="🎁 Подарить подписку",
+                                        callback_data="gift_sub"
+                                    )
+                                ],
+                            ])
+            )
+            successful_user_ids.append(user['user_id'])
             count += 1
             await asyncio.sleep(0.1)
         except Exception as e:
             await callback_query.message.answer(f"Ошибка при отправке пользователю {user['user_id']}: {e}")
 
-    # Отправляем уведомление об успешной рассылке
     await callback_query.answer(f"Уведомление отправлено {count} пользователям.", show_alert=True, cache_time=3)
     await callback_query.message.edit_text('Готово 🎉\n')
 

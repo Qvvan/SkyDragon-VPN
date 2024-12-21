@@ -24,7 +24,11 @@ class GiftCallback(CallbackData, prefix="gift"):
 @router.message(Command(commands="gift_sub"))
 async def process_start_command(message: Message, state: FSMContext):
     await message.answer(
-        text="Введите @username пользователя, которому вы хотите подарить подписку",
+        text=(
+            "🎁 *Введите @username пользователя, которому хотите подарить подписку* ✨\n\n"
+            "🔄 Активная подписка будет продлена, а новая — активируется при входе пользователя! 🕒\n\n"
+            "Сделайте этот день особенным! 😊"
+        ),
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [

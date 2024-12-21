@@ -196,9 +196,16 @@ class SubscriptionsServiceCard:
                 if not user:
                     await session_methods.gifts.add_gift(Gifts(
                         giver_id=user_id,
-                        receiver_id=user_id,
+                        receiver_username=receiver_username,
                         service_id=service_id
                     ))
+                    await bot.send_message(
+                        user_id,
+                        "🎁 Этот пользователь пока не зарегистрирован в нашем боте.\n\n"
+                        "Как только он присоединится, подарок сразу станет доступным! ✨\n\n"
+                        "Спасибо за то, что делитесь радостью! 😊"
+                    )
+
                 else:
                     await extend_user_subscription(user.user_id, receiver_username, service.duration_days,
                                                    session_methods)
@@ -209,7 +216,7 @@ class SubscriptionsServiceCard:
                                            f"🌐 Подписка уже активирована, для большей информации зайдите в /profile 🔒"
                                            )
 
-                    await session_methods.session.commit()
+                await session_methods.session.commit()
 
             except Exception as e:
                 await session_methods.session.rollback()

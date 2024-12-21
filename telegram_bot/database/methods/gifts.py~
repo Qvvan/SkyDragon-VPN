@@ -39,7 +39,7 @@ class GiftsMethods:
 
     async def get_gift_by_username(self, username: str):
         try:
-            result = await self.session.execute(select(Gifts).filter_by(receiver_username=username))
+            result = await self.session.execute(select(Gifts).filter_by(username=username))
             gift = result.scalars().all()
             return gift
         except SQLAlchemyError as e:
