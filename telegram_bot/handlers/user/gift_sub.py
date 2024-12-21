@@ -69,7 +69,15 @@ async def handle_know_more(message: Message, state: FSMContext):
     if not username.startswith('@') or len(username) == 1:
         await message.answer(
             text="Неверный формат @username",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="Отмена",
+                        callback_data="cancel"
+                    )
+                ],
+            ])
         )
         return
     if username[1:] == message.from_user.username:
