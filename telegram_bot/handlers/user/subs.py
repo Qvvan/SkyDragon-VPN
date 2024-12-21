@@ -196,7 +196,7 @@ async def show_subscription_details(callback: CallbackQuery, state: FSMContext):
                                    f"ID: {callback.from_user.id}\n", e)
 
 
-@router.callback_query(SubscriptionCallbackFactory.filter(F.action == 'extend_sub'))
+@router.callback_query(SubscriptionCallbackFactory.filter(F.action == 'extend_subscription'))
 async def extend_subscription(callback: CallbackQuery, callback_data: SubscriptionCallbackFactory, state: FSMContext):
     subscription_id = callback_data.subscription_id
     back = callback_data.back

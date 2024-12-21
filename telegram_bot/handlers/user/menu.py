@@ -11,6 +11,7 @@ router = Router()
 
 @router.message(Command(commands="main_menu"))
 async def process_start_command(message: Message, state: FSMContext):
+    await state.clear()
     await state.update_data(back_target='main_menu')
     await message.answer(
             text=LEXICON_RU['main_menu'],

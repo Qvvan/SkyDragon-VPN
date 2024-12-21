@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from aiogram import Router
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
@@ -32,10 +34,40 @@ async def process_start_command(message: Message):
             )
             await session_methods.session.commit()
             if status_user:
+                gifts = await session_methods.gifts.get_gift_by_username(message.from_user.username)
+                if gifts:
+                    await get_new_gift(gifts, message)
                 await log_new_user(message)
                 if referrer_id:
                     await handle_referral(referrer_id, message)
         except Exception as e:
+            await logger.log_error(
+                f'Пользователь: @{message.from_user.username}\n'
+                f'ID: {message.from_user.id}\n'
+                f'При команде /start произошла ошибка:', e
+            )
+
+
+async def get_new_gift(gifts, message):
+    async with DatabaseContextManager() as session_methods:
+        try:
+            for gift in gifts:
+                if gift.status == "used":
+                    continue
+                user = await session_methods.users.get_user(gift.user_id)
+                service = await session_methods.services.get_service_by_id(gift.service_id)
+                await extend_user_subscription(message.from_user.id, message.from_user.username, service.duration_days,
+                                               session_methods)
+                await session_methods.gifts.update_gift(gift_id=gift.gift_id, status="used",
+                                                        activated_at=datetime.utcnow())
+                await message.answer(
+                    text="У вас есть новый подарок! 🎁\n\n"
+                         f"От {'@' + user.username if user.username else 'Неизвестного пользователя'}:\n"
+                         f"{service.name} на {service.duration_days} дней",
+                )
+                await session_methods.session.commit()
+        except Exception as e:
+            await session_methods.session.rollback()
             await logger.log_error(
                 f'Пользователь: @{message.from_user.username}\n'
                 f'ID: {message.from_user.id}\n'

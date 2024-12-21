@@ -11,7 +11,7 @@ from handlers.services.key_create import BaseKeyManager
 from keyboards.kb_inline import InlineKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
-from models.models import StatusSubscriptionHistory, SubscriptionStatusEnum, Subscriptions, NameApp
+from models.models import StatusSubscriptionHistory, SubscriptionStatusEnum, Subscriptions, NameApp, Gifts
 
 
 class NoActiveSubscriptionsError(Exception):
@@ -186,3 +186,32 @@ class SubscriptionsServiceCard:
                     error
                 )
         return True
+
+    @staticmethod
+    async def gift_for_friend(bot, user_id, username, receiver_username, service_id):
+        async with DatabaseContextManager() as session_methods:
+            try:
+                service = await session_methods.services.get_service_by_id(service_id)
+                user = await session_methods.users.get_user_by_username(receiver_username)
+                if not user:
+                    await session_methods.gifts.add_gift(Gifts(
+                        giver_id=user_id,
+                        receiver_id=user_id,
+                        service_id=service_id
+                    ))
+                else:
+                    await extend_user_subscription(user.user_id, receiver_username, service.duration_days,
+                                                   session_methods)
+                    await bot.send_message(user_id, "Подписка успешно подарена!")
+                    await bot.send_message(user.user_id,
+                                           f"Вам подарок от {'@' + username if username else 'Неизвестного пользователя'}"
+                                           f"\n\nЗащита {service.name}а на {service.duration_days} дней")
+                    await session_methods.session.commit()
+
+            except Exception as e:
+                await session_methods.session.rollback()
+                await logger.log_error(
+                    f"Пользователь: @{username}\n"
+                    f"ID: {user_id}\n"
+                    f"Error during transaction processing", e
+                )

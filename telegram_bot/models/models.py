@@ -115,6 +115,18 @@ class Payments(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 
+class Gifts(Base):
+    __tablename__ = 'gifts'
+
+    gift_id = Column(Integer, primary_key=True, autoincrement=True)
+    giver_id = Column(BigInteger, nullable=False, unique=True)
+    receiver_username = Column(String, nullable=False)
+    service_id = Column(Integer, nullable=True)
+    status = Column(String, nullable=False, default='pending')
+    activated_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 class Servers(Base):
     __tablename__ = 'servers'
 

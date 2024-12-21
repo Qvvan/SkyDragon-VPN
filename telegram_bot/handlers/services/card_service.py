@@ -7,6 +7,7 @@ from yookassa import Configuration, Payment
 from config_data.config import SHOP_ID, SHOP_API_TOKEN
 from database.context_manager import DatabaseContextManager
 from handlers.services.subscription_service_with_card import SubscriptionsServiceCard
+from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 
 Configuration.account_id = SHOP_ID
@@ -14,7 +15,7 @@ Configuration.secret_key = SHOP_API_TOKEN
 
 
 def create_payment(amount, description, return_url, service_id, service_type, user_id, username,
-                   subscription_id: int = None):
+                   subscription_id: int = None, receiver_username: str = None):
     payment = Payment.create(
         {
             "amount": {
@@ -33,6 +34,7 @@ def create_payment(amount, description, return_url, service_id, service_type, us
                 "service_type": service_type,
                 "user_id": user_id,
                 "username": username,
+                "receiver_username": receiver_username,
                 "subscription_id": subscription_id
             }
         }
@@ -78,6 +80,7 @@ async def successful_payment(bot, payment_response):
     service_type = metadata.get("service_type")
     user_id = int(metadata.get("user_id"))
     username = metadata.get("username")
+    receiver_username = metadata.get("receiver_username")
     subscription_id = metadata.get("subscription_id")
 
     if subscription_id is not None:
@@ -89,3 +92,6 @@ async def successful_payment(bot, payment_response):
     elif service_type == 'old':
         await SubscriptionsServiceCard.extend_sub_successful_payment(bot, user_id, username, subscription_id,
                                                                      service_id)
+    elif service_type == 'gift':
+        await bot.send_message(chat_id=user_id, text=LEXICON_RU['gift_thank_you'])
+        await SubscriptionsServiceCard.gift_for_friend(bot, user_id, username, receiver_username, service_id)

@@ -15,7 +15,7 @@ async def process_start_command(message: Message, state: FSMContext):
     await message.answer(
             text=LEXICON_RU['main_menu'],
             reply_markup=await InlineKeyboards.main_menu(),
-            parse_mode="MarkDown "
+            parse_mode="Markdown"
             )
 
 
@@ -24,7 +24,7 @@ async def handle_know_more(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     await state.update_data(back_target='main_menu')
     await callback.message.edit_text(
-            text=LEXICON_RU['start'],
+            text=LEXICON_RU['main_menu'],
             reply_markup=await InlineKeyboards.main_menu(),
             parse_mode="Markdown"
             )

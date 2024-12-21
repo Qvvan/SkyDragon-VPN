@@ -220,7 +220,7 @@ class InlineKeyboards:
                 InlineKeyboardButton(
                     text="🔙 Назад",
                     callback_data=SubscriptionCallbackFactory(
-                        action='extend_sub',
+                        action='extend_subscription',
                         subscription_id=subscription_id,
                         back=back_target
                     ).pack()
@@ -291,7 +291,7 @@ class InlineKeyboards:
                     InlineKeyboardButton(
                         text='⏳ Продлить подписку',
                         callback_data=SubscriptionCallbackFactory(
-                            action='extend_sub',
+                            action='extend_subscription',
                             subscription_id=subscription_id,
                             back=f"view_details_{subscription_id}"
                         ).pack()),
@@ -780,6 +780,12 @@ class InlineKeyboards:
             ],
             [
                 InlineKeyboardButton(
+                    text="🎁 Подарить подписку",
+                    callback_data="gift_sub"
+                )
+            ],
+            [
+                InlineKeyboardButton(
                     text="🧙‍♂️ Поддержка",
                     callback_data="help_wizards_callback"
                 )
@@ -810,7 +816,7 @@ class InlineKeyboards:
                     InlineKeyboardButton(
                         text='⏳ Продлить подписку',
                         callback_data=SubscriptionCallbackFactory(
-                            action='extend_sub',
+                            action='extend_subscription',
                             subscription_id=subscription_id,
                             back="subscribe"
                         ).pack() if subscription_id else "view_subs"
@@ -834,4 +840,3 @@ class InlineKeyboards:
             ]
         )
         return keyboard
-

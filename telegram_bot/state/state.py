@@ -61,3 +61,7 @@ class ServerManagementStates(StatesGroup):
 
 class GetUser(StatesGroup):
     waiting_user_id = State()
+
+
+class Gift(StatesGroup):
+    waiting_username = State()

@@ -15,12 +15,14 @@ class Result:
 
 class Success(Result):
     """Класс для успешного результата, содержащий обновленного пользователя."""
+
     def __init__(self, user):
         self.user = user
 
 
 class NotFoundError(Result):
     """Класс для результата, указывающего, что пользователь не найден."""
+
     def __init__(self, user_id: int, message: str = "User not found"):
         self.user_id = user_id
         self.message = message
@@ -28,6 +30,7 @@ class NotFoundError(Result):
 
 class LogicError(Result):
     """Класс для логической ошибки, указывающей на некорректную логику."""
+
     def __init__(self, message: str = "Logic error in update operation"):
         self.message = message
 
@@ -107,3 +110,12 @@ class UserMethods:
         except SQLAlchemyError as e:
             await logger.log_error("Database error during user update", e)
             return LogicError("Database error occurred")
+
+    async def get_user_by_username(self, username: str):
+        try:
+            result = await self.session.execute(select(Users).filter_by(username=username))
+            user = result.scalars().first()
+            return user
+        except SQLAlchemyError as e:
+            await logger.log_error(f"Error checking if user exists", e)
+            return False
