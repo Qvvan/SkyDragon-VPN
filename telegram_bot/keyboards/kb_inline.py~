@@ -774,7 +774,7 @@ class InlineKeyboards:
             ],
             [
                 InlineKeyboardButton(
-                    text="🏰 Пригласить друга",
+                    text="🎁 Пригласить друга",
                     callback_data="back_to_call_allies"
                 )
             ],
