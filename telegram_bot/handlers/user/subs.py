@@ -42,7 +42,6 @@ async def get_user_subs_callback(callback: CallbackQuery, state: FSMContext):
         await delete_message_safe(previous_message_id)
         await state.update_data(text_dragons_overview_id=None)
 
-    # Показываем подписки
     await show_user_subscriptions(
         user_id=callback.from_user.id,
         username=callback.from_user.username,
@@ -63,8 +62,6 @@ async def get_user_subs_command(message: Message, state: FSMContext):
 
 
 async def show_user_subscriptions(user_id, username, message, state: FSMContext):
-    # Отправляем начальное приветственное сообщение
-
     async with (DatabaseContextManager() as session):
         try:
             # Получаем данные о подписках пользователя
@@ -73,7 +70,6 @@ async def show_user_subscriptions(user_id, username, message, state: FSMContext)
             await state.update_data(back_target='view_subs')
             await state.update_data(callback_for_support='view_subs')
             user = await session.users.get_user(user_id=user_id)
-            # Проверка: если подписок нет
             if subscription_data is None:
                 if not user.trial_used:
                     await message.answer(

@@ -17,7 +17,6 @@ router = Router()
 @router.message(Command(commands='new'))
 async def create_order(message: Message, state: FSMContext):
     async with DatabaseContextManager() as session_methods:
-        await state.update_data(back_target='subscribe')
         try:
             subs = await session_methods.subscription.get_subscription(message.from_user.id)
             await state.update_data(status_pay=StatusPay.NEW)
