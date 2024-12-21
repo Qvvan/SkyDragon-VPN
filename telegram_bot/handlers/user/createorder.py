@@ -47,19 +47,20 @@ async def handle_subscribe(callback: CallbackQuery, state: FSMContext):
     """Обработчик кнопки 'Оформить подписку' в главном меню."""
     await callback.answer()
 
-    data = await state.get_data()
-    back_target = data.get('back_target')
+    # data = await state.get_data()
+    # back_target = data.get('back_target')
+    back_target = "subscribe"
     async with DatabaseContextManager() as session_methods:
         try:
             subs = await session_methods.subscription.get_subscription(callback.from_user.id)
             if subs:
                 if len(subs) == 1:
-                    await callback.edit_text(
+                    await callback.message.edit_text(
                         text="Мы заметили, что у вас уже есть подписка, может вы хотите продлить ее?",
                         reply_markup=await InlineKeyboards.create_or_extend(subs[0].subscription_id)
                     )
                 else:
-                    await callback.edit_text(
+                    await callback.message.edit_text(
                         text="Мы заметили, что у вас несколько подписок, может вы хотите продлить какую-нибудь?",
                         reply_markup=await InlineKeyboards.create_or_extend()
                     )
