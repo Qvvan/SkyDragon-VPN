@@ -119,7 +119,7 @@ class Gifts(Base):
     __tablename__ = 'gifts'
 
     gift_id = Column(Integer, primary_key=True, autoincrement=True)
-    giver_id = Column(BigInteger, nullable=False)
+    giver_id = Column(BigInteger, nullable=False, unique=True)
     receiver_username = Column(String, nullable=False)
     service_id = Column(Integer, nullable=True)
     status = Column(String, nullable=False, default='pending')
