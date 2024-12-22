@@ -65,3 +65,8 @@ class GetUser(StatesGroup):
 
 class Gift(StatesGroup):
     waiting_username = State()
+
+
+class GiveSub(StatesGroup):
+    waiting_username = State()
+    waiting_duration_days = State()
