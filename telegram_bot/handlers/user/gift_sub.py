@@ -76,7 +76,9 @@ async def handle_know_more(message: Message, state: FSMContext):
     username = message.text
     if not username.startswith('@') or len(username) == 1:
         await message.answer(
-            text="Неверный формат @username",
+            text="Вы в режиме 'Подарок другу'\n\n"
+                 "Неверный формат @username\n\n"
+                 "Чтобы выйти с него, нажмите кнопку 👇",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [

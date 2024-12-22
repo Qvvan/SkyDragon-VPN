@@ -70,7 +70,6 @@ async def main():
     # user-handlers
     dp.include_router(cancel.router)
     dp.include_router(menu.router)
-    dp.include_router(gift_sub.router)
     dp.include_router(createorder.router)
     dp.include_router(subs.router)
     dp.include_router(start.router)
@@ -82,6 +81,7 @@ async def main():
     dp.include_router(referrer.router)
     dp.include_router(trial_subscription.router)
     dp.include_router(stars.router)
+    dp.include_router(gift_sub.router)
 
     # admin-handlers
     dp.include_router(add_server.router)

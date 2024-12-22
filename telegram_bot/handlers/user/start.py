@@ -86,11 +86,14 @@ async def get_new_gift(gifts, message):
 async def handle_referral(referrer_id, message):
     async with DatabaseContextManager() as session_methods:
         try:
-            await message.bot.send_message(
-                referrer_id,
-                f"🐲 Ваш друг @{message.from_user.username} присоединился к кругу! Древние драконы даруют вам бонус силы 🎁",
-                reply_markup=await InlineKeyboards.get_invite_keyboard()
-            )
+            try:
+                await message.bot.send_message(
+                    referrer_id,
+                    f"🐲 Ваш друг @{message.from_user.username} присоединился к кругу! Древние драконы даруют вам бонус силы 🎁",
+                    reply_markup=await InlineKeyboards.get_invite_keyboard()
+                )
+            except:
+                await logger.warning(f"Не удалось отправить уведомление пользователю с ID: {referrer_id}")
             await logger.log_info(
                 f"Его пригласил пользователь с ID: {referrer_id}",
                 await InlineKeyboards.get_user_info(referrer_id)
