@@ -23,7 +23,7 @@ class MessageLoggingMiddleware(BaseMiddleware):
             username = event.chat.username
             await logger.info(f"Пользователь {username} (ID: {user_id}) отправил сообщение: {event.text}")
             await last_visit(user_id, username)
-            await gift_with_new_username(event, username, user_id)
+            await gift_with_new_username(event, username, user_id, 'message')
 
         return await handler(event, data)
 
@@ -41,7 +41,7 @@ class CallbackLoggingMiddleware(BaseMiddleware):
             button_text = event.data
             await logger.info(f"Пользователь {username} (ID: {user_id}) нажал кнопку: {button_text}")
             await last_visit(user_id, username)
-            await gift_with_new_username(event, username, user_id)
+            await gift_with_new_username(event, username, user_id, 'callback')
 
         return await handler(event, data)
 
@@ -57,8 +57,10 @@ async def last_visit(user_id: int, username: str = None):
             await logger.log_error("Error updating last visit", e)
 
 
-async def gift_with_new_username(event, username, user_id):
+async def gift_with_new_username(event, username, user_id, status: str):
     async with DatabaseContextManager() as session_methods:
+        if status == 'callback':
+            event = event.message
         try:
             gifts = await session_methods.gifts.get_gift_by_username(username)
             for gift in gifts:
@@ -70,7 +72,7 @@ async def gift_with_new_username(event, username, user_id):
                                                session_methods)
                 await session_methods.gifts.update_gift(gift_id=gift.gift_id, status="used",
                                                         activated_at=datetime.utcnow())
-                await event.message.answer(
+                await event.answer(
                     text=f"🎁 Вам подарок! 🎉\n\n"
                          f"Ваш друг {'@' + giver.username if giver.username else 'Неизвестный пользователь'} решил сделать вам приятный сюрприз! ✨\n\n"
                          f"💪 Защита {service.name}а на {service.duration_days} дней 🛡️\n\n"
