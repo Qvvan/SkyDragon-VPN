@@ -5,7 +5,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 
-load_dotenv('../../.env')
+load_dotenv('/root/SkyDragon-VPN/.env')
 
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
