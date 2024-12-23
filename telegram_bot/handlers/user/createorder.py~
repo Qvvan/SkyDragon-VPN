@@ -50,6 +50,7 @@ async def handle_subscribe(callback: CallbackQuery, state: FSMContext):
 
     data = await state.get_data()
     back_target = data.get('back_target')
+    await state.update_data(back_target='subscribe')
     async with DatabaseContextManager() as session_methods:
         try:
             subs = await session_methods.subscription.get_subscription(callback.from_user.id)

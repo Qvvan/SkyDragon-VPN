@@ -95,7 +95,7 @@ async def successful_payment(bot, payment_response):
                                                                      service_id)
     elif service_type == 'gift':
         await bot.send_message(chat_id=user_id, text=LEXICON_RU['gift_thank_you'])
-        await logger.log_info(f"Пользователь: @{username}\nID: {user_id}\nПодарил другу подписку: {receiver_username}")
+        await logger.log_info(f"Пользователь: @{username}\nID: {user_id}\nПодарил другу подписку: @{receiver_username}")
         async with DatabaseContextManager() as session_methods:
             try:
                 await extend_user_subscription(user_id, username, 10, session_methods)

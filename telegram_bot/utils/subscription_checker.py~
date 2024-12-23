@@ -99,7 +99,7 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
             InlineKeyboardButton(
                 text='⏳ Продлить подписку',
                 callback_data=SubscriptionCallbackFactory(
-                    action='extend_sub',
+                    action='extend_subscription',
                     subscription_id=sub.subscription_id
                 ).pack(),
             ),

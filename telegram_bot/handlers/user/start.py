@@ -89,7 +89,7 @@ async def handle_referral(referrer_id, message):
             try:
                 await message.bot.send_message(
                     referrer_id,
-                    f"🐲 Ваш друг @{message.from_user.username} присоединился к кругу! Древние драконы даруют вам бонус силы 🎁",
+                    f"🐲 Ваш друг {'@' + message.from_user.username if message.from_user.username else ''} присоединился к кругу! Древние драконы даруют вам бонус силы 🎁",
                     reply_markup=await InlineKeyboards.get_invite_keyboard()
                 )
             except:

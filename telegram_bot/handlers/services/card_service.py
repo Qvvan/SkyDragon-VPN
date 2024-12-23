@@ -80,7 +80,7 @@ async def successful_payment(bot, payment_response):
     service_id = int(metadata.get("service_id"))
     service_type = metadata.get("service_type")
     user_id = int(metadata.get("user_id"))
-    username = metadata.get("username")
+    username = metadata.get("username", None)
     receiver_username = metadata.get("receiver_username")
     subscription_id = metadata.get("subscription_id")
 
