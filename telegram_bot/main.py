@@ -8,7 +8,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from config_data import config
 from database.init_db import DataBase
 from handlers.admin import add_server, user_info, unban_user, block_key, cancel, refund, del_key, \
-    unblock_key, help_info, ban_user, pushes, show_servers, get_user_id, add_gift
+    unblock_key, help_info, ban_user, pushes, show_servers, get_user_id, add_gift, message_for_user
 from handlers.services import payments_service, guide_install, trial_subscription
 from handlers.services.card_service import payment_status_checker
 from handlers.user import subs, replace_server, replace_app, referrer, menu, just_message, stars, gift_sub
@@ -84,6 +84,7 @@ async def main():
     dp.include_router(gift_sub.router)
 
     # admin-handlers
+    dp.include_router(message_for_user.router)
     dp.include_router(add_server.router)
     dp.include_router(ban_user.router)
     dp.include_router(block_key.router)

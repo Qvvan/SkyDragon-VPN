@@ -23,7 +23,7 @@ class DatabaseContextManager:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         try:
             if exc_type:
-                logger.error(f"Exception occurred: {exc_type} - {exc_val}", None)
+                await logger.error(f"Exception occurred: {exc_type} - {exc_val}", None)
                 traceback.print_tb(exc_tb)
                 await self.session.rollback()
         finally:

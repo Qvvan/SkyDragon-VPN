@@ -539,7 +539,9 @@ class InlineKeyboards:
                 InlineKeyboardButton(
                     text="🐲 Приглашенные друзья",
                     callback_data="show_referrals"
-                ),
+                )
+            ],
+            [
                 InlineKeyboardButton(
                     text="🔗 Пригласить друга",
                     callback_data="get_invite_link"
