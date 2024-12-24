@@ -72,10 +72,12 @@ async def send_reminder(bot: Bot, sub, session_methods):
                 reply_markup=keyboard.as_markup(),
                 parse_mode="HTML"
             )
-        except:
-            pass
-        user = await session_methods.users.get_user(sub.user_id)
-        keyboard = await InlineKeyboards.get_user_info(sub.user_id)
+            user = await session_methods.users.get_user(sub.user_id)
+            keyboard = await InlineKeyboards.get_user_info(sub.user_id)
+        except Exception as e:
+            await logger.warning(message=f"Не удалось отправить напоминание: {e}",)
+            keyboard = None
+
         await logger.log_info(
             f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{user.username}\nИстечет через 3 дня.", keyboard
         )
@@ -86,9 +88,10 @@ async def send_reminder(bot: Bot, sub, session_methods):
 
 
 async def handle_expired_subscription(bot: Bot, sub, session_methods):
-    # TODO Переделать удаление ключа перед коммитом
     user = Users(username='None')
     try:
+        await BaseKeyManager(server_ip=sub.server_ip).update_key_enable(sub.key_id, False)
+
         await session_methods.subscription.update_sub(
             subscription_id=sub.subscription_id,
             status=SubscriptionStatusEnum.EXPIRED,
@@ -109,23 +112,18 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
             )
         )
         await session_methods.session.commit()
+        user = await session_methods.users.get_user(sub.user_id)
         try:
             await bot.send_message(
                 chat_id=sub.user_id,
                 text=LEXICON_RU['expired'],
                 reply_markup=keyboard.as_markup(),
             )
-        except:
-            pass
-        user = await session_methods.users.get_user(sub.user_id)
-        try:
-            await BaseKeyManager(server_ip=sub.server_ip).update_key_enable(sub.key_id, False)
-        except:
-            await logger.log_error(
-                f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при обновлении подписки',
-                'Не удалось обновить ключ')
+            keyboard = await InlineKeyboards.get_user_info(sub.user_id)
+        except Exception as e:
+            await logger.warning(message=f"Не удалось отправить напоминание @{user.username}, ID: {sub.user_id}, {e}")
+            keyboard = None
 
-        keyboard = await InlineKeyboards.get_user_info(sub.user_id)
         await logger.log_info(
             f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{user.username}\nИстекла", keyboard
         )
@@ -138,6 +136,8 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
 async def handle_subscription_deletion(sub, session_methods):
     user = Users(username='None')
     try:
+        await BaseKeyManager(server_ip=sub.server_ip).delete_key(sub.key_id)
+
         result = await session_methods.subscription.delete_sub(subscription_id=sub.subscription_id)
         if not result:
             await logger.log_error('Не удалось удалить подписку при ее истечении\n'
@@ -147,13 +147,10 @@ async def handle_subscription_deletion(sub, session_methods):
         await session_methods.session.commit()
         user = await session_methods.users.get_user(sub.user_id)
         try:
-            await BaseKeyManager(server_ip=sub.server_ip).delete_key(sub.key_id)
+            keyboard = await InlineKeyboards.get_user_info(sub.user_id)
         except:
-            await logger.log_error(
-                f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при удалении подписки',
-                'Не удалось удалить ключ')
-
-        keyboard = await InlineKeyboards.get_user_info(sub.user_id)
+            await logger.warning(message=f"Не удалось получить профиль пользователя: {user.username} ID: {user.user_id}")
+            keyboard = None
         await logger.log_info(
             f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{user.username}\nПолностью удалена", keyboard
         )

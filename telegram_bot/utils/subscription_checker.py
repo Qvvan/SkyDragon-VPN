@@ -50,7 +50,7 @@ async def send_reminder(bot: Bot, sub, session_methods):
             InlineKeyboardButton(
                 text='⏳ Продлить подписку',
                 callback_data=SubscriptionCallbackFactory(
-                    action='extend_subn',
+                    action='extend_subscription',
                     subscription_id=sub.subscription_id
                 ).pack(),
             ),
