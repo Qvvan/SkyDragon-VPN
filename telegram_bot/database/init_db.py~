@@ -13,12 +13,7 @@ class DataBase:
     def __init__(self):
         try:
             self.connect = DSN
-            self.async_engine = create_async_engine(
-                self.connect,
-                pool_size=10,
-                max_overflow=20,
-                pool_timeout=30
-            )
+            self.async_engine = create_async_engine(self.connect)
             self.Session = async_sessionmaker(bind=self.async_engine, class_=AsyncSession)
         except ArgumentError as e:
             logger.error(f"Invalid DSN configuration", e)

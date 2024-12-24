@@ -1,5 +1,8 @@
+import traceback
+
 from database.db_methods import MethodsManager
 from database.init_db import DataBase
+from logger.logging_config import logger
 
 
 class DatabaseContextManager:
@@ -20,7 +23,8 @@ class DatabaseContextManager:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         try:
             if exc_type:
-                print(f"Exception occurred: {exc_type} - {exc_val}")
+                logger.error(f"Exception occurred: {exc_type} - {exc_val}", None)
+                traceback.print_tb(exc_tb)
                 await self.session.rollback()
         finally:
             await self.session.close()

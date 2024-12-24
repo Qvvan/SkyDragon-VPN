@@ -9,10 +9,13 @@ class DatabaseContextManager:
         self.methods = None
 
     async def __aenter__(self):
-        self.session = self.db.Session()
-
-        self.methods = MethodsManager(self.session)
-        return self.methods
+        try:
+            self.session = self.db.Session()
+            self.methods = MethodsManager(self.session)
+            return self.methods
+        except Exception as e:
+            print(f"Error initializing DatabaseContextManager: {e}")
+            raise
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         try:
