@@ -89,20 +89,6 @@ class SubscriptionsHistory(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-
-class Transactions(Base):
-    __tablename__ = 'transactions'
-
-    transaction_id = Column(Integer, primary_key=True, autoincrement=True)
-    transaction_code = Column(String, unique=True, nullable=False)
-    service_id = Column(Integer, nullable=False)
-    user_id = Column(BigInteger, nullable=False)
-    status = Column(String)
-    description = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-
 class Payments(Base):
     __tablename__ = 'payments'
 

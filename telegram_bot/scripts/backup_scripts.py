@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv('/root/SkyDragon-VPN/.env')
 
+
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = os.getenv("DB_HOST")
@@ -15,10 +16,17 @@ DB_NAME = os.getenv("DB_NAME")
 TOKEN = os.getenv('BOT_TOKEN')
 BACKUP_GROUP_ID = os.getenv('BACKUP_GROUP_ID')
 
+# Определяем базовый путь к директории, где находится скрипт
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BACKUP_PATH = os.path.join(BASE_DIR, '..', 'backup')  # Путь к папке backup на уровень выше
+
 
 def create_backup():
+    # Убедитесь, что папка `backup` существует
+    os.makedirs(BACKUP_PATH, exist_ok=True)
+
     date_str = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    backup_file = f"../backup/backup_{date_str}.dump.gz"
+    backup_file = os.path.join(BACKUP_PATH, f"backup_{date_str}.dump.gz")
 
     # Команда для выполнения резервного копирования через Docker
     command = (
