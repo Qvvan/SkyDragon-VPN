@@ -66,7 +66,7 @@ async def main():
 
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
-
+    dp.include_router(user_info.router)
     # user-handlers
     dp.include_router(cancel.router)
     dp.include_router(menu.router)
@@ -90,7 +90,6 @@ async def main():
     dp.include_router(block_key.router)
     dp.include_router(del_key.router)
     dp.include_router(help_info.router)
-    dp.include_router(user_info.router)
     dp.include_router(refund.router)
     dp.include_router(unban_user.router)
     dp.include_router(unblock_key.router)

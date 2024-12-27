@@ -7,11 +7,13 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 # Создание роутера
 router = Router()
 
+
 # Состояния для FSM
 class SendMessageUser(StatesGroup):
     waiting_user_id = State()
     waiting_message = State()
     preview_message = State()
+
 
 # Буфер для выбранных клавиатур
 KEYBOARD_BUFFER = {}
@@ -26,6 +28,7 @@ PREDEFINED_KEYBOARDS = {
     ":faq": "📜 Часто задаваемые вопросы"
 }
 
+
 # Команда для отправки сообщения
 @router.message(Command(commands="sms"))
 async def start_sending_message(message: types.Message, state: FSMContext):
@@ -36,6 +39,7 @@ async def start_sending_message(message: types.Message, state: FSMContext):
         )
     )
     await state.set_state(SendMessageUser.waiting_user_id)
+
 
 # Обработка введённого user_id
 @router.message(SendMessageUser.waiting_user_id)
@@ -52,6 +56,7 @@ async def process_user_id(message: types.Message, state: FSMContext):
         await state.set_state(SendMessageUser.waiting_message)
     except ValueError:
         await message.answer("Некорректный user_id. Попробуйте снова.")
+
 
 # Обработка текста сообщения
 @router.message(SendMessageUser.waiting_message)
@@ -71,6 +76,7 @@ async def process_message_text(message: types.Message, state: FSMContext):
         text="Выберите кнопки для клавиатуры:",
         reply_markup=keyboard
     )
+
 
 # Обработка нажатий на кнопки
 @router.callback_query()

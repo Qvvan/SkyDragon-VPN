@@ -33,7 +33,7 @@ class ServiceCallbackFactory(CallbackData, prefix='service'):
 
 class UserInfoCallbackFactory(CallbackData, prefix='info'):
     action: str
-    user_id: int
+    user_id: Optional[int] = None
     ban: Optional[bool] = None
     trial: Optional[bool] = None
 
@@ -713,7 +713,7 @@ class InlineKeyboards:
                 InlineKeyboardButton(
                     text="Подписки пользователя",
                     callback_data=UserSelectCallback(
-                        action='user_subs',
+                        action='user_subs_info',
                         user_id=user_id
                     ).pack()
                 )
@@ -748,7 +748,7 @@ class InlineKeyboards:
             [
                 InlineKeyboardButton(
                     text="Назад",
-                    callback_data=''
+                    callback_data='main_menu'
                 )
             ],
         ])

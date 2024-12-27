@@ -46,6 +46,7 @@ async def user_info(message: types.Message, state: FSMContext):
                     ban=user_info.ban,
                     trial=user_info.trial_used),
             )
+            await state.clear()
 
         except Exception as e:
             await message.answer(f"Произошла ошибка: \n{e}")
@@ -124,18 +125,20 @@ async def handle_user_trial(callback_query: CallbackQuery, callback_data: UserIn
             await logger.log_error(f"Ошибка при изменении статуса пробной подписки пользователя {user_id}", e)
 
 
-@router.callback_query(UserSelectCallback.filter(F.action == "user_subs"))
-async def handle_user_trial(callback_query: CallbackQuery, callback_data: UserSelectCallback):
+@router.callback_query(UserSelectCallback.filter(F.action == "user_subs_info"))
+async def handle_user_subscriptions(callback_query: CallbackQuery, callback_data: UserSelectCallback):
+    print("hello")
     user_id = int(callback_data.user_id)
     async with DatabaseContextManager() as session_methods:
         try:
             subs = await session_methods.subscription.get_subscription(user_id)
-            if len(subs) == 0:
+            if not subs:
                 await callback_query.answer(
                     text='У данного пользователя нет доступных подписок',
                     show_alert=True,
                     cache_time=5
                 )
+                return
             for sub in subs:
                 response_message = (
                     f"🆔 ID подписки: {sub.subscription_id}\n"
