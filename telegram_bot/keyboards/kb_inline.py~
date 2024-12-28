@@ -749,8 +749,7 @@ class InlineKeyboards:
                     text="Удалить подписку",
                     callback_data=ChangeUserSubCallback(
                         action='delete_sub',
-                        subscription_id=sub.subscription_id,
-                        user_id=user_id
+                        subscription_id=sub.subscription_id
                     ).pack())
             ],
             [

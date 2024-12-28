@@ -76,3 +76,7 @@ class SendMessageUser(StatesGroup):
     waiting_user_id = State()
     waiting_message = State()
     waiting_keyboard = State()
+
+
+class UserSubInfo(StatesGroup):
+    waiting_duration_days = State()

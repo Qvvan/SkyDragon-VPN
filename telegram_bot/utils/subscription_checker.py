@@ -38,7 +38,7 @@ async def process_subscription(bot: Bot, sub, current_date, session_methods):
     elif sub.end_date < current_date and sub.status != SubscriptionStatusEnum.EXPIRED:
         await handle_expired_subscription(bot, sub, session_methods)
 
-    elif days_since_expiration > 5:
+    elif days_since_expiration > 7:
         await handle_subscription_deletion(sub, session_methods)
 
 

@@ -78,7 +78,7 @@ class SubscriptionMethods:
         try:
             self.session.add(sub)
             await self.session.flush()
-            return sub.id
+            return sub.subscription_id
         except SQLAlchemyError as e:
             await logger.log_error(f"Error creating subscription", e)
             return False

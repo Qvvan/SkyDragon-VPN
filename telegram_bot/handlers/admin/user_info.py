@@ -6,10 +6,12 @@ from aiogram.types import CallbackQuery
 from config_data.config import ADMIN_IDS
 from database.context_manager import DatabaseContextManager
 from filters.admin import IsAdmin
-from keyboards.kb_inline import InlineKeyboards, UserInfoCallbackFactory, UserSelectCallback
+from handlers.services.extend_latest_subscription import extend_user_subscription
+from handlers.services.key_create import BaseKeyManager
+from keyboards.kb_inline import InlineKeyboards, UserInfoCallbackFactory, UserSelectCallback, ChangeUserSubCallback
 from logger.logging_config import logger
 from models.models import SubscriptionStatusEnum
-from state.state import KeyInfo
+from state.state import KeyInfo, UserSubInfo
 
 router = Router()
 
@@ -127,7 +129,6 @@ async def handle_user_trial(callback_query: CallbackQuery, callback_data: UserIn
 
 @router.callback_query(UserSelectCallback.filter(F.action == "user_subs_info"))
 async def handle_user_subscriptions(callback_query: CallbackQuery, callback_data: UserSelectCallback):
-    print("hello")
     user_id = int(callback_data.user_id)
     async with DatabaseContextManager() as session_methods:
         try:
@@ -145,6 +146,7 @@ async def handle_user_subscriptions(callback_query: CallbackQuery, callback_data
                     f"📶 Статус: {'🟢 Активна' if sub.status == SubscriptionStatusEnum.ACTIVE else '🔴 Истекла'}\n"
                     f"🌐 Сервер: {sub.server_ip}\n"
                     f"🏷 Имя сервера: {sub.server_name}\n"
+                    f"🏷 Автопродление: {'✅ Да' if False else '❌ Нет'}\n"
                     f"🔑 Ключ: {sub.key}\n"
                     f"🆔 ID Ключа: {sub.key_id}\n"
                     f"📅 Начало подписки: {sub.start_date.strftime('%Y-%m-%d %H:%M')}\n"
@@ -152,17 +154,74 @@ async def handle_user_subscriptions(callback_query: CallbackQuery, callback_data
                 )
                 message_sub_info = await callback_query.message.answer(
                     text=response_message,
-                    reply_markup=await InlineKeyboards.sub_info(sub.subscription_id),
+                    reply_markup=await InlineKeyboards.sub_info(user_id, sub),
                 )
         except Exception as e:
+            await logger.error("Произошла ошибка", e)
             await callback_query.message.answer(f"Произошла ошибка: \n{e}")
 
 
-@router.callback_query(UserSelectCallback.filter(F.action == "turn_off_sub"))
-async def handle_user_trial(callback_query: CallbackQuery, callback_data: UserSelectCallback):
-    await callback_query.message.answer('Вы нажали кнопку выключить подписку')
+@router.callback_query(ChangeUserSubCallback.filter(F.action == "change_date_sub"))
+async def handle_user_trial(callback_query: CallbackQuery, callback_data: ChangeUserSubCallback, state: FSMContext):
+    await state.update_data(user_id=int(callback_data.user_id))
+    await callback_query.message.answer(
+        text='Введите количество дней:',
+        reply_markup=await InlineKeyboards.cancel()
+    )
+    await state.set_state(UserSubInfo.waiting_duration_days)
 
 
-@router.callback_query(UserSelectCallback.filter(F.action == "end_date_sub"))
-async def handle_user_trial(callback_query: CallbackQuery, callback_data: UserSelectCallback):
-    await callback_query.message.answer('Вы нажали кнопку настройки даты подписки')
+@router.message(UserSubInfo.waiting_duration_days)
+async def process_duration_days(message: types.Message, state: FSMContext):
+    try:
+        duration_days = int(message.text)
+        data = await state.get_data()
+        user_id = data.get('user_id')
+
+        async with DatabaseContextManager() as session_methods:
+            user = await session_methods.users.get_user(user_id)
+            await extend_user_subscription(user_id, user.username, duration_days, session_methods)
+            await session_methods.session.commit()
+            await message.answer("Дата успешно изменена!")
+
+    except ValueError:
+        await message.answer('Некорректное количество дней. Попробуйте снова.')
+
+    await state.clear()
+
+
+@router.callback_query(ChangeUserSubCallback.filter(F.action == "delete_sub"))
+async def handle_user_trial(callback_query: CallbackQuery, callback_data: ChangeUserSubCallback):
+    async with DatabaseContextManager() as session_methods:
+        try:
+            sub = await session_methods.subscription.get_subscription_by_id(callback_data.subscription_id)
+            user = await session_methods.users.get_user(callback_data.user_id)
+            await BaseKeyManager(server_ip=sub.server_ip).delete_key(sub.key_id)
+
+            result = await session_methods.subscription.delete_sub(subscription_id=sub.subscription_id)
+            if not result:
+                await logger.log_error('Не удалось удалить подписку при ее истечении\n'
+                                       f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\n', Exception)
+                return
+
+            await session_methods.session.commit()
+        except Exception as e:
+            await session_methods.session.rollback()
+            await logger.log_error(
+                f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при удалении подписки', e)
+
+        await callback_query.message.answer("Подписка успешно удалена")
+
+@router.callback_query(ChangeUserSubCallback.filter(F.action == "change_expire_sub"))
+async def handle_user_trial(callback_query: CallbackQuery, callback_data: ChangeUserSubCallback):
+    await callback_query.message.answer("Вы нажали кнопку изменения автопродления подписки")
+
+
+@router.callback_query(ChangeUserSubCallback.filter(F.action == "change_status_key"))
+async def handle_user_trial(callback_query: CallbackQuery, callback_data: ChangeUserSubCallback):
+    await callback_query.message.answer("Вы нажали кнопку выключения ключа")
+
+
+@router.callback_query(ChangeUserSubCallback.filter(F.action == "change_key"))
+async def handle_user_trial(callback_query: CallbackQuery, callback_data: ChangeUserSubCallback):
+    await callback_query.message.answer("Вы нажали кнопку обновить ключ")
