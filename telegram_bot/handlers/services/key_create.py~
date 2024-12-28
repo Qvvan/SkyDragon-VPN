@@ -315,7 +315,7 @@ class VlessKeyManager(BaseKeyManager):
     def generate_vless_link(self, client_id, port, short_id, public_key, server_name="google.com"):
         return (f"vless://{client_id}@{self.server_ip}:{port}"
                 f"?type=tcp&security=reality&pbk={public_key}"
-                f"&fp=chrome&sni={server_name}&sid={99}&spx=%2F&flow=xtls-rprx-vision-udp443"
+                f"&fp=chrome&sni={server_name}&sid={short_id}&spx=%2F&flow=xtls-rprx-vision-udp443"
                 f"#SkyDragon")
 
 
