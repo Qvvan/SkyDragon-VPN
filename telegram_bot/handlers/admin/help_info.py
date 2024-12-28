@@ -8,7 +8,7 @@ from lexicon.lexicon_ru import LEXICON_COMMANDS_ADMIN
 router = Router()
 
 
-@router.message(Command(commands='help'), IsAdmin(ADMIN_IDS))
+@router.message(Command(commands='menu'), IsAdmin(ADMIN_IDS))
 async def show_commands(message: types.Message):
     ans = ''
     for command, description in LEXICON_COMMANDS_ADMIN.items():
