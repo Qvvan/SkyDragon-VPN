@@ -127,25 +127,27 @@ async def send_notification(callback_query: types.CallbackQuery, state: FSMConte
                 user_info = await session_methods.users.get_user(user['user_id'])
                 if user_info.ban:
                     return
-                await callback_query.bot.send_message(
-                    chat_id=user['user_id'],
-                    text=message_text,
-                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                        [
-                            InlineKeyboardButton(
-                                text="🐲 Мои подписки",
-                                callback_data="view_subs"
-                            )
-                        ],
-                    ])
-                )
-                successful_user_ids.append(user['user_id'])
-                count += 1
+                try:
+                    await callback_query.bot.send_message(
+                        chat_id=user['user_id'],
+                        text=message_text,
+                        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                            [
+                                InlineKeyboardButton(
+                                    text="🐲 Мои подписки",
+                                    callback_data="view_subs"
+                                )
+                            ],
+                        ])
+                    )
+                    successful_user_ids.append(user['user_id'])
+                    count += 1
+                except Exception as e:
+                    blocked_users.append(user['user_id'])
+                    await session_methods.users.update_user(user['user_id'], ban=True)
+                    await session_methods.session.commit()
             except Exception as e:
                 await logger.log_error(f"Ошибка при отправке пользователю {user['user_id']}", e)
-                blocked_users.append(user['user_id'])
-                await session_methods.users.update_user(user['user_id'], ban=True)
-                await session_methods.session.commit()
 
     # Разделяем пользователей на батчи и отправляем сообщения
     for i in range(0, len(selected_users), batch_size):
