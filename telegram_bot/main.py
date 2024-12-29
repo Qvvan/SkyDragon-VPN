@@ -84,7 +84,6 @@ async def main():
     dp.include_router(gift_sub.router)
 
     # admin-handlers
-    dp.include_router(message_for_user.router)
     dp.include_router(add_server.router)
     dp.include_router(ban_user.router)
     dp.include_router(block_key.router)
@@ -98,6 +97,7 @@ async def main():
     dp.include_router(show_servers.router)
     dp.include_router(get_user_id.router)
     dp.include_router(add_gift.router)
+    dp.include_router(message_for_user.router)
 
     dp.include_router(just_message.router)
 
