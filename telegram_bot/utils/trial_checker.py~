@@ -23,8 +23,6 @@ async def trial_checker(bot: Bot):
 
             for user in users:
                 try:
-                    trial_used = await user.trial_used
-                    print(trial_used)
                     # Проверяем, что пользователь зарегистрировался недавно и не использовал пробную подписку
                     if not user.trial_used and user.created_at and user.created_at >= recent_period and not user.reminder_trial_sub:
                         # Отправляем сообщение пользователю
