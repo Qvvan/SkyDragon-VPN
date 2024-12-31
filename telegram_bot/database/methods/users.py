@@ -1,6 +1,5 @@
 from typing import Union
 
-from sqlalchemy.orm import selectinload
 from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -84,9 +83,8 @@ class UserMethods:
 
     async def get_all_users(self):
         try:
-            result = await self.session.execute(
-                select(Users).options(selectinload(Users.trial_used), selectinload(Users.created_at))
-            )
+            # Все колонки Users загружаются сразу
+            result = await self.session.execute(select(Users))
             users = result.scalars().all()
             return users
         except SQLAlchemyError as e:
