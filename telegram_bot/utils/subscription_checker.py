@@ -166,27 +166,31 @@ async def handle_subscription_deletion(sub, session_methods):
 
 
 async def handle_notify_buy_sub(bot, sub, session_methods):
+    user = Users(username='None')
     try:
         user = await session_methods.users.get_user(sub.user_id)
         await session_methods.subscription.update_sub(sub.subscription_id, reminder_sent=2)
-        await bot.send_message(
-            chat_id=sub.user_id,
-            text=(
-                "Ой! Кажется, ваша подписка закончилась. 😔 Может, пора её продлить? 💪\n\n"
-                "Давайте вернём доступ к вашим любимым функциям! 🚀"
-            ),
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="⏳ Продлить подписку",
-                        callback_data=SubscriptionCallbackFactory(
-                            action='extend_subscription',
-                            subscription_id=sub.subscription_id,
-                        ).pack()
-                    )
-                ]
-            ])
-        )
+        try:
+            await bot.send_message(
+                chat_id=sub.user_id,
+                text=(
+                    "Ой! Кажется, ваша подписка закончилась. 😔 Может, пора её продлить? 💪\n\n"
+                    "Давайте вернём доступ к вашим любимым функциям! 🚀"
+                ),
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="⏳ Продлить подписку",
+                            callback_data=SubscriptionCallbackFactory(
+                                action='extend_subscription',
+                                subscription_id=sub.subscription_id,
+                            ).pack()
+                        )
+                    ]
+                ])
+            )
+        except:
+            pass
         await session_methods.session.commit()
         await logger.info(f"Уведомление о продление подписки отправлено ID: `{sub.user_id}` Username: @{user.username}")
     except Exception as e:
