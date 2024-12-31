@@ -1,5 +1,6 @@
 from typing import Union
 
+from sqlalchemy.orm import selectinload
 from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -83,12 +84,14 @@ class UserMethods:
 
     async def get_all_users(self):
         try:
-            result = await self.session.execute(select(Users))
+            result = await self.session.execute(
+                select(Users).options(selectinload(Users.trial_used), selectinload(Users.created_at))
+            )
             users = result.scalars().all()
             return users
         except SQLAlchemyError as e:
             await logger.log_error("Error fetching all users", e)
-            return False
+            return []
 
     async def update_user(self, user_id: int, **kwargs) -> Union[Success, NotFoundError, LogicError]:
         try:
