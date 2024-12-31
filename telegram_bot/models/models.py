@@ -35,6 +35,7 @@ class Users(Base):
     username = Column(String)
     ban = Column(Boolean, default=False)
     trial_used = Column(Boolean, default=False)
+    reminder_trial_sub = Column(Boolean, default=False)
     last_visit = Column(DateTime, default=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 

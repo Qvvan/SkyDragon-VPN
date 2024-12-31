@@ -39,6 +39,21 @@ class BaseKeyManager:
                     status=response.status, message=await response.text()
                 )
 
+    async def get_inbound_by_id(self, inbound_id):
+        get_inbound_api_url = f"{self.base_url}/api/inbounds/get/{inbound_id}"
+        cookies = await get_session_cookie(self.server_ip)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(get_inbound_api_url, cookies=cookies, ssl=False) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    raise aiohttp.ClientResponseError(
+                        response.request_info, response.history,
+                        status=response.status, message=await response.text()
+                    )
+
+            return None
+
     async def delete_key(self, key_id: str):
         """
         Удаляет ключ с указанным key_id.

@@ -20,6 +20,7 @@ class ChangeUserSubCallback(CallbackData, prefix="change_user_sub"):
     action: str
     subscription_id: int
     user_id: Optional[int] = None
+    server_ip: Optional[str] = None
 
 
 class UserPaginationCallback(CallbackData, prefix="user"):
@@ -774,7 +775,8 @@ class InlineKeyboards:
                     text="Обновить ключ",
                     callback_data=ChangeUserSubCallback(
                         action='change_key',
-                        subscription_id=sub.subscription_id
+                        subscription_id=sub.subscription_id,
+                        server_ip=sub.server_ip
                     ).pack())
             ],
             [

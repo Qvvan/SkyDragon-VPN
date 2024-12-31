@@ -20,6 +20,7 @@ from middleware.trottling import ThrottlingMiddleware
 from utils import check_servers
 from utils.check_servers import ping_servers
 from utils.subscription_checker import run_checker
+from utils.trial_checker import run_trial_checker
 
 
 async def on_startup(bot: Bot):
@@ -104,6 +105,7 @@ async def main():
     asyncio.create_task(run_checker(bot))
     asyncio.create_task(ping_servers(bot))
     asyncio.create_task(payment_status_checker(bot))
+    asyncio.create_task(run_trial_checker(bot))
 
     await bot.delete_webhook(drop_pending_updates=True)
     try:

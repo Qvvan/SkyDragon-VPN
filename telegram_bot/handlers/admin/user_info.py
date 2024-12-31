@@ -212,6 +212,7 @@ async def handle_user_trial(callback_query: CallbackQuery, callback_data: Change
 
         await callback_query.message.answer("Подписка успешно удалена")
 
+
 @router.callback_query(ChangeUserSubCallback.filter(F.action == "change_expire_sub"))
 async def handle_user_trial(callback_query: CallbackQuery, callback_data: ChangeUserSubCallback):
     await callback_query.message.answer("Вы нажали кнопку изменения автопродления подписки")
@@ -219,9 +220,29 @@ async def handle_user_trial(callback_query: CallbackQuery, callback_data: Change
 
 @router.callback_query(ChangeUserSubCallback.filter(F.action == "change_status_key"))
 async def handle_user_trial(callback_query: CallbackQuery, callback_data: ChangeUserSubCallback):
-    await callback_query.message.answer("Вы нажали кнопку выключения ключа")
+    async with DatabaseContextManager() as session_methods:
+        try:
+            sub = await session_methods.subscription.get_subscription_by_id(callback_data.subscription_id)
+            key_info = await BaseKeyManager(server_ip=sub.server_ip).get_inbound_by_id(sub.key_id)
+            status_key = key_info.get('obj').get('enable')
+            await BaseKeyManager(server_ip=sub.server_ip).update_key_enable(sub.key_id, not status_key)
+            await callback_query.message.edit_reply_markup()
+            await callback_query.answer(
+                text=f"Ключ успешно: {'Выключен' if status_key else 'Включен'}",
+                show_alert=True,
+                cache_time=3
+            )
+        except Exception as e:
+            await logger.error("Произошла ошибка при обновление ключа:", e)
+            await callback_query.message.answer("Произошла ошибка при обновление ключа")
 
 
 @router.callback_query(ChangeUserSubCallback.filter(F.action == "change_key"))
-async def handle_user_trial(callback_query: CallbackQuery, callback_data: ChangeUserSubCallback):
-    await callback_query.message.answer("Вы нажали кнопку обновить ключ")
+async def handle_user_trial(callback_query: CallbackQuery, callback_data: ChangeUserSubCallback, state: FSMContext):
+    server_ip = callback_data.server_ip
+    subscription_id = callback_data.subscription_id
+    await state.update_data(subscription_id=subscription_id)
+    await callback_query.message.answer(
+        text='Выберите, на какой сервер поменять',
+        reply_markup=await InlineKeyboards.get_servers(server_ip, subscription_id)
+    )
