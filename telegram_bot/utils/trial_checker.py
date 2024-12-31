@@ -13,6 +13,8 @@ async def trial_checker(bot: Bot):
         try:
             # Получаем всех пользователей
             users = await session_methods.users.get_all_users()
+            print(users)
+            print(users[0].__dict__)
             if not users:
                 return
 
