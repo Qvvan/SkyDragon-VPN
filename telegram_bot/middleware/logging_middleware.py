@@ -47,13 +47,14 @@ class CallbackLoggingMiddleware(BaseMiddleware):
 
 
 async def last_visit(user_id: int, username: str = None):
-    async with DatabaseContextManager() as session:
+    async with DatabaseContextManager() as session_methods:
         try:
-            result = await session.users.update_user(user_id, last_visit=datetime.utcnow(), username=username)
+            result = await session_methods.users.update_user(user_id, last_visit=datetime.utcnow(), username=username)
+            await session_methods.session.commit()
             if isinstance(result, LogicError):
                 await logger.log_error("Error updating last visit", result)
         except Exception as e:
-            await session.session.rollback()
+            await session_methods.session.rollback()
             await logger.log_error("Error updating last visit", e)
 
 

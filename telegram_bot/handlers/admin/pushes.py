@@ -149,7 +149,7 @@ async def send_notification(callback_query: types.CallbackQuery, state: FSMConte
                 while True:
                     try:
                         await send_message(user)
-                        await asyncio.sleep(1)
+                        await asyncio.sleep(0.5)
                         break
                     except Exception as e:
                         if 'Too Many Requests' in str(e):
