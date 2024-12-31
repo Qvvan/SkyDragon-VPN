@@ -139,31 +139,32 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
 
 
 async def handle_subscription_deletion(sub, session_methods):
-    user = Users(username='None')
+    username = None
     try:
         await BaseKeyManager(server_ip=sub.server_ip).delete_key(sub.key_id)
 
         result = await session_methods.subscription.delete_sub(subscription_id=sub.subscription_id)
         if not result:
             await logger.log_error('Не удалось удалить подписку при ее истечении\n'
-                                   f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\n', Exception)
+                                   f'Пользователь:\nID: {sub.user_id}\nUsername: @{username}\n', Exception)
             return
 
         await session_methods.session.commit()
         user = await session_methods.users.get_user(sub.user_id)
+        username = user.username
         try:
             keyboard = await InlineKeyboards.get_user_info(sub.user_id)
         except:
             await logger.warning(
-                message=f"Не удалось получить профиль пользователя: {user.username} ID: {user.user_id}")
+                message=f"Не удалось получить профиль пользователя: {username} ID: {sub.user_id}")
             keyboard = None
         await logger.log_info(
-            f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{user.username}\nПолностью удалена", keyboard
+            f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{username}\nПолностью удалена", keyboard
         )
     except Exception as e:
         await session_methods.session.rollback()
         await logger.log_error(
-            f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при удалении подписки', e)
+            f'Пользователь:\nID: {sub.user_id}\nUsername: @{username}\nОшибка при удалении подписки', e)
 
 
 async def handle_notify_buy_sub(bot, sub, session_methods):
