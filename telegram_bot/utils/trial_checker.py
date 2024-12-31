@@ -13,6 +13,8 @@ async def trial_checker(bot: Bot):
         try:
             # Получаем всех пользователей
             users = await session_methods.users.get_all_users()
+            if not users:
+                return
 
             # Устанавливаем период для проверки (например, зарегистрировались в течение последних 7 дней)
             recent_period = datetime.utcnow() - timedelta(days=7)
