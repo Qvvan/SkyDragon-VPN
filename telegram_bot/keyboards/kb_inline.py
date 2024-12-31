@@ -839,7 +839,7 @@ class InlineKeyboards:
             )
             return keyboard
         except Exception as e:
-            logger.error(e)
+            await logger.error(e)
             return None
 
     @staticmethod
