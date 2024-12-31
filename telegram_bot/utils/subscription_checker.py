@@ -32,7 +32,6 @@ async def check_subscriptions(bot: Bot):
 async def process_subscription(bot: Bot, sub, current_date, session_methods):
     days_since_expiration = (current_date - sub.end_date).days
     days_until_end = (sub.end_date - current_date).days
-    print(days_since_expiration)
     if days_until_end == 2 and not sub.reminder_sent:
         await send_reminder(bot, sub, session_methods)
 
@@ -166,9 +165,8 @@ async def handle_subscription_deletion(sub, session_methods):
 
 
 async def handle_notify_buy_sub(bot, sub, session_methods):
-    user = Users(username='None')
+    username = None
     try:
-        user = await session_methods.users.get_user(sub.user_id)
         await session_methods.subscription.update_sub(sub.subscription_id, reminder_sent=2)
         try:
             await bot.send_message(
@@ -192,11 +190,12 @@ async def handle_notify_buy_sub(bot, sub, session_methods):
         except:
             pass
         await session_methods.session.commit()
-        await logger.info(f"Уведомление о продление подписки отправлено ID: `{sub.user_id}` Username: @{user.username}")
+        await logger.info(f"Уведомление о продление подписки отправлено ID: `{sub.user_id}` Username: @{username}")
     except Exception as e:
         await session_methods.session.rollback()
         await logger.log_error(
-            f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при уведомления пользователя о продление подписки через несколько дней',
+            f'Пользователь:\nID: {sub.user_id}\nUsername: @{username}\n'
+            f'Ошибка при уведомления пользователя о продление подписки через несколько дней',
             e)
 
 
