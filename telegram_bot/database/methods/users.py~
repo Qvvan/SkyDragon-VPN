@@ -83,7 +83,6 @@ class UserMethods:
 
     async def get_all_users(self):
         try:
-            # Все колонки Users загружаются сразу
             result = await self.session.execute(select(Users))
             users = result.scalars().all()
             return users

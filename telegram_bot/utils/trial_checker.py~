@@ -29,7 +29,6 @@ async def trial_checker(bot: Bot):
                     if not user.trial_used and user.created_at and user.created_at >= recent_period and not user.reminder_trial_sub:
                         # Отправляем сообщение пользователю
                         try:
-                            await session_methods.users.update_user(user.user_id, reminder_trial_sub=True)
                             await bot.send_message(
                                 chat_id=user.user_id,
                                 text=(
@@ -50,15 +49,13 @@ async def trial_checker(bot: Bot):
                             )
                         except:
                             pass
+                        await session_methods.users.update_user(user.user_id, reminder_trial_sub=True)
                         await logger.info("Отправлено уведомление пользователю о активации пробного периода\n"
                                           f"ID: {user.user_id}\nUsername: @{user.username}")
                 except Exception as e:
                     await logger.error("Ошибка отправки уведомления пользователю о активации пробного периода:", e)
                     await logger.log_error(f"Ошибка отправки уведомления пользователю {user.user_id}:", e)
-
-            await session_methods.session.commit()
         except Exception as e:
-            await session_methods.session.commit()
             await logger.error("Ошибка в функции trial_checker:", e)
             await logger.log_error("Ошибка в функции trial_checker", e)
 

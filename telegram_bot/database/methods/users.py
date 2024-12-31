@@ -102,7 +102,6 @@ class UserMethods:
 
             stmt = update(Users).where(Users.user_id == user_id).values(**kwargs)
             await self.session.execute(stmt)
-            await self.session.commit()  # Сохраняем изменения
 
             # Получаем обновленного пользователя
             updated_user = await self.get_user(user_id)
