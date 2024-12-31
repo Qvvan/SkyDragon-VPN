@@ -826,17 +826,21 @@ class InlineKeyboards:
     @staticmethod
     async def get_user_info(user_id: int):
         user_link = f"tg://user?id={user_id}"
-        keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="Пользователь",
-                        url=user_link
-                    )
+        try:
+            keyboard = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="Пользователь",
+                            url=user_link
+                        )
+                    ]
                 ]
-            ]
-        )
-        return keyboard
+            )
+            return keyboard
+        except Exception as e:
+            logger.error(e)
+            return None
 
     @staticmethod
     async def create_or_extend(subscription_id: int = None):
