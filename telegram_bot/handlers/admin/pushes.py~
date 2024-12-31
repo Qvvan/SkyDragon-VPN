@@ -148,13 +148,15 @@ async def send_notification(callback_query: types.CallbackQuery, state: FSMConte
             while True:
                 try:
                     await send_message(user)
-                    break  # Успешно отправлено, выходим из цикла
+                    await asyncio.sleep(1)
+                    break
                 except Exception as e:
                     if 'Too Many Requests' in str(e):
-                        await asyncio.sleep(delay_on_spam)  # Ждем перед повторной отправкой
+                        await logger.warning("Пауза на 30 секунд")
+                        await asyncio.sleep(delay_on_spam)
                     else:
                         await logger.log_error(f"Ошибка при отправке пользователю {user['user_id']}", e)
-                        break  # Пропускаем пользователя при другой ошибке
+                        break
 
         # Сохраняем успешные и заблокированные
         await session_methods.pushes.add_push_record(message=message_text, user_ids=successful_user_ids)
@@ -203,7 +205,6 @@ async def show_users(message: types.Message, page: int, users_dict: dict):
         await logger.error('Произошла ошибка при создании клавиатуры', e)
         return
 
-    # Отправляем сообщение с пользователями и клавиатурой
     try:
         await message.edit_text(user_list, reply_markup=keyboard)
     except:

@@ -129,8 +129,8 @@ async def send_notification(callback_query: types.CallbackQuery, state: FSMConte
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                     [
                         InlineKeyboardButton(
-                            text="🐲 Мои подписки",
-                            callback_data="view_subs"
+                            text="🎁 Подарить подарок",
+                            callback_data="gift_sub"
                         )
                     ],
                 ])
@@ -205,7 +205,6 @@ async def show_users(message: types.Message, page: int, users_dict: dict):
         await logger.error('Произошла ошибка при создании клавиатуры', e)
         return
 
-    # Отправляем сообщение с пользователями и клавиатурой
     try:
         await message.edit_text(user_list, reply_markup=keyboard)
     except:

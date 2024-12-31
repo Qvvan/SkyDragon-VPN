@@ -66,5 +66,4 @@ async def run_trial_checker(bot: Bot):
         except Exception as e:
             await logger.log_error("Ошибка в цикле run_checker", e)
 
-        # Задержка в 24 часа
         await asyncio.sleep(86400)

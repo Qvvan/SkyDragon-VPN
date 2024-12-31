@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import date
 
 from aiogram import Router
 from aiogram.filters import Command
@@ -12,9 +12,6 @@ from logger.logging_config import logger
 from models.models import ReferralStatus
 
 router = Router()
-
-
-# Клавиатура с кнопками "Сколько рефералов" и "Пригласить"
 
 
 @router.message(Command(commands='friends'))
@@ -85,7 +82,6 @@ async def show_referrals(callback: CallbackQuery):
             await logger.log_error("Error fetching referrals", e)
 
 
-# Обработчик для кнопки "Пригласить"
 @router.callback_query(lambda c: c.data == "get_invite_link")
 async def send_invite_link(callback: CallbackQuery):
     user_id = callback.from_user.id
