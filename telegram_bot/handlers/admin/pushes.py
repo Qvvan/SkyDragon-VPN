@@ -113,7 +113,7 @@ async def send_notification(callback_query: types.CallbackQuery, state: FSMConte
         await callback_query.answer("Текст уведомления отсутствует. Пожалуйста, задайте текст перед отправкой.",
                                     show_alert=True)
         return
-    await callback_query.answer("Начинаю рассылку...", show_alert=False, cache_time=3)
+    await callback_query.message.edit_text("Начинаю рассылку...", show_alert=False, cache_time=3)
 
     count = 0
     blocked_users = []
@@ -144,26 +144,27 @@ async def send_notification(callback_query: types.CallbackQuery, state: FSMConte
                 blocked_users.append(user['user_id'])
 
     async with DatabaseContextManager() as session_methods:
-        for user in selected_users:
-            while True:
-                try:
-                    await send_message(user)
-                    await asyncio.sleep(1)
-                    break
-                except Exception as e:
-                    if 'Too Many Requests' in str(e):
-                        await logger.warning("Пауза на 30 секунд")
-                        await asyncio.sleep(delay_on_spam)
-                    else:
-                        await logger.log_error(f"Ошибка при отправке пользователю {user['user_id']}", e)
+        try:
+            for user in selected_users:
+                while True:
+                    try:
+                        await send_message(user)
+                        await asyncio.sleep(1)
                         break
+                    except Exception as e:
+                        if 'Too Many Requests' in str(e):
+                            await logger.warning("Пауза на 30 секунд")
+                            await asyncio.sleep(delay_on_spam)
+                        else:
+                            await logger.log_error(f"Ошибка при отправке пользователю {user['user_id']}", e)
+                            break
 
-        # Сохраняем успешные и заблокированные
-        await session_methods.pushes.add_push_record(message=message_text, user_ids=successful_user_ids)
-        await session_methods.session.commit()
-
-    # Отправляем итоговое сообщение
-    await callback_query.message.edit_text(
+            # Сохраняем успешные и заблокированные
+            await session_methods.pushes.add_push_record(message=message_text, user_ids=successful_user_ids)
+            await session_methods.session.commit()
+        except Exception as e:
+            await logger.error('Произошла ошибка при отправке уведомления', e)
+    await callback_query.message.answer(
         f"Готово 🎉\n"
         f"Уведомление отправлено {count} пользователям.\n"
         f"Заблокировали бота: {len(blocked_users)}"

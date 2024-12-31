@@ -129,5 +129,5 @@ class Pushes(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     message = Column(String, nullable=False)
-    user_ids = Column(ARRAY(BigInteger), default=[])
+    user_ids = Column(ARRAY(Integer), default=[])
     timestamp = Column(DateTime, default=datetime.utcnow)
