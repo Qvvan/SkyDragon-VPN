@@ -213,16 +213,16 @@ class InlineKeyboards:
                     ).pack()
                 )
             ],
-            # [
-            #     InlineKeyboardButton(
-            #         text="✨ Звездами",
-            #         callback_data=StarsPayCallbackFactory(
-            #             action="stars_pay",
-            #             service_id=callback_data.service_id,
-            #             status_pay=callback_data.status_pay
-            #         ).pack()
-            #     )
-            # ],
+            [
+                InlineKeyboardButton(
+                    text="✨ Звездами",
+                    callback_data=StarsPayCallbackFactory(
+                        action="stars_pay",
+                        service_id=callback_data.service_id,
+                        status_pay=callback_data.status_pay
+                    ).pack()
+                )
+            ],
             [
                 InlineKeyboardButton(
                     text="🔙 Назад",
