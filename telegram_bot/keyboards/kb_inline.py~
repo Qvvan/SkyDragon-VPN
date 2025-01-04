@@ -215,12 +215,8 @@ class InlineKeyboards:
             ],
             [
                 InlineKeyboardButton(
-                    text="✨ Звездами",
-                    callback_data=StarsPayCallbackFactory(
-                        action="stars_pay",
-                        service_id=callback_data.service_id,
-                        status_pay=callback_data.status_pay
-                    ).pack()
+                    text="Оферта SkyDragon",
+                    url="https://telegra.ph/Oferta-na-predostavlenie-uslug-VPN-01-04"
                 )
             ],
             [
