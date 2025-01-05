@@ -24,7 +24,6 @@ class SubscriptionMethods:
                     Subscriptions.key_id,
                     Subscriptions.name_app,
                     Subscriptions.server_ip,
-                    Subscriptions.
                     Services.name,
                     Subscriptions.status,
                     Subscriptions.subscription_id,

@@ -174,7 +174,8 @@ async def show_subscription_details(callback: CallbackQuery, state: FSMContext):
                 name_app = subscription.name_app
                 server_name = subscription.server_name
                 server_ip = subscription.server_ip
-                auto_renewal = False
+                auto_renewal = subscription.auto_renewal
+                card_details_id = subscription.card_details_id
 
                 detailed_info = (
                     f"<b>🐉 Статус подписки:</b> {'🐲 Дракон на страже' if status == 'активная' else '💀 Покровительство завершено'}\n"
@@ -189,7 +190,7 @@ async def show_subscription_details(callback: CallbackQuery, state: FSMContext):
                 await callback.message.edit_text(
                     text=detailed_info,
                     parse_mode="HTML",
-                    reply_markup=await InlineKeyboards.menu_subs(subscription_id, name_app, server_ip)
+                    reply_markup=await InlineKeyboards.menu_subs(subscription_id, name_app, server_ip, auto_renewal)
                 )
         except Exception as e:
             await logger.log_error("Ошибка при получении подробностей подписки\n"
@@ -235,9 +236,10 @@ async def toggle_auto_renewal(callback: CallbackQuery, callback_data: AutoRenewa
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
-                text="✔️ Включить" if not is_auto_renewal_enabled else "❌ Отключить",
+                text="✅ Включить" if not is_auto_renewal_enabled else "❌ Отключить",
                 callback_data=AutoRenewalCallbackFactory(
                     action="off_or_on",
+                    subscription_id=subscription_id,
                     auto_renewal_enabled=not is_auto_renewal_enabled).pack()
             ),
             InlineKeyboardButton(
@@ -252,4 +254,37 @@ async def toggle_auto_renewal(callback: CallbackQuery, callback_data: AutoRenewa
 
 @router.callback_query(AutoRenewalCallbackFactory.filter(F.action == 'off_or_on'))
 async def toggle_auto_renewal(callback: CallbackQuery, callback_data: AutoRenewalCallbackFactory):
-    await callback.answer("Пока что эта функция не реализована.", show_alert=True, cache_time=5)
+    is_auto_renewal_enabled = callback_data.auto_renewal_enabled
+    subscription_id = callback_data.subscription_id
+
+    async with DatabaseContextManager() as session_methods:
+        if is_auto_renewal_enabled:
+            await session_methods.subscription.update_sub(subscription_id, auto_renewal=is_auto_renewal_enabled,
+                                                          card_details_id='Тут что-то будет')
+        else:
+            await session_methods.subscription.update_sub(subscription_id, auto_renewal=is_auto_renewal_enabled,
+                                                          card_details_id=None)
+        await session_methods.session.commit()
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="✅ Включить" if not is_auto_renewal_enabled else "❌ Отключить",
+                callback_data=AutoRenewalCallbackFactory(
+                    action="off_or_on",
+                    subscription_id=subscription_id,
+                    auto_renewal_enabled=not is_auto_renewal_enabled).pack()
+            ),
+            InlineKeyboardButton(
+                text='🔙 Назад',
+                callback_data=f'view_details_{subscription_id}'
+            )
+        ]
+    ])
+
+    await callback.message.edit_text(
+        text=f"🔔 Автопродление подписки: {'✅ Включено' if is_auto_renewal_enabled else '❌ Отключено'}\n\n"
+             "Вы можете изменить статус автопродления, нажав на соответствующую кнопку ниже.",
+        parse_mode="Markdown",
+        reply_markup=keyboard
+    )

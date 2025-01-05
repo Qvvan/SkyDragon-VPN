@@ -74,6 +74,8 @@ class Subscriptions(Base):
     status = Column(String, default=SubscriptionStatusEnum.ACTIVE)
     name_app = Column(String, nullable=True)
     reminder_sent = Column(Integer, default=0)
+    auto_renewal = Column(Boolean, default=False)
+    card_details_id = Column(String, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

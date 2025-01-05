@@ -135,6 +135,8 @@ class SubscriptionMethods:
                     Services.name,
                     Subscriptions.status,
                     Subscriptions.subscription_id,
+                    Subscriptions.card_details_id,
+                    Subscriptions.auto_renewal,
                     Services.duration_days,
                     Services.price,
                     Services.service_id,

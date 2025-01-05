@@ -74,6 +74,8 @@ class Subscriptions(Base):
     status = Column(String, default=SubscriptionStatusEnum.ACTIVE)
     name_app = Column(String, nullable=True)
     reminder_sent = Column(Integer, default=0)
+    auto_renewal = Column(Boolean, default=False)
+    card_details_id = Column(Integer, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -129,5 +131,5 @@ class Pushes(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     message = Column(String, nullable=False)
-    user_ids = Column(ARRAY(Integer), default=[])
+    user_ids = Column(ARRAY(BigInteger), default=[])
     timestamp = Column(DateTime, default=datetime.utcnow)

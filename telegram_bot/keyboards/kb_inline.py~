@@ -275,7 +275,7 @@ class InlineKeyboards:
         return keyboard.as_markup()
 
     @staticmethod
-    async def menu_subs(subscription_id, name_app, server_ip, auto_renewal):
+    async def menu_subs(subscription_id, name_app, server_ip):
         async with DatabaseContextManager() as session_methods:
             try:
                 keyboard = InlineKeyboardBuilder()
@@ -309,7 +309,7 @@ class InlineKeyboards:
                         text='🔄 Автопродление',
                         callback_data=AutoRenewalCallbackFactory(
                             action='auto_renewal',
-                            auto_renewal_enabled=auto_renewal,
+                            auto_renewal_enabled=False,
                             subscription_id=subscription_id,
                         ).pack()),
                     InlineKeyboardButton(
