@@ -37,9 +37,9 @@ async def process_start_command(message: Message):
                 gifts = await session_methods.gifts.get_gift_by_username(message.from_user.username)
                 if gifts:
                     await get_new_gift(gifts, message)
-                await log_new_user(message)
                 if referrer_id:
                     await handle_referral(referrer_id, message)
+                await log_new_user(message)
         except Exception as e:
             await logger.log_error(
                 f'Пользователь: @{message.from_user.username}\n'
@@ -94,10 +94,6 @@ async def handle_referral(referrer_id, message):
                 )
             except:
                 await logger.warning(f"Не удалось отправить уведомление пользователю с ID: {referrer_id}")
-            await logger.log_info(
-                f"Его пригласил пользователь с ID: {referrer_id}",
-                await InlineKeyboards.get_user_info(referrer_id)
-            )
             await session_methods.referrals.add_referrer(
                 referral=Referrals(
                     referrer_id=referrer_id,
@@ -108,6 +104,10 @@ async def handle_referral(referrer_id, message):
             )
             await extend_user_subscription(referrer_id, message.from_user.username, 5, session_methods)
             await session_methods.session.commit()
+            await logger.log_info(
+                f"Его пригласил пользователь с ID: {referrer_id}",
+                await InlineKeyboards.get_user_info(referrer_id)
+            )
         except Exception as e:
             await logger.log_error(f"Ошибка при начислении бонуса за приглашение: {referrer_id}", e)
 
@@ -122,13 +122,14 @@ def get_referrer_id(message):
 
 async def log_new_user(message: Message):
     """Logs information about a new user."""
+    keyboard = await InlineKeyboards.get_user_info(message.from_user.id)
     await logger.log_info(
         f"New user joined:\n"
         f"Username: @{message.from_user.username}\n"
         f"First name: {message.from_user.first_name}\n"
         f"Last name: {message.from_user.last_name}\n"
         f"ID: {message.from_user.id}",
-        await InlineKeyboards.get_user_info(message.from_user.id)
+        keyboard=keyboard
     )
 
 

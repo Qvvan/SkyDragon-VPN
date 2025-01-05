@@ -497,6 +497,12 @@ class InlineKeyboards:
             ],
             [
                 InlineKeyboardButton(
+                    text="Правила и условия",
+                    url="https://telegra.ph/Oferta-na-predostavlenie-uslug-VPN-01-04"
+                )
+            ],
+            [
+                InlineKeyboardButton(
                     text="🔙 Назад",
                     callback_data="back_to_start"
                 )
@@ -816,13 +822,19 @@ class InlineKeyboards:
                     callback_data="help_wizards_callback"
                 )
             ],
+            [
+                InlineKeyboardButton(
+                    text="Правила и условия",
+                    url="https://telegra.ph/Oferta-na-predostavlenie-uslug-VPN-01-04"
+                )
+            ],
         ]
         )
 
     @staticmethod
     async def get_user_info(user_id: int):
-        user_link = f"tg://user?id={user_id}"
         try:
+            user_link = f"tg://user?id={user_id}"
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
                     [
