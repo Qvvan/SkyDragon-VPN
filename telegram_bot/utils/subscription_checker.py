@@ -82,9 +82,15 @@ async def send_reminder(bot: Bot, sub, session_methods):
             await logger.warning(message=f"Не удалось отправить напоминание: {e}", )
             keyboard = None
 
-        await logger.log_info(
-            f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{username}\nИстечет через 3 дня.", keyboard
-        )
+
+        try:
+            await logger.log_info(
+                f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{username}\nИстечет через 3 дня.", keyboard
+            )
+        except:
+            await logger.log_info(
+                f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{username}\nИстечет через 3 дня."
+            )
     except Exception as e:
         await session_methods.session.rollback()
         await logger.log_error(
@@ -129,9 +135,14 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
             await logger.warning(message=f"Не удалось отправить напоминание @{username}, ID: {sub.user_id}, {e}")
             keyboard = None
 
-        await logger.log_info(
-            f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{username}\nИстекла", keyboard
-        )
+        try:
+            await logger.log_info(
+                f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{username}\nИстекла", keyboard
+            )
+        except:
+            await logger.log_info(
+                f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{username}\nИстекла"
+            )
     except Exception as e:
         await session_methods.session.rollback()
         await logger.log_error(
@@ -158,9 +169,15 @@ async def handle_subscription_deletion(sub, session_methods):
             await logger.warning(
                 message=f"Не удалось получить профиль пользователя: {username} ID: {sub.user_id}")
             keyboard = None
-        await logger.log_info(
-            f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{username}\nПолностью удалена", keyboard
-        )
+
+        try:
+            await logger.log_info(
+                f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{username}\nПолностью удалена", keyboard
+            )
+        except:
+            await logger.log_info(
+                f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{username}\nПолностью удалена"
+            )
     except Exception as e:
         await session_methods.session.rollback()
         await logger.log_error(

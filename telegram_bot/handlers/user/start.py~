@@ -123,23 +123,15 @@ def get_referrer_id(message):
 async def log_new_user(message: Message):
     """Logs information about a new user."""
     keyboard = await InlineKeyboards.get_user_info(message.from_user.id)
-    try:
-        await logger.log_info(
-            f"New user joined:\n"
-            f"Username: @{message.from_user.username}\n"
-            f"First name: {message.from_user.first_name}\n"
-            f"Last name: {message.from_user.last_name}\n"
-            f"ID: {message.from_user.id}",
-            keyboard=keyboard
-        )
-    except:
-        await logger.log_info(
-            f"New user joined:\n"
-            f"Username: @{message.from_user.username}\n"
-            f"First name: {message.from_user.first_name}\n"
-            f"Last name: {message.from_user.last_name}\n"
-            f"ID: {message.from_user.id}",
-        )
+    await logger.log_info(
+        f"New user joined:\n"
+        f"Username: @{message.from_user.username}\n"
+        f"First name: {message.from_user.first_name}\n"
+        f"Last name: {message.from_user.last_name}\n"
+        f"ID: {message.from_user.id}",
+        keyboard=keyboard
+    )
+
 
 @router.callback_query(lambda c: c.data == 'back_to_start')
 async def handle_know_more(callback: CallbackQuery):
