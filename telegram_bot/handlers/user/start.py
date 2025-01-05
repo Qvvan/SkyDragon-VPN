@@ -104,10 +104,15 @@ async def handle_referral(referrer_id, message):
             )
             await extend_user_subscription(referrer_id, message.from_user.username, 5, session_methods)
             await session_methods.session.commit()
-            await logger.log_info(
-                f"Его пригласил пользователь с ID: {referrer_id}",
-                await InlineKeyboards.get_user_info(referrer_id)
-            )
+            try:
+                await logger.log_info(
+                    f"Его пригласил пользователь с ID: {referrer_id}",
+                    await InlineKeyboards.get_user_info(referrer_id)
+                )
+            except:
+                await logger.log_info(
+                    f"Его пригласил пользователь с ID: {referrer_id}"
+                )
         except Exception as e:
             await logger.log_error(f"Ошибка при начислении бонуса за приглашение: {referrer_id}", e)
 
