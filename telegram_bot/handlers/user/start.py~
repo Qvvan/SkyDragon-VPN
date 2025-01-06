@@ -37,9 +37,9 @@ async def process_start_command(message: Message):
                 gifts = await session_methods.gifts.get_gift_by_username(message.from_user.username)
                 if gifts:
                     await get_new_gift(gifts, message)
-                await log_new_user(message)
                 if referrer_id:
                     await handle_referral(referrer_id, message)
+                await log_new_user(message)
         except Exception as e:
             await logger.log_error(
                 f'Пользователь: @{message.from_user.username}\n'
