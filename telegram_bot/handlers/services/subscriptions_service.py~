@@ -6,7 +6,6 @@ from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from database.context_manager import DatabaseContextManager
 from handlers.services.active_servers import get_active_server_and_key
 from handlers.services.create_subscription_service import SubscriptionService
-from handlers.services.create_transaction_service import TransactionService
 from handlers.services.extend_latest_subscription import NoAvailableServersError, extend_user_subscription
 from handlers.services.key_create import BaseKeyManager
 from keyboards.kb_inline import InlineKeyboards
@@ -14,7 +13,7 @@ from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 from models.models import StatusSubscriptionHistory, SubscriptionStatusEnum, Subscriptions, NameApp
 
-
+    
 class NoActiveSubscriptionsError(Exception):
     pass
 

@@ -15,6 +15,29 @@ Configuration.account_id = SHOP_ID
 Configuration.secret_key = SHOP_API_TOKEN
 
 
+def auto_renewal_payment(amount, description, payment_method_id, user_id, username, subscription_id, service_id):
+    try:
+        payment = Payment.create({
+            "amount": {
+                "value": amount,
+                "currency": "RUB"
+            },
+            "capture": True,
+            "payment_method_id": payment_method_id,
+            "description": description,
+            "metadata": {
+                "service_id": service_id,
+                "service_type": "old",
+                "user_id": user_id,
+                "username": username,
+                "subscription_id": subscription_id
+            }
+        })
+        return json.loads(payment.json())
+    except Exception as e:
+        return None
+
+
 def create_payment(amount, description, return_url, service_id, service_type, user_id, username,
                    subscription_id: int = None, receiver_username: str = None):
     payment = Payment.create(
@@ -24,7 +47,7 @@ def create_payment(amount, description, return_url, service_id, service_type, us
                 "currency": "RUB"
             },
             "capture": True,
-            "save_payment_method": False,
+            "save_payment_method": True,
             "description": description,
             "confirmation": {
                 "type": "redirect",
@@ -89,10 +112,10 @@ async def successful_payment(bot, payment_response):
     else:
         subscription_id = -99999
     if service_type == 'new':
-        await SubscriptionsServiceCard.process_new_subscription(bot, user_id, username, service_id)
+        await SubscriptionsServiceCard.process_new_subscription(bot, user_id, username, service_id, payment_response)
     elif service_type == 'old':
         await SubscriptionsServiceCard.extend_sub_successful_payment(bot, user_id, username, subscription_id,
-                                                                     service_id)
+                                                                     service_id, payment_response)
     elif service_type == 'gift':
         await logger.log_info(f"Пользователь: @{username}\nID: {user_id}\nПодарил другу подписку: @{receiver_username}")
         async with DatabaseContextManager() as session_methods:

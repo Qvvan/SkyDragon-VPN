@@ -20,11 +20,15 @@ class NoActiveSubscriptionsError(Exception):
 
 class SubscriptionsServiceCard:
     @staticmethod
-    async def process_new_subscription(bot: Bot, user_id: int, username: str, service_id: int):
+    async def process_new_subscription(bot: Bot, user_id: int, username: str, service_id: int, payment_response):
         async with DatabaseContextManager() as session_methods:
             key_id = None
             service = await session_methods.services.get_service_by_id(service_id)
             durations_days = service.duration_days
+            status_saved = payment_response.payment_method.saved
+            card_details_id = None
+            if status_saved:
+                card_details_id = payment_response.payment_method.id
             try:
                 vless_manager, server_ip, key, key_id = await get_active_server_and_key(
                     user_id, username, session_methods
@@ -46,6 +50,7 @@ class SubscriptionsServiceCard:
                         server_ip=server_ip,
                         name_app=NameApp.VLESS,
                         start_date=datetime.now(),
+                        card_details_id=card_details_id,
                         end_date=datetime.now() + timedelta(days=durations_days)
                     ),
                     session_methods=session_methods
@@ -80,12 +85,16 @@ class SubscriptionsServiceCard:
                 await session_methods.session.commit()
 
     @staticmethod
-    async def extend_sub_successful_payment(bot: Bot, user_id, username, subscription_id, service_id):
+    async def extend_sub_successful_payment(bot: Bot, user_id, username, subscription_id, service_id, payment_response):
         async with DatabaseContextManager() as session_methods:
             try:
                 subs = await session_methods.subscription.get_subscription(user_id)
                 service = await session_methods.services.get_service_by_id(service_id)
                 durations_days = service.duration_days
+                status_saved = payment_response.payment_method.saved
+                card_details_id = None
+                if status_saved:
+                    card_details_id = payment_response.payment_method.id
                 if subs:
                     for sub in subs:
                         if sub.subscription_id == subscription_id:
@@ -99,6 +108,7 @@ class SubscriptionsServiceCard:
                                 end_date=new_end_date,
                                 updated_at=datetime.now(),
                                 status=SubscriptionStatusEnum.ACTIVE,
+                                card_details_id=card_details_id if sub.auto_renewal else None,
                                 reminder_sent=0
                             )
                             await session_methods.subscription_history.create_history_entry(

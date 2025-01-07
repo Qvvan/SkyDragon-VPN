@@ -135,6 +135,8 @@ class SubscriptionMethods:
                     Services.name,
                     Subscriptions.status,
                     Subscriptions.subscription_id,
+                    Subscriptions.card_details_id,
+                    Subscriptions.auto_renewal,
                     Services.duration_days,
                     Services.price,
                     Services.service_id,
@@ -149,7 +151,7 @@ class SubscriptionMethods:
             result = await self.session.execute(query)
             subscription = result.mappings().first()
 
-            if len(subscription) == 0:
+            if subscription is None:
                 return None
 
             return subscription
