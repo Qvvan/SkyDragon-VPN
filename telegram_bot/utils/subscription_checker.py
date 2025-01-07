@@ -100,7 +100,7 @@ async def send_reminder(bot: Bot, sub, session_methods):
 async def handle_expired_subscription(bot: Bot, sub, session_methods):
     username = None
     try:
-        if sub.auto_renewal:
+        if sub.auto_renewal and sub.card_details_id:
             service = await session_methods.services.get_service_by_id(sub.service_id)
             res = auto_renewal_payment(
                 amount=service.price,

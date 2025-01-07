@@ -28,6 +28,8 @@ class SubscriptionMethods:
                     Subscriptions.status,
                     Subscriptions.subscription_id,
                     Services.duration_days,
+                    Subscriptions.auto_renewal,
+                    Subscriptions.card_details_id,
                     Services.price,
                     Services.service_id,
                     Servers.name.label('server_name')

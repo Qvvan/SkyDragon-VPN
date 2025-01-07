@@ -259,8 +259,7 @@ async def toggle_auto_renewal(callback: CallbackQuery, callback_data: AutoRenewa
 
     async with DatabaseContextManager() as session_methods:
         if is_auto_renewal_enabled:
-            await session_methods.subscription.update_sub(subscription_id, auto_renewal=is_auto_renewal_enabled,
-                                                          card_details_id='Тут что-то будет')
+            await session_methods.subscription.update_sub(subscription_id, auto_renewal=is_auto_renewal_enabled)
         else:
             await session_methods.subscription.update_sub(subscription_id, auto_renewal=is_auto_renewal_enabled,
                                                           card_details_id=None)
