@@ -36,6 +36,7 @@ class UserSelectCallback(CallbackData, prefix="user_select"):
 class ServiceCallbackFactory(CallbackData, prefix='service'):
     service_id: str
     status_pay: str
+    subscription_id: Optional[int] = None
 
 
 class UserInfoCallbackFactory(CallbackData, prefix='info'):
@@ -66,6 +67,7 @@ class ServerSelectCallback(CallbackData, prefix="servers"):
 class StarsPayCallbackFactory(CallbackData, prefix="stars_pay"):
     action: str
     service_id: str
+    subscription_id: Optional[int] = None
     status_pay: str
 
 
@@ -93,7 +95,7 @@ class AutoRenewalCallbackFactory(CallbackData, prefix="auto_renewal"):
 
 class InlineKeyboards:
     @staticmethod
-    async def create_order_keyboards(status_pay: StatusPay, back_target: str = None) -> InlineKeyboardMarkup:
+    async def create_order_keyboards(status_pay: StatusPay, back_target: str = None, subscription_id: int = None) -> InlineKeyboardMarkup:
         """Клавиатура для кнопок с услугами."""
         async with DatabaseContextManager() as session_methods:
             try:
@@ -107,7 +109,8 @@ class InlineKeyboards:
 
                     callback_data = ServiceCallbackFactory(
                         service_id=service_id,
-                        status_pay=status_pay.value
+                        status_pay=status_pay.value,
+                        subscription_id=subscription_id
                     ).pack()
 
                     buttons.append(InlineKeyboardButton(text=service_name, callback_data=callback_data))
@@ -209,6 +212,7 @@ class InlineKeyboards:
                     callback_data=StarsPayCallbackFactory(
                         action="card_pay",
                         service_id=callback_data.service_id,
+                        subscription_id=subscription_id,
                         status_pay=callback_data.status_pay
                     ).pack()
                 )
@@ -292,6 +296,7 @@ class InlineKeyboards:
                     )
                 keyboard.add(
                     InlineKeyboardButton(
+                        # TODO переделать так, чтоб кнопки оплата не зависила от состояния, так как новые релизы затираюь состояние
                         text='⏳ Продлить подписку',
                         callback_data=SubscriptionCallbackFactory(
                             action='extend_subscription',

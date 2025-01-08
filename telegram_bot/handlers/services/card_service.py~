@@ -78,7 +78,7 @@ async def payment_status_checker(bot):
                 unpaid_payments = await session_methods.payments.get_unpaid_payments()
 
                 for payment in unpaid_payments:
-                    payment_time_limit = payment .created_at + timedelta(hours=1)
+                    payment_time_limit = payment.created_at + timedelta(hours=1)
                     if datetime.utcnow() > payment_time_limit:
                         await session_methods.payments.delete_payment(payment.payment_id)
                         await session_methods.session.commit()

@@ -162,6 +162,7 @@ class SubscriptionsServiceCard:
                 )
 
                 await session_methods.session.rollback()
+                await session_methods.session.commit()
                 return
 
     @staticmethod

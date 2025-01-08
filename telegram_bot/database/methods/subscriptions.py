@@ -43,7 +43,7 @@ class SubscriptionMethods:
             result = await self.session.execute(query)
             subscription = result.mappings().all()
 
-            if len(subscription) == 0:
+            if not subscription:
                 return None
 
             return subscription

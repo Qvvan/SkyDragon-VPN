@@ -91,8 +91,9 @@ async def handle_subscribe(callback: CallbackQuery, callback_data: DefaultCallba
 async def handle_service_callback(callback_query: CallbackQuery, callback_data: ServiceCallbackFactory,
                                   state: FSMContext):
     user_data = await state.get_data()
-    subscription_id = int(user_data.get('subscription_id')) if user_data.get('subscription_id') else None
+    subscription_id = callback_data.subscription_id
     back_target = user_data.get('back_target')
+
     try:
         await callback_query.message.edit_text("Выберите способ оплаты",
                                                reply_markup=await InlineKeyboards.payment_method(callback_data,
@@ -180,8 +181,7 @@ async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallba
 
     service_id = int(callback_data.service_id)
     status_pay = StatusPay(callback_data.status_pay)
-    user_data = await state.get_data()
-    subscription_id = int(user_data.get('subscription_id')) if user_data.get('subscription_id') else None
+    subscription_id = callback_data.subscription_id
     async with DatabaseContextManager() as session_methods:
         try:
             service = await session_methods.services.get_service_by_id(service_id)

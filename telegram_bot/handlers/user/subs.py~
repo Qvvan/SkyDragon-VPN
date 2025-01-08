@@ -217,7 +217,7 @@ async def extend_subscription(callback: CallbackQuery, callback_data: Subscripti
 
     await callback.message.edit_text(
         text=LEXICON_RU['createorder'],
-        reply_markup=await InlineKeyboards.create_order_keyboards(StatusPay.OLD, back, subscription_id),
+        reply_markup=await InlineKeyboards.create_order_keyboards(StatusPay.OLD, back),
     )
 
 
