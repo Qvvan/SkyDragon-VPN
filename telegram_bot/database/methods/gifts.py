@@ -45,3 +45,12 @@ class GiftsMethods:
         except SQLAlchemyError as e:
             await logger.log_error(f"Ошибка получения подарка", e)
             return
+
+    async def get_pending_gifts(self):
+        try:
+            result = await self.session.execute(select(Gifts).filter_by(status="pending"))
+            gift = result.scalars().all()
+            return gift
+        except SQLAlchemyError as e:
+            await logger.log_error(f"Ошибка получения подарка", e)
+            return

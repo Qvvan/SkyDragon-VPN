@@ -107,7 +107,7 @@ async def main():
     asyncio.create_task(ping_servers(bot))
     asyncio.create_task(payment_status_checker(bot))
     asyncio.create_task(run_trial_checker(bot))
-    asyncio.create_task(run_gift_checker(bot))
+    # asyncio.create_task(run_gift_checker(bot))
 
     await bot.delete_webhook(drop_pending_updates=True)
     try:

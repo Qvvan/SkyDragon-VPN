@@ -1,4 +1,4 @@
-from sqlalchemy import desc, asc
+from sqlalchemy import asc
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -26,9 +26,6 @@ class ServiceMethods:
                 select(Services).filter_by(service_id=service_id)
             )
             service = result.scalar_one_or_none()
-
-            if service is None:
-                return False
 
             return service
         except Exception as e:

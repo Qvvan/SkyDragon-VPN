@@ -23,7 +23,7 @@ class MessageLoggingMiddleware(BaseMiddleware):
             username = event.chat.username
             await logger.info(f"Пользователь {username} (ID: {user_id}) отправил сообщение: {event.text}")
             await last_visit(user_id, username)
-            await gift_with_new_username(event, username, user_id, 'message')
+            # await gift_with_new_username(event, username, user_id, 'message')
 
         return await handler(event, data)
 
@@ -41,7 +41,7 @@ class CallbackLoggingMiddleware(BaseMiddleware):
             button_text = event.data
             await logger.info(f"Пользователь {username} (ID: {user_id}) нажал кнопку: {button_text}")
             await last_visit(user_id, username)
-            await gift_with_new_username(event, username, user_id, 'callback')
+            # await gift_with_new_username(event, username, user_id, 'callback')
 
         return await handler(event, data)
 
