@@ -238,7 +238,7 @@ class InlineKeyboards:
 
     @staticmethod
     async def get_support(callback_data: str = None) -> InlineKeyboardMarkup:
-        support_user_id = "SkyDragonSupport"
+        support_user_id = ""
         support_link = f"t.me/{support_user_id}"
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
