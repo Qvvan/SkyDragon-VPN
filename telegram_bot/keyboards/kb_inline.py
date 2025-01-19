@@ -95,7 +95,8 @@ class AutoRenewalCallbackFactory(CallbackData, prefix="auto_renewal"):
 
 class InlineKeyboards:
     @staticmethod
-    async def create_order_keyboards(status_pay: StatusPay, back_target: str = None, subscription_id: int = None) -> InlineKeyboardMarkup:
+    async def create_order_keyboards(status_pay: StatusPay, back_target: str = None,
+                                     subscription_id: int = None) -> InlineKeyboardMarkup:
         """Клавиатура для кнопок с услугами."""
         async with DatabaseContextManager() as session_methods:
             try:
@@ -181,27 +182,6 @@ class InlineKeyboards:
         keyboard.adjust(1, 2)
 
         return keyboard.as_markup()
-
-    @staticmethod
-    async def card_pay(callback_data):
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="Оплатить",
-                    callback_data="empty"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🔙 Назад",
-                    callback_data=ServiceCallbackFactory(
-                        service_id=callback_data.service_id,
-                        status_pay=callback_data.status_pay
-                    ).pack()
-                )
-            ]
-        ])
-        return keyboard
 
     @staticmethod
     async def payment_method(callback_data, subscription_id: int = None, back_target: str = "main_menu"):
@@ -328,41 +308,6 @@ class InlineKeyboards:
                 await logger.log_error(f'Произошла ошибка при формирование клавиатуры с подпиской', e)
 
     @staticmethod
-    async def get_back_button_keyboard(callback: str = "back_to_support_menu") -> InlineKeyboardMarkup:
-        keyboard = InlineKeyboardBuilder()
-
-        back_button = InlineKeyboardButton(
-            text="🔙 Назад",
-            callback_data=callback
-        )
-
-        keyboard.add(back_button)
-
-        return keyboard.as_markup()
-
-    @staticmethod
-    async def get_guide(turn_on: str = None) -> InlineKeyboardMarkup:
-        # Создаем клавиатуру с кнопкой "Инструкция"
-        keyboard = InlineKeyboardBuilder()
-
-        instruction_button = InlineKeyboardButton(
-            text="Инструкция 📖",
-            url=LEXICON_RU['outline_info']  # Ссылка на инструкцию
-        )
-        keyboard.add(instruction_button)
-
-        if turn_on:
-            back_button = InlineKeyboardButton(
-                text="🔙 Назад",
-                callback_data="back_to_support_menu"
-            )
-            keyboard.add(back_button)
-
-        keyboard.adjust(1)
-
-        return keyboard.as_markup()
-
-    @staticmethod
     async def create_user_pagination_with_users_keyboard(users, page: int, has_next: bool) -> InlineKeyboardMarkup:
         buttons = [[
             InlineKeyboardButton(text="Add all ✅", callback_data="add_all_users"),
@@ -435,21 +380,6 @@ class InlineKeyboards:
         keyboard.row(
             InlineKeyboardButton(text='🔙 Назад', callback_data=f'view_details_{subscription_id}')
         )
-
-        return keyboard.as_markup()
-
-    @staticmethod
-    async def show_guide(name_app) -> InlineKeyboardMarkup:
-        keyboard = InlineKeyboardBuilder()
-        vless = InlineKeyboardButton(text="VLESS", callback_data=GuideSelectCallback(
-            action='show_guide', name_oc=name_app, name_app='vless').pack())
-        outline = InlineKeyboardButton(text="OUTLINE", callback_data=GuideSelectCallback(
-            action='show_guide', name_oc=name_app, name_app='outline').pack())
-        back = InlineKeyboardButton(text="Назад", callback_data=GuideSelectCallback(
-            action='show_guide', name_oc=name_app, name_app='back').pack())
-        keyboard.row(vless, outline)
-        keyboard.add(back)
-        keyboard.adjust(2, 1)
 
         return keyboard.as_markup()
 

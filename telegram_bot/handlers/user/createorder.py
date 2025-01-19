@@ -171,7 +171,7 @@ async def stars_pay(callback_query: CallbackQuery, callback_data: ServiceCallbac
 
 
 @router.callback_query(StarsPayCallbackFactory.filter(F.action == 'card_pay'))
-async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallbackFactory, state: FSMContext):
+async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallbackFactory):
     service_list = [
         "Краткосрочная мощь духа дракона, дарующая защиту на время одного полного круга луны.",
         "Щит древности, что бережёт вас в течение трёх смен времён года, словно хранитель древних тайн.",
@@ -184,6 +184,13 @@ async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallba
     subscription_id = callback_data.subscription_id
     async with DatabaseContextManager() as session_methods:
         try:
+            sub = await session_methods.subscription.get_subscription_by_id(subscription_id)
+            if not sub:
+                await callback_query.answer(
+                    text="Подписка, которую вы хотите продлить, не найдена🙏",
+                    show_alert=True,
+                    cache_time=5
+                )
             service = await session_methods.services.get_service_by_id(service_id)
             payment_data = create_payment(
                 amount=service.price,

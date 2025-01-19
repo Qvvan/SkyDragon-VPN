@@ -296,7 +296,6 @@ class InlineKeyboards:
                     )
                 keyboard.add(
                     InlineKeyboardButton(
-                        # TODO переделать так, чтоб кнопки оплата не зависила от состояния, так как новые релизы затираюь состояние
                         text='⏳ Продлить подписку',
                         callback_data=SubscriptionCallbackFactory(
                             action='extend_subscription',

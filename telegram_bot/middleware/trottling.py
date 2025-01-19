@@ -73,7 +73,7 @@ class ThrottlingMiddleware(BaseMiddleware):
 
     @staticmethod
     async def event_throttled(event: Message, throttled: Throttled):
-        if throttled.exceeded_count <= 2:
+        if throttled.exceeded_count <= 3:
             await event.answer(
                 f'🐉 Пожалуйста, не тревожь дракона так часто! 😅 Дай ему немного времени, чтобы обработать твой запрос.'
             )

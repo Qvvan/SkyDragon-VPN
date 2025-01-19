@@ -153,9 +153,6 @@ class SubscriptionMethods:
             result = await self.session.execute(query)
             subscription = result.mappings().first()
 
-            if subscription is None:
-                return None
-
             return subscription
         except SQLAlchemyError as e:
             await logger.log_error(f"Error retrieving subscription", e)

@@ -1,6 +1,7 @@
 import html
 import logging
 import traceback
+
 from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -51,7 +52,8 @@ class CustomLogger:
         ) as bot:
             await bot.send_message(
                 chat_id=group_id,
-                text=f"{notification_type}{escaped_message}{error_message}",
+                text="Слишком большой текст, загляни в логи" if len(
+                    f"{notification_type}{escaped_message}{error_message}") > 4096 else f"{notification_type}{escaped_message}{error_message}",
                 reply_markup=keyboard
             )
 
