@@ -212,7 +212,8 @@ async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallba
                             text="🔙 Назад",
                             callback_data=ServiceCallbackFactory(
                                 service_id=str(service_id),
-                                status_pay=status_pay.value
+                                status_pay=status_pay.value,
+                                subscription_id=subscription_id
                             ).pack()
                         )
                     ],

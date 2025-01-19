@@ -11,7 +11,7 @@ from handlers.admin import add_server, user_info, unban_user, block_key, cancel,
     unblock_key, help_info, ban_user, pushes, show_servers, get_user_id, add_gift, message_for_user
 from handlers.services import payments_service, guide_install, trial_subscription
 from handlers.services.card_service import payment_status_checker
-from handlers.user import subs, replace_server, replace_app, referrer, menu, just_message, stars, gift_sub
+from handlers.user import subs, replace_server, replace_app, referrer, menu, just_message, stars, gift_sub, send_stikers
 from handlers.user import start, support, createorder
 from keyboards.set_menu import set_main_menu
 from logger.logging_config import logger
@@ -70,6 +70,7 @@ async def main():
     dp.shutdown.register(on_shutdown)
     dp.include_router(user_info.router)
     # user-handlers
+    dp.include_router(send_stikers.router)
     dp.include_router(cancel.router)
     dp.include_router(menu.router)
     dp.include_router(createorder.router)

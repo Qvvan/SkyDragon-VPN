@@ -181,8 +181,7 @@ async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallba
 
     service_id = int(callback_data.service_id)
     status_pay = StatusPay(callback_data.status_pay)
-    user_data = await state.get_data()
-    subscription_id = int(user_data.get('subscription_id')) if user_data.get('subscription_id') else None
+    subscription_id = callback_data.subscription_id
     async with DatabaseContextManager() as session_methods:
         try:
             service = await session_methods.services.get_service_by_id(service_id)

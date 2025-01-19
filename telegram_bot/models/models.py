@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, String, Integer, DateTime, Enum, BigInteger, ARRAY, Boolean, DECIMAL
+from sqlalchemy import Column, String, Integer, DateTime, Enum, BigInteger, ARRAY, Boolean
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -91,6 +91,7 @@ class SubscriptionsHistory(Base):
     status = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 
 class Payments(Base):
     __tablename__ = 'payments'
