@@ -16,13 +16,17 @@ async def trial_checker(bot: Bot):
             if not users:
                 return
 
-            # Устанавливаем период для проверки (например, зарегистрировались в течение последних 7 дней)
-            recent_period = datetime.utcnow() - timedelta(days=7)
+            one_day_ago = datetime.utcnow() - timedelta(days=1)
 
             for user in users:
                 try:
                     # Проверяем, что пользователь зарегистрировался недавно и не использовал пробную подписку
-                    if not user.trial_used and user.created_at and user.created_at >= recent_period and not user.reminder_trial_sub:
+                    if (
+                            not user.trial_used
+                            and user.created_at
+                            and user.created_at <= one_day_ago
+                            and not user.reminder_trial_sub
+                    ):
                         # Отправляем сообщение пользователю
                         try:
                             await session_methods.users.update_user(user.user_id, reminder_trial_sub=True)

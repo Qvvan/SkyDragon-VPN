@@ -214,14 +214,14 @@ class VlessKeyManager(BaseKeyManager):
                     "clients": [
                         {
                             "id": new_client["id"],
-                            "flow": "xtls-rprx-vision-udp443",
+                            "flow": "xtls-rprx-vision",
                             "email": new_client.get("email", ""),
                             "limitIp": 1,
                             "totalGB": 0,
                             "expiryTime": 0,
                             "enable": True,
                             "tgId": "",
-                            "subId": sub_id,  # Укажите здесь ваш `subId`
+                            "subId": sub_id,
                             "reset": 0
                         }
                     ],
@@ -247,7 +247,7 @@ class VlessKeyManager(BaseKeyManager):
                         ],
                         "settings": {
                             "publicKey": public_key,
-                            "fingerprint": "chrome",  # Заменено с `firefox` на `chrome`
+                            "fingerprint": "chrome",
                             "serverName": "",
                             "spiderX": "/"
                         }
@@ -279,7 +279,6 @@ class VlessKeyManager(BaseKeyManager):
                         ssl=False
                 ) as response:
                     if response.status == 200:
-                        # Если запрос успешен, возвращаем результат
                         return await response.json(), port, short_id
                     elif response.status == 400 and "port already in use" in await response.text().lower():
                         print(f"Port {port} is already in use, trying a new port...")
@@ -298,7 +297,7 @@ class VlessKeyManager(BaseKeyManager):
             try:
                 new_client = {
                     "id": self.generate_uuid(),
-                    "flow": "xtls-rprx-vision-udp443",
+                    "flow": "xtls-rprx-vision",
                     "email": self.generate_uuid(),
                     "limitIp": 1,
                     "totalGB": 0,
