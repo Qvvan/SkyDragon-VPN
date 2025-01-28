@@ -185,12 +185,13 @@ async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallba
     async with DatabaseContextManager() as session_methods:
         try:
             sub = await session_methods.subscription.get_subscription_by_id(subscription_id)
-            if not sub:
+            if sub is None and status_pay == StatusPay.OLD.value:
                 await callback_query.answer(
                     text="Подписка, которую вы хотите продлить, не найдена🙏",
                     show_alert=True,
                     cache_time=5
                 )
+                return
             service = await session_methods.services.get_service_by_id(service_id)
             payment_data = create_payment(
                 amount=service.price,
