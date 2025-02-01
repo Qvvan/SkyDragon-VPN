@@ -52,9 +52,12 @@ class PaymentsMethods:
             await logger.log_error(f"Error getting unpaid payments", e)
             return []
 
-    async def update_payment_status(self, payment_id: str, status: str):
+    async def update_payment_status(self, payment_id: str, status: str, receipt_link: str):
         try:
-            stmt = update(Payments).where(Payments.payment_id == payment_id).values(status=status)
+            stmt = update(Payments).where(Payments.payment_id == payment_id).values(
+                status=status,
+                receipt_link=receipt_link
+            )
             await self.session.execute(stmt)
             return True
         except SQLAlchemyError as e:
@@ -73,3 +76,12 @@ class PaymentsMethods:
         except SQLAlchemyError as e:
             await logger.log_error(f"Error deleting payment", e)
             return False
+
+    async def get_payments_by_user_id(self, user_id: int) -> list[Payments]:
+        try:
+            result = await self.session.execute(select(Payments).where(Payments.user_id == user_id))
+            payments = result.scalars().all()
+            return payments
+        except SQLAlchemyError as e:
+            await logger.log_error(f"Error getting payments by user ID", e)
+            return []

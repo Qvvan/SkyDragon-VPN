@@ -27,12 +27,14 @@ async def get_support(callback_query: CallbackQuery, state: FSMContext, callback
     for each server. If there are no available servers, it sends a message
     with an error message.
     """
-    await callback_query.answer()
     subscription_id = callback_data.subscription_id
     server_ip = callback_data.server_ip
     async with DatabaseContextManager() as session_methods:
         try:
             subscription = await session_methods.subscription.get_subscription_by_id(subscription_id)
+            if not subscription:
+                await callback_query.answer(LEXICON_RU["not_found_subscription"], show_alert=True, cache_time=5)
+                return
             if subscription.status == SubscriptionStatusEnum.EXPIRED:
                 await callback_query.answer(LEXICON_RU["subscription_expired"], show_alert=True, cache_time=5)
                 return
@@ -42,7 +44,7 @@ async def get_support(callback_query: CallbackQuery, state: FSMContext, callback
                                    f'Ошибка при получении подписок', e)
             await callback_query.answer(LEXICON_RU["error"], show_alert=True, cache_time=5)
             return
-
+    await callback_query.answer()
     data = await state.get_data()
     previous_message_id = data.get("text_dragons_overview_id")
     if previous_message_id:
@@ -103,7 +105,7 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
     async with DatabaseContextManager() as session_methods:
         try:
             subscription = await session_methods.subscription.get_subscription_by_id(subscription_id)
-            if subscription is None:
+            if not subscription:
                 await callback_query.answer(LEXICON_RU["not_found_subscription"], show_alert=True, cache_time=5)
                 return
             if subscription.status == SubscriptionStatusEnum.EXPIRED:

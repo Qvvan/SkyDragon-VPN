@@ -137,6 +137,12 @@ async def show_user_subscriptions(user_id, username, message, state: FSMContext)
                 ])
             buttons.append([
                 InlineKeyboardButton(
+                    text="📜 История платежей",
+                    callback_data="history_payments"
+                )
+            ])
+            buttons.append([
+                InlineKeyboardButton(
                     text="🌌 Главное меню",
                     callback_data="main_menu"
                 )
@@ -201,6 +207,16 @@ async def show_subscription_details(callback: CallbackQuery, state: FSMContext):
 async def extend_subscription(callback: CallbackQuery, callback_data: SubscriptionCallbackFactory, state: FSMContext):
     subscription_id = callback_data.subscription_id
     back = callback_data.back
+
+    async with DatabaseContextManager() as session:
+        sub = await session.subscription.get_subscription_by_id(subscription_id)
+        if not sub:
+            await callback.answer(
+                text="Подписка, которую вы хотите продлить, не найдена🙏",
+                show_alert=True,
+                cache_time=5
+            )
+            return
     await callback.answer()
 
     data = await state.get_data()

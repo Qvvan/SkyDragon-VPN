@@ -181,7 +181,7 @@ async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallba
 
     service_id = int(callback_data.service_id)
     status_pay = StatusPay(callback_data.status_pay)
-    subscription_id = callback_data.subscription_id
+    subscription_id = int(callback_data.subscription_id)
     async with DatabaseContextManager() as session_methods:
         try:
             sub = await session_methods.subscription.get_subscription_by_id(subscription_id)

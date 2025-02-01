@@ -101,6 +101,7 @@ class Payments(Base):
     user_id = Column(BigInteger, nullable=False)
     service_id = Column(Integer, nullable=True)
     status = Column(String, nullable=False, default='pending')
+    receipt_link = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

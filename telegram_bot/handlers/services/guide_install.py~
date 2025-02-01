@@ -4,7 +4,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 
 from database.context_manager import DatabaseContextManager
 from keyboards.kb_inline import InlineKeyboards, SubscriptionCallbackFactory
-from lexicon.lexicon_ru import guide_install
+from lexicon.lexicon_ru import guide_install, LEXICON_RU
 from logger.logging_config import logger
 
 router = Router()
@@ -56,6 +56,9 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Subs
     async with DatabaseContextManager() as session_methods:
         try:
             subsciption = await session_methods.subscription.get_subscription_by_id(subscription_id)
+            if not subsciption:
+                await callback_query.answer(LEXICON_RU["not_found_subscription"], show_alert=True, cache_time=5)
+
             user_key = subsciption.key
             show_guide_message = await callback_query.message.edit_text(
                     text=guide_install[name_app][name_device].format(key=user_key),

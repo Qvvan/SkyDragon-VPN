@@ -49,17 +49,18 @@ async def back_to_device_selection(
 
 @router.callback_query(SubscriptionCallbackFactory.filter())
 async def get_install_android(callback_query: CallbackQuery, callback_data: SubscriptionCallbackFactory, state: FSMContext):
-    await callback_query.answer()
     name_device = callback_data.action
     name_app = callback_data.name_app
     subscription_id = callback_data.subscription_id
     async with DatabaseContextManager() as session_methods:
         try:
-            subsciption = await session_methods.subscription.get_subscription_by_id(subscription_id)
-            if not subsciption:
+            subscription = await session_methods.subscription.get_subscription_by_id(subscription_id)
+            if not subscription:
                 await callback_query.answer(LEXICON_RU["not_found_subscription"], show_alert=True, cache_time=5)
+                return
 
-            user_key = subsciption.key
+            await callback_query.answer()
+            user_key = subscription.key
             show_guide_message = await callback_query.message.edit_text(
                     text=guide_install[name_app][name_device].format(key=user_key),
                     reply_markup=InlineKeyboardMarkup(

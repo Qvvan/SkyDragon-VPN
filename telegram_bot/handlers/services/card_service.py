@@ -6,6 +6,7 @@ from yookassa import Configuration, Payment
 
 from config_data.config import SHOP_ID, SHOP_API_TOKEN
 from database.context_manager import DatabaseContextManager
+from handlers.services.create_receipt import create_receipt
 from handlers.services.extend_latest_subscription import extend_user_subscription
 from handlers.services.subscription_service_with_card import SubscriptionsServiceCard
 from lexicon.lexicon_ru import LEXICON_RU
@@ -87,7 +88,16 @@ async def payment_status_checker(bot):
                         payment_response = await check_payment_status(payment.payment_id)
                         if payment_response.status == 'succeeded':
                             user_id = payment.user_id
-                            await session_methods.payments.update_payment_status(payment.payment_id, 'succeeded')
+                            try:
+                                service = await session_methods.services.get_service_by_id(payment.service_id)
+                                receipt_link = await create_receipt(service.name, service.price, service.duration_days)
+                            except Exception as e:
+                                receipt_link = None
+                            await session_methods.payments.update_payment_status(
+                                payment_id=payment.payment_id,
+                                status='succeeded',
+                                receipt_link=receipt_link
+                            )
                             await bot.send_message(chat_id=user_id, text="Платеж успешно прошел!")
 
                             await successful_payment(bot, payment_response)

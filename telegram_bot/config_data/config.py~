@@ -21,5 +21,3 @@ PORT_X_UI = env.int("PORT_X_UI", 54321)
 
 SHOP_ID = env.str("SHOP_ID")
 SHOP_API_TOKEN = env.str("SHOP_API_TOKEN")
-
-INN = env.str("INN")
