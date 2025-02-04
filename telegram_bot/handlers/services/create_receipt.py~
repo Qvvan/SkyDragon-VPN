@@ -38,6 +38,7 @@ async def generate_receipt(service_name, amount, duration_days, quantity=1, paym
 
     token_data = get_valid_token()
     TOKEN = token_data.get("token", None)
+    print(TOKEN)
 
     # Заголовки для запроса
     HEADERS = {

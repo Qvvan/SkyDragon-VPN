@@ -23,3 +23,4 @@ SHOP_ID = env.str("SHOP_ID")
 SHOP_API_TOKEN = env.str("SHOP_API_TOKEN")
 
 INN = env.str("INN")
+PASSWORD_MY_NALOG = env.str("PASSWORD_MY_NALOG")

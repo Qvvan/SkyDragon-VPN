@@ -77,7 +77,7 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Subs
                                     ]
                                 ]
                             ),
-                    parse_mode="Markdown",
+                    parse_mode="HTML",
                     disable_web_page_preview=True
                     )
             show_slow_internet = await callback_query.message.answer(
