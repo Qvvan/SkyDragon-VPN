@@ -33,8 +33,8 @@ async def handle_know_more(callback: CallbackQuery):
             inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text="🌌 Главное меню",
-                        callback_data='main_menu'
+                        text="🔙 Назад ",
+                        callback_data='view_subs'
                     )
                 ]
             ]

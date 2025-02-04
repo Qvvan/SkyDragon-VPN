@@ -137,7 +137,7 @@ async def show_user_subscriptions(user_id, username, message, state: FSMContext)
                 ])
             buttons.append([
                 InlineKeyboardButton(
-                    text="📜 История платежей",
+                    text="💰 История платежей",
                     callback_data="history_payments"
                 )
             ])
