@@ -263,4 +263,4 @@ async def handle_notify_buy_sub(bot, sub, session_methods):
 async def run_checker(bot: Bot):
     while True:
         await check_subscriptions(bot)
-        await asyncio.sleep(60)
+        await asyncio.sleep(1800)
