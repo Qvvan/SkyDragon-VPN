@@ -89,8 +89,6 @@ class FamilyMembers(Base):
     role = Column(String, default="member")  # owner / member
     is_free = Column(Boolean, default=True)  # True, если место свободно
     joined_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class SubscriptionsHistory(Base):

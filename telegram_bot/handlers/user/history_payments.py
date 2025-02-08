@@ -2,7 +2,6 @@ from aiogram import Router
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 
 from database.context_manager import DatabaseContextManager
-from keyboards.kb_inline import InlineKeyboards
 from logger.logging_config import logger
 
 router = Router()

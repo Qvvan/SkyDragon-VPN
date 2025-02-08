@@ -2,16 +2,17 @@ import datetime
 
 import requests
 
-from config_data.config import PASSWORD_MY_NALOG, INN
+from config_data.config import PASSWORD_MY_NALOG, INN, SOURCE_DEVICE_ID
 
 # Константы
 AUTH_URL = "https://lknpd.nalog.ru/api/v1/auth/lkfl"
 REFRESH_URL = "https://lknpd.nalog.ru/api/v1/auth/token"
+SOURCE_DEVICE_ID = SOURCE_DEVICE_ID
 
 INN = INN
 PASSWORD = PASSWORD_MY_NALOG
 DEVICE_INFO = {
-    "sourceDeviceId": "J-MjzxGohXTuMYECozz6v",
+    "sourceDeviceId": SOURCE_DEVICE_ID,
     "sourceType": "WEB",
     "appVersion": "1.0.0",
     "metaDetails": {}
