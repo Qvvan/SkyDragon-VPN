@@ -28,6 +28,31 @@ services:
     networks:
       - bot-network
 
+  nginx:
+    image: nginx:latest
+    container_name: nginx_server
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./html:/usr/share/nginx/html:ro
+    networks:
+      - bot-network
+
+  fastapi:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fastapi_app
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "12345:12345"
+    command: [ "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "12345", "--reload" ]
+    networks:
+      - bot-network
+
 volumes:
   postgres_data:
 

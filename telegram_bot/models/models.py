@@ -23,7 +23,7 @@ class StatusSubscriptionHistory(str, Enum):
 
 
 class ReferralStatus(str, Enum):
-    """Status of a referral in the database"""
+    """Status of a referral in the db"""
     INVITED = 'приглашен'
     SUBSCRIBED = 'купил'
 
@@ -60,19 +60,27 @@ class Services(Base):
     price = Column(Integer, nullable=False)
 
 
+class Keys(Base):
+    __tablename__ = 'keys'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    key_id = Column(Integer, nullable=False)
+    key = Column(String, nullable=False)
+    server_ip = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 class Subscriptions(Base):
     __tablename__ = 'subscriptions'
 
     subscription_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(BigInteger, nullable=False)
     service_id = Column(Integer, nullable=True)
-    key = Column(String, nullable=True)
-    key_id = Column(Integer, nullable=True)
-    server_ip = Column(String, nullable=True)
+    config_link = Column(String, nullable=True)
+    key_ids = Column(ARRAY(Integer), default=[], nullable=True)
     start_date = Column(DateTime, nullable=True)
     end_date = Column(DateTime, nullable=True)
     status = Column(String, default=SubscriptionStatusEnum.ACTIVE)
-    name_app = Column(String, nullable=True)
     reminder_sent = Column(Integer, default=0)
     auto_renewal = Column(Boolean, default=True)
     card_details_id = Column(String, nullable=True)
