@@ -60,6 +60,18 @@ class Services(Base):
     price = Column(Integer, nullable=False)
 
 
+class Keys(Base):
+    __tablename__ = 'keys'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    key_id = Column(Integer, nullable=False)
+    key = Column(String, nullable=False)
+    server_ip = Column(String, nullable=False)
+    name_app = Column(String, nullable=False)
+    status = Column(String, default='active', nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 class Subscriptions(Base):
     __tablename__ = 'subscriptions'
 
