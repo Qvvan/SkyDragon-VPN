@@ -169,7 +169,7 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Inst
                                 ).pack() if name_device in ["Android", "iPhone"] else SubscriptionCallbackFactory(
                                     action=name_device,
                                     subscription_id=subscription_id
-                                ).pack()
+                                )
                             )
                         ],
                         [

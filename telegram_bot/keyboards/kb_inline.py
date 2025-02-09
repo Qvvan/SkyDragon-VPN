@@ -52,6 +52,12 @@ class SubscriptionCallbackFactory(CallbackData, prefix="subscription"):
     status_pay: Optional[str] = None
 
 
+class InstallProfileCallbackFactory(CallbackData, prefix="install_profile"):
+    action: str
+    subscription_id: Optional[int] = None
+    name_device: Optional[str] = None
+
+
 class ReplaceServerCallbackFactory(CallbackData, prefix="serv"):
     action: str
     subscription_id: Optional[int] = None

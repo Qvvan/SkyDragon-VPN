@@ -218,7 +218,7 @@ LEXICON_RU: dict[str, str] = {
 
 app_link = {
     "iPhone": "https://apps.apple.com/ru/app/streisand/id6450534064",
-    "Android": "https://play.google.com/store/apps/details?id=com.v2ray.ang&hl=ru",
+    "Android": "https://play.google.com/store/apps/details?id=com.streisand",
     "Windows": "https://github.com/hiddify/hiddify-next/releases",
     "MacOS": "https://apps.apple.com/ru/app/v2box-v2ray-client/id6446814690"
 }
