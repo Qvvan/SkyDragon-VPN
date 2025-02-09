@@ -258,7 +258,7 @@ class InlineKeyboards:
         return keyboard.as_markup()
 
     @staticmethod
-    async def menu_subs(subscription_id, name_app, server_ip, auto_renewal):
+    async def menu_subs(subscription_id, auto_renewal):
         async with DatabaseContextManager() as session_methods:
             try:
                 keyboard = InlineKeyboardBuilder()
@@ -266,40 +266,30 @@ class InlineKeyboards:
                 if subscription.status == SubscriptionStatusEnum.ACTIVE:
                     keyboard.add(
                         InlineKeyboardButton(
-                            text='🌍 Изменить локацию',
-                            callback_data=ReplaceServerCallbackFactory(
-                                action='rep_serv',
+                            text='⏳ Продлить подписку',
+                            callback_data=SubscriptionCallbackFactory(
+                                action='extend_subscription',
                                 subscription_id=subscription_id,
-                                server_ip=server_ip
+                                back=f"view_details_{subscription_id}"
                             ).pack()),
+                        InlineKeyboardButton(
+                            text='Как подключиться ❔',
+                            callback_data=SubscriptionCallbackFactory(
+                                action='get_guide_install_app',
+                                subscription_id=subscription_id,
+                            ).pack()),
+                        InlineKeyboardButton(
+                            text='🔄 Автопродление',
+                            callback_data=AutoRenewalCallbackFactory(
+                                action='auto_renewal',
+                                auto_renewal_enabled=auto_renewal,
+                                subscription_id=subscription_id,
+                            ).pack()),
+                        InlineKeyboardButton(
+                            text='🔙 Назад',
+                            callback_data='view_subs',
+                        )
                     )
-                keyboard.add(
-                    InlineKeyboardButton(
-                        text='⏳ Продлить подписку',
-                        callback_data=SubscriptionCallbackFactory(
-                            action='extend_subscription',
-                            subscription_id=subscription_id,
-                            back=f"view_details_{subscription_id}"
-                        ).pack()),
-                    InlineKeyboardButton(
-                        text='Как подключиться ❔',
-                        callback_data=SubscriptionCallbackFactory(
-                            action='get_guide_install_app',
-                            subscription_id=subscription_id,
-                            name_app=name_app
-                        ).pack()),
-                    InlineKeyboardButton(
-                        text='🔄 Автопродление',
-                        callback_data=AutoRenewalCallbackFactory(
-                            action='auto_renewal',
-                            auto_renewal_enabled=auto_renewal,
-                            subscription_id=subscription_id,
-                        ).pack()),
-                    InlineKeyboardButton(
-                        text='🔙 Назад',
-                        callback_data='view_subs',
-                    )
-                )
                 keyboard.adjust(2, 1)
 
                 return keyboard.as_markup()

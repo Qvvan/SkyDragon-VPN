@@ -20,10 +20,8 @@ class SubscriptionMethods:
                 select(
                     Subscriptions.start_date,
                     Subscriptions.end_date,
-                    Subscriptions.key,
-                    Subscriptions.key_id,
-                    Subscriptions.name_app,
-                    Subscriptions.server_ip,
+                    Subscriptions.config_link,
+                    Subscriptions.key_ids,
                     Services.name,
                     Subscriptions.status,
                     Subscriptions.subscription_id,
@@ -36,7 +34,6 @@ class SubscriptionMethods:
                 )
                 .select_from(Subscriptions)
                 .outerjoin(Services, Subscriptions.service_id == Services.service_id)
-                .outerjoin(Servers, Subscriptions.server_ip == Servers.server_ip)
                 .filter(Subscriptions.user_id == user_id)
             )
 
@@ -130,10 +127,8 @@ class SubscriptionMethods:
                 select(
                     Subscriptions.start_date,
                     Subscriptions.end_date,
-                    Subscriptions.key,
-                    Subscriptions.key_id,
-                    Subscriptions.name_app,
-                    Subscriptions.server_ip,
+                    Subscriptions.config_link,
+                    Subscriptions.key_ids,
                     Services.name,
                     Subscriptions.status,
                     Subscriptions.subscription_id,
@@ -146,7 +141,6 @@ class SubscriptionMethods:
                 )
                 .select_from(Subscriptions)
                 .outerjoin(Services, Subscriptions.service_id == Services.service_id)
-                .outerjoin(Servers, Subscriptions.server_ip == Servers.server_ip)
                 .filter(Subscriptions.subscription_id == subscription_id)
             )
 

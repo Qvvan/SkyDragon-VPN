@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta
 
-from handlers.services.active_servers import get_active_server_and_key
+from handlers.services.create_config_link import create_config_link
+from handlers.services.create_keys import create_keys
 from handlers.services.create_subscription_service import SubscriptionService
-from handlers.services.key_create import BaseKeyManager
 from logger.logging_config import logger
-from models.models import Subscriptions, NameApp, SubscriptionStatusEnum
+from models.models import Subscriptions, SubscriptionStatusEnum
 
 
 class NoAvailableServersError(Exception):
@@ -16,24 +16,14 @@ async def extend_user_subscription(user_id: int, username: str, days: int, sessi
         subscriptions = await session_methods.subscription.get_subscription(user_id)
 
         if not subscriptions:
-            vless_manager, server_ip, key, key_id = await get_active_server_and_key(
-                user_id, f"{username} Пробный период", session_methods
-            )
-
-            if not server_ip or not key or not key_id:
-                await logger.log_error(
-                    message=f"Пользователь c ID: {user_id} попытался оформить пробную подписку, но ни один сервер не ответил",
-                    error="Не удалось получить сессию ни по одному из серверов"
-                )
-                raise NoAvailableServersError("нет доступных серверов")
+            keys = await create_keys(user_id, username)
+            config_link = await create_config_link(user_id)
 
             subscription = Subscriptions(
                 user_id=user_id,
                 service_id=0,
-                key=key,
-                key_id=key_id,
-                server_ip=server_ip,
-                name_app=NameApp.VLESS,
+                config_link=config_link,
+                key_ids=keys,
                 start_date=datetime.now(),
                 end_date=datetime.now() + timedelta(days=days)
             )
@@ -48,9 +38,11 @@ async def extend_user_subscription(user_id: int, username: str, days: int, sessi
         latest_subscription = max(subscriptions, key=lambda sub: sub.end_date or datetime.min)
         subscription_id = latest_subscription.subscription_id
         end_date = latest_subscription.end_date
+        status_update_keys = True
 
         if end_date and end_date > datetime.utcnow():
             new_end_date = end_date + timedelta(days=days)
+            status_update_keys = False
         else:
             new_end_date = max(datetime.utcnow(), end_date or datetime.utcnow()) + timedelta(days=days)
 
@@ -60,7 +52,9 @@ async def extend_user_subscription(user_id: int, username: str, days: int, sessi
             status=SubscriptionStatusEnum.ACTIVE,
             reminder_sent=0
         )
-        await BaseKeyManager(latest_subscription.server_ip).update_key_enable(latest_subscription.key_id, True)
+        if status_update_keys:
+            # TODO Сделать обновление ключей
+            pass
         return latest_subscription
 
     except Exception as e:

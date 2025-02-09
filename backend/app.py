@@ -4,8 +4,8 @@ from cryptography.fernet import Fernet
 from sqlalchemy.orm import Session
 from starlette.middleware.cors import CORSMiddleware
 
-from backend.db import methods
-from backend.db.db import get_db
+from db import methods
+from db.db import get_db
 from cfg.config import CRYPTO_KEY
 
 app = FastAPI()
@@ -29,6 +29,7 @@ async def decrypt_part(encrypted_data: str) -> str:
 
 @app.get("/sub/{encrypted_part}")
 async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
+    print(encrypted_part)
     try:
         user_id = int(await decrypt_part(encrypted_part))
     except Exception:

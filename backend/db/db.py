@@ -1,4 +1,4 @@
-from backend.cfg.config import DSN
+from cfg.config import DSN
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
 async_engine = create_async_engine(DSN)
