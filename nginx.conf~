@@ -1,13 +1,13 @@
 server {
     listen 443 ssl;
-    server_name speed-of-light.ru www.speed-of-light.ru;
+    server_name skydragonvpn.ru www.skydragonvpn.ru;
 
-    ssl_certificate /etc/letsencrypt/live/speed-of-light.ru/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/speed-of-light.ru/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/skydragonvpn.ru/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/skydragonvpn.ru/privkey.pem;
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
-    location /access-keys/ {
+    location /sub/ {
         add_header 'Access-Control-Allow-Origin' '*';
     }
 
