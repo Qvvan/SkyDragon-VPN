@@ -68,6 +68,7 @@ class Keys(Base):
     key = Column(String, nullable=False)
     server_ip = Column(String, nullable=False)
     name_app = Column(String, nullable=False)
+    status = Column(String, default='active', nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 

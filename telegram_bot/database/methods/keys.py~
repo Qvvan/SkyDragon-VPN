@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from select import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -59,19 +59,3 @@ class KeysMethods:
         except SQLAlchemyError as e:
             await logger.log_error(f"Error deleting key", e)
             return False
-
-    async def update_key(self, id: int, **kwargs):
-        try:
-            result = await self.session.execute(select(Keys).where(Keys.id == id))
-            key = result.scalars().first()
-
-            if key:
-                for field, value in kwargs.items():
-                    setattr(key, field, value)
-
-                self.session.add(key)
-
-            return key
-
-        except SQLAlchemyError as e:
-            await logger.log_error(f"Error updating key", e)

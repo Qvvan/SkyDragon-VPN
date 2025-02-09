@@ -4,16 +4,15 @@ from aiogram import Bot
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from database.context_manager import DatabaseContextManager
-from handlers.services.active_servers import get_active_server_and_key
 from handlers.services.create_config_link import create_config_link
 from handlers.services.create_keys import create_keys
 from handlers.services.create_subscription_service import SubscriptionService
 from handlers.services.extend_latest_subscription import NoAvailableServersError, extend_user_subscription
-from handlers.services.key_create import BaseKeyManager
+from handlers.services.update_keys import update_keys
 from keyboards.kb_inline import InlineKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
-from models.models import StatusSubscriptionHistory, SubscriptionStatusEnum, Subscriptions, NameApp, Gifts
+from models.models import StatusSubscriptionHistory, SubscriptionStatusEnum, Subscriptions, Gifts
 
 
 class NoActiveSubscriptionsError(Exception):
@@ -32,13 +31,11 @@ class SubscriptionsServiceCard:
                 card_details_id = payment_response.payment_method.id
             try:
                 keys = await create_keys(user_id, username)
-                config_link = await create_config_link(user_id)
 
-                subscription_id = await SubscriptionService.create_subscription(
+                subscription = await SubscriptionService.create_subscription(
                     Subscriptions(
                         user_id=user_id,
                         service_id=service_id,
-                        config_link=config_link,
                         key_ids=keys,
                         start_date=datetime.now(),
                         card_details_id=card_details_id,
@@ -46,11 +43,13 @@ class SubscriptionsServiceCard:
                     ),
                     session_methods=session_methods
                 )
-                if not subscription_id:
+                if not subscription:
                     raise Exception("Ошибка создания подписки")
 
+                config_link = await create_config_link(user_id, subscription.subscription_id)
+
                 await session_methods.session.commit()
-                await SubscriptionsServiceCard.send_success_response(bot, user_id, config_link, subscription_id)
+                await SubscriptionsServiceCard.send_success_response(bot, user_id, config_link, subscription)
                 await logger.log_info(f"Пользователь: @{username}\n"
                                       f"ID: {user_id}\n"
                                       f"Оформил подписку на {durations_days} дней")
@@ -113,8 +112,7 @@ class SubscriptionsServiceCard:
                                 status=StatusSubscriptionHistory.EXTENSION
                             )
                             if status_update_key:
-                                # TODO сделать включение всех ключей подписки
-                                pass
+                                await update_keys(subscription_id, True)
                             await logger.info(f"Успешно создана подписка {subscription_id}")
                             await session_methods.session.commit()
                             await bot.send_message(chat_id=user_id, text=LEXICON_RU['subscription_renewed'])
@@ -160,7 +158,7 @@ class SubscriptionsServiceCard:
                 return
 
     @staticmethod
-    async def send_success_response(bot: Bot, user_id: int, vpn_key: str, subscription_id):
+    async def send_success_response(bot: Bot, user_id: int, vpn_key: str, subscription):
         await bot.send_message(chat_id=user_id,
                                text=LEXICON_RU[
                                         'purchase_thank_you'] + f'\nКлюч доступа VPN:\n<pre>{vpn_key}</pre>',
@@ -168,7 +166,7 @@ class SubscriptionsServiceCard:
                                )
         await bot.send_message(chat_id=user_id,
                                text=LEXICON_RU["choose_device"],
-                               reply_markup=await InlineKeyboards.get_menu_install_app(NameApp.VLESS, subscription_id)
+                               reply_markup=await InlineKeyboards.get_menu_install_app(subscription.subscription_id)
                                )
 
     @staticmethod

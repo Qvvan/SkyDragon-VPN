@@ -16,8 +16,8 @@ class SubscriptionService:
         :return: Успешность операции.
         """
         try:
-            subscription_id = await session_methods.subscription.create_sub(subscription)
-            if not subscription_id:
+            subscription = await session_methods.subscription.create_sub(subscription)
+            if not subscription:
                 return None
 
             await session_methods.subscription_history.create_history_entry(
@@ -28,7 +28,7 @@ class SubscriptionService:
                 status=StatusSubscriptionHistory.NEW_SUBSCRIPTION
             )
 
-            return subscription_id
+            return subscription
 
         except Exception as e:
             await logger.log_error(

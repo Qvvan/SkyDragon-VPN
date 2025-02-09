@@ -14,10 +14,9 @@ router = Router()
 async def back_to_device_selection(
         callback_query: CallbackQuery, state: FSMContext,
         callback_data: SubscriptionCallbackFactory
-        ):
+):
     data = await state.get_data()
     previous_message_id = data.get("text_dragons_overview_id")
-    show_slow_internet_id = data.get("show_slow_internet")
 
     # Функция для безопасного удаления сообщений
     async def delete_message_safe(message_id):
@@ -27,30 +26,22 @@ async def back_to_device_selection(
             # Логирование ошибки, если сообщение не найдено
             await logger.info(f"Не удалось удалить сообщение с ID {message_id}")
 
-    # Удаление сообщений с обработкой ошибок
-    if show_slow_internet_id:
-        await delete_message_safe(show_slow_internet_id)
-        await state.update_data(show_slow_internet_id=None)
-
     if previous_message_id:
         await delete_message_safe(previous_message_id)
         await state.update_data(text_dragons_overview_id=None)
 
-    # Редактируем текущее сообщение
-    name_app = callback_data.name_app
     subscription_id = callback_data.subscription_id
     await callback_query.message.edit_text(
-            text="Выбери своё устройство",
-            reply_markup=await InlineKeyboards.get_menu_install_app(name_app, subscription_id)
-            )
+        text="Выбери своё устройство",
+        reply_markup=await InlineKeyboards.get_menu_install_app(subscription_id)
+    )
     await callback_query.answer()
 
 
-
 @router.callback_query(SubscriptionCallbackFactory.filter())
-async def get_install_android(callback_query: CallbackQuery, callback_data: SubscriptionCallbackFactory, state: FSMContext):
+async def get_install_android(callback_query: CallbackQuery, callback_data: SubscriptionCallbackFactory,
+                              state: FSMContext):
     name_device = callback_data.action
-    name_app = callback_data.name_app
     subscription_id = callback_data.subscription_id
     async with DatabaseContextManager() as session_methods:
         try:
@@ -60,39 +51,26 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Subs
                 return
 
             await callback_query.answer()
-            user_key = subscription.key
+            config_link = subscription.config_link
             show_guide_message = await callback_query.message.edit_text(
-                    text=guide_install[name_app][name_device].format(key=user_key),
-                    reply_markup=InlineKeyboardMarkup(
-                            inline_keyboard=[
-                                [
-                                    InlineKeyboardButton(
-                                            text="🔙 Назад",
-                                            callback_data=SubscriptionCallbackFactory(
-                                                    action='get_guide_install_app',
-                                                    subscription_id=subscription_id,
-                                                    name_app=name_app
-                                                    ).pack()
-                                            )
-                                    ]
-                                ]
-                            ),
-                    parse_mode="HTML",
-                    disable_web_page_preview=True
-                    )
-            show_slow_internet = await callback_query.message.answer(
-                text="Если у вас плохо грузит VPN, попробуйте сменить локацию 👇.",
+                text=guide_install[name_device].format(key=config_link),
                 reply_markup=InlineKeyboardMarkup(
                     inline_keyboard=[
                         [
                             InlineKeyboardButton(
-                                text="🐉 Мои подписки",
-                                callback_data="view_subs"
+                                text="🔙 Назад",
+                                callback_data=SubscriptionCallbackFactory(
+                                    action='get_guide_install_app',
+                                    subscription_id=subscription_id,
+                                ).pack()
                             )
-                        ],
-                ])
+                        ]
+                    ]
+                ),
+                parse_mode="HTML",
+                disable_web_page_preview=True
             )
             await state.update_data(show_guide_message=show_guide_message.message_id)
-            await state.update_data(show_slow_internet=show_slow_internet.message_id)
         except Exception as e:
-            await logger.log_error(f"Не удалось получить подписку при показе инструкции {callback_query.from_user.id}", e)
+            await logger.log_error(f"Не удалось получить подписку при показе инструкции {callback_query.from_user.id}",
+                                   e)

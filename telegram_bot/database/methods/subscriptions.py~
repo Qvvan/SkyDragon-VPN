@@ -136,6 +136,7 @@ class SubscriptionMethods:
                     Services.duration_days,
                     Services.price,
                     Services.service_id,
+                    Servers.name.label('server_name')
                 )
                 .select_from(Subscriptions)
                 .outerjoin(Services, Subscriptions.service_id == Services.service_id)

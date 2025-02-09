@@ -175,28 +175,24 @@ async def show_subscription_details(callback: CallbackQuery, state: FSMContext):
             subscription = await session.subscription.get_subscription_by_id(subscription_id)
             if subscription:
                 end_date = subscription.end_date
-                key = subscription.key
+                config_link = subscription.config_link
                 status = subscription.status
-                name_app = subscription.name_app
-                server_name = subscription.server_name
-                server_ip = subscription.server_ip
                 auto_renewal = subscription.auto_renewal
                 card_details_id = subscription.card_details_id
 
                 detailed_info = (
-                    f"<b>🐉 Статус подписки:</b> {'🐲 Дракон на страже' if status == 'активная' else '💀 Покровительство завершено'}\n"
-                    f"<b>🌍 Локация VPN:</b> {server_name}\n"
+                    f"<b>🐉 Статус подписки:</b> {'Активна' if status == 'активная' else 'Истекла'}\n"
                     f"<b>📅 Окончание подписки:</b> {end_date.strftime('%d-%m-%Y')}\n"
                     f"<b>🔄 Автопродление:</b> {'✅' if auto_renewal else '❌'}\n"
                     f"<b>🐲🔑 Ключ:</b>\n"
-                    f"<pre>{key}</pre>"
+                    f"<pre>{config_link}</pre>"
                 )
                 await state.update_data(back_target=f"view_details_{subscription_id}")
                 # Клавиатура для управления подпиской
                 await callback.message.edit_text(
                     text=detailed_info,
                     parse_mode="HTML",
-                    reply_markup=await InlineKeyboards.menu_subs(subscription_id, name_app, server_ip, auto_renewal)
+                    reply_markup=await InlineKeyboards.menu_subs(subscription_id, auto_renewal)
                 )
         except Exception as e:
             await logger.log_error("Ошибка при получении подробностей подписки\n"
@@ -207,10 +203,11 @@ async def show_subscription_details(callback: CallbackQuery, state: FSMContext):
 async def extend_subscription(callback: CallbackQuery, callback_data: SubscriptionCallbackFactory, state: FSMContext):
     subscription_id = callback_data.subscription_id
     back = callback_data.back
+    status_pay = callback_data.status_pay
 
     async with DatabaseContextManager() as session:
         sub = await session.subscription.get_subscription_by_id(subscription_id)
-        if not sub:
+        if not sub and status_pay == StatusPay.OLD:
             await callback.answer(
                 text="Подписка, которую вы хотите продлить, не найдена🙏",
                 show_alert=True,

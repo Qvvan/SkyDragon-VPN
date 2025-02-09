@@ -9,6 +9,7 @@ from database.context_manager import DatabaseContextManager
 from handlers.services.card_service import auto_renewal_payment
 from handlers.services.create_receipt import create_receipt
 from handlers.services.key_create import BaseKeyManager
+from handlers.services.update_keys import update_keys
 from keyboards.kb_inline import SubscriptionCallbackFactory, InlineKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
@@ -138,7 +139,8 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
                 return
             else:
                 await logger.warning("При автопродление что-то пошло не так")
-        await BaseKeyManager(server_ip=sub.server_ip).update_key_enable(sub.key_id, False)
+
+        await update_keys(sub.subscription_id, False)
 
         await session_methods.subscription.update_sub(
             subscription_id=sub.subscription_id,
@@ -263,4 +265,4 @@ async def handle_notify_buy_sub(bot, sub, session_methods):
 async def run_checker(bot: Bot):
     while True:
         await check_subscriptions(bot)
-        await asyncio.sleep(60)
+        await asyncio.sleep(1800)

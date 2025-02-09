@@ -29,13 +29,14 @@ async def decrypt_part(encrypted_data: str) -> str:
 
 @app.get("/sub/{encrypted_part}")
 async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
-    print(encrypted_part)
     try:
-        user_id = int(await decrypt_part(encrypted_part))
+        data = await decrypt_part(encrypted_part)
+        user_id = int(data.split("|")[0])
+        sub_id = int(data.split("|")[1])
     except Exception:
         return Response(content="Invalid encryption", status_code=400)
 
-    keys = await methods.get_user_keys(db, user_id)
+    keys = await methods.get_user_keys(db, user_id, sub_id)
 
     if not keys:
         return Response(content="No keys found", status_code=404)

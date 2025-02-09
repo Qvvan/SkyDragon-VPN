@@ -18,7 +18,7 @@ router = Router()
 
 @router.message(CommandStart())
 async def process_start_command(message: Message):
-    await set_main_menu(message.bot)
+    await set_main_menu(message.bot, message.from_user.id)
     await message.answer(
         text=LEXICON_RU['start'],
         reply_markup=await InlineKeyboards.get_menu_keyboard(),

@@ -18,7 +18,6 @@ router = Router()
 async def get_user_subs_callback(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     previous_message_id = data.get("text_dragons_overview_id")
-    show_slow_internet_id = data.get("show_slow_internet")
     show_guide_message_id = data.get("show_guide_message")
 
     # Функция для удаления сообщения с обработкой исключений
@@ -28,11 +27,6 @@ async def get_user_subs_callback(callback: CallbackQuery, state: FSMContext):
         except Exception as e:
             # Если сообщение не найдено, логируем ошибку
             await logger.info(f"Не удалось удалить сообщение с ID {message_id}")
-
-    # Удаление сообщений
-    if show_slow_internet_id:
-        await delete_message_safe(show_slow_internet_id)
-        await state.update_data(show_slow_internet_id=None)
 
     if show_guide_message_id:
         await delete_message_safe(show_guide_message_id)
@@ -203,10 +197,11 @@ async def show_subscription_details(callback: CallbackQuery, state: FSMContext):
 async def extend_subscription(callback: CallbackQuery, callback_data: SubscriptionCallbackFactory, state: FSMContext):
     subscription_id = callback_data.subscription_id
     back = callback_data.back
+    status_pay = callback_data.status_pay
 
     async with DatabaseContextManager() as session:
         sub = await session.subscription.get_subscription_by_id(subscription_id)
-        if not sub:
+        if not sub and status_pay == StatusPay.OLD:
             await callback.answer(
                 text="Подписка, которую вы хотите продлить, не найдена🙏",
                 show_alert=True,

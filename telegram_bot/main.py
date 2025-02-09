@@ -7,14 +7,13 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from config_data import config
 from database.init_db import DataBase
-from handlers.admin import add_server, user_info, unban_user, block_key, cancel, refund, del_key, \
-    unblock_key, help_info, ban_user, pushes, show_servers, get_user_id, add_gift, message_for_user
+from handlers.admin import add_server, user_info, cancel, refund, help_info, pushes, show_servers, get_user_id, \
+    add_gift, message_for_user
 from handlers.services import payments_service, guide_install, trial_subscription
 from handlers.services.card_service import payment_status_checker
+from handlers.user import start, support, createorder
 from handlers.user import subs, replace_server, replace_app, referrer, menu, just_message, stars, gift_sub, \
     send_stikers, history_payments
-from handlers.user import start, support, createorder
-from keyboards.set_menu import set_main_menu
 from logger.logging_config import logger
 from middleware.logging_middleware import CallbackLoggingMiddleware, MessageLoggingMiddleware
 from middleware.trottling import ThrottlingMiddleware
@@ -58,8 +57,6 @@ async def main():
 
     dp = Dispatcher(storage=storage)
 
-    await set_main_menu(bot)
-
     dp.message.outer_middleware(MessageLoggingMiddleware())
     dp.callback_query.outer_middleware(CallbackLoggingMiddleware())
 
@@ -90,13 +87,8 @@ async def main():
 
     # admin-handlers
     dp.include_router(add_server.router)
-    dp.include_router(ban_user.router)
-    dp.include_router(block_key.router)
-    dp.include_router(del_key.router)
     dp.include_router(help_info.router)
     dp.include_router(refund.router)
-    dp.include_router(unban_user.router)
-    dp.include_router(unblock_key.router)
     dp.include_router(pushes.router)
     dp.include_router(check_servers.router)
     dp.include_router(show_servers.router)
@@ -127,6 +119,7 @@ async def run_bot():
             await logger.error(f"Бот завершил работу с ошибкой", e)
             await logger.info("Перезапуск бота через 5 секунд...")
             await asyncio.sleep(5)
+
 
 if __name__ == "__main__":
     asyncio.run(run_bot())
