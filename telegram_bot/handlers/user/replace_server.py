@@ -22,7 +22,7 @@ async def get_support(callback_query: CallbackQuery, state: FSMContext, callback
     This function is called when user clicks on a replace server button.
     It answers the callback query, gets the subscription id and server ip
     from the callback data, and updates the state with the subscription id.
-    It then gets the list of available servers from the database and
+    It then gets the list of available servers from the db and
     sends a message to the user with the list of servers and a button
     for each server. If there are no available servers, it sends a message
     with an error message.
@@ -81,7 +81,7 @@ async def handle_server_selection(callback_query: CallbackQuery, callback_data: 
     This function is called when user selects a new server
     from the list of available servers. It changes the subscription
     server to the selected one, generates a new key for the user,
-    and updates the subscription record in the database.
+    and updates the subscription record in the db.
 
     If the old server is unavailable, it will not be possible
     to delete the old key, and an error will be logged.

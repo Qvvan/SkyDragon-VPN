@@ -18,6 +18,7 @@ router = Router()
 async def get_user_subs_callback(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     previous_message_id = data.get("text_dragons_overview_id")
+    show_slow_internet_id = data.get("show_slow_internet")
     show_guide_message_id = data.get("show_guide_message")
 
     # Функция для удаления сообщения с обработкой исключений
@@ -27,6 +28,11 @@ async def get_user_subs_callback(callback: CallbackQuery, state: FSMContext):
         except Exception as e:
             # Если сообщение не найдено, логируем ошибку
             await logger.info(f"Не удалось удалить сообщение с ID {message_id}")
+
+    # Удаление сообщений
+    if show_slow_internet_id:
+        await delete_message_safe(show_slow_internet_id)
+        await state.update_data(show_slow_internet_id=None)
 
     if show_guide_message_id:
         await delete_message_safe(show_guide_message_id)

@@ -8,6 +8,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from database.context_manager import DatabaseContextManager
 from handlers.services.extend_latest_subscription import extend_user_subscription
 from keyboards.kb_inline import InlineKeyboards
+from keyboards.set_menu import set_main_menu
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 from models.models import ReferralStatus, Referrals, Users
@@ -17,6 +18,7 @@ router = Router()
 
 @router.message(CommandStart())
 async def process_start_command(message: Message):
+    await set_main_menu(message.bot, message.from_user.id)
     await message.answer(
         text=LEXICON_RU['start'],
         reply_markup=await InlineKeyboards.get_menu_keyboard(),

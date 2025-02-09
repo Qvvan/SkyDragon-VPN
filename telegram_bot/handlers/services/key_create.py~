@@ -292,7 +292,7 @@ class VlessKeyManager(BaseKeyManager):
                 print(f"An error occurred during the request: {e}")
                 raise
 
-    async def manage_vless_key(self, tg_id, username, server_name):
+    async def manage_vless_key(self, tg_id, username):
         async with aiohttp.ClientSession() as session:
             try:
                 new_client = {
@@ -320,17 +320,17 @@ class VlessKeyManager(BaseKeyManager):
                     port=port,
                     short_id=short_id,
                     public_key=cert_data["publicKey"],
-                    server_name=server_name,
+                    server_name="google.com"
                 )
                 return vless_link, key_id
             except aiohttp.ClientResponseError as e:
                 print(f"Request error: {e}")
 
-    def generate_vless_link(self, client_id, port, short_id, public_key, server_name):
+    def generate_vless_link(self, client_id, port, short_id, public_key, server_name="google.com"):
         return (f"vless://{client_id}@{self.server_ip}:{port}"
                 f"?type=tcp&security=reality&pbk={public_key}"
-                f"&fp=chrome&sni=google.com&sid={99}&spx=%2F&flow=xtls-rprx-vision-udp443"
-                f"#{server_name} - VLESS")
+                f"&fp=chrome&sni={server_name}&sid={99}&spx=%2F&flow=xtls-rprx-vision-udp443"
+                f"#SkyDragon")
 
 
 class ShadowsocksKeyManager(BaseKeyManager):
@@ -410,7 +410,7 @@ class ShadowsocksKeyManager(BaseKeyManager):
                 print(f"An error occurred during the request: {e}")
                 raise
 
-    async def manage_shadowsocks_key(self, tg_id, username, server_name):
+    async def manage_shadowsocks_key(self, tg_id, username):
         async with aiohttp.ClientSession() as session:
             try:
                 new_port = self.generate_port()
@@ -431,11 +431,11 @@ class ShadowsocksKeyManager(BaseKeyManager):
                 # Используем session_cookie в create_shadowsocks_key
                 response = await self.create_shadowsocks_key(session, new_client, new_password, new_port)
                 key_id = response.get('obj', {}).get('id')
-                return self.generate_ss_link(new_port, new_password, method, key_id, server_name), key_id
+                return self.generate_ss_link(new_port, new_password, method, key_id), key_id
             except aiohttp.ClientResponseError as e:
                 print(f"Request error: {e}")
 
-    def generate_ss_link(self, port, password, method, key_id, server_name):
+    def generate_ss_link(self, port, password, method, key_id):
         user_info = f"{method}:{password}".encode()
         user_info_base64 = base64.b64encode(user_info).decode()
-        return f"ss://{user_info_base64}@{self.server_ip}:{port}?prefix=POST%20&type=tcp#{server_name} - Shadowsocks"
+        return f"ss://{user_info_base64}@{self.server_ip}:{port}?prefix=POST%20&type=tcp#SkyDragon"

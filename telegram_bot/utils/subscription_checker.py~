@@ -140,6 +140,7 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
             else:
                 await logger.warning("При автопродление что-то пошло не так")
 
+        print(sub.subscription_id)
         await update_keys(sub.subscription_id, False)
 
         await session_methods.subscription.update_sub(

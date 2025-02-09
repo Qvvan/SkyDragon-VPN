@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyDragon - Взлетай выше</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .container {
+            position: relative;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 3rem;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px #00c3ff, 0 0 20px #00c3ff, 0 0 40px #0077ff;
+            animation: glow 2s infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 10px #00c3ff, 0 0 20px #00c3ff, 0 0 40px #0077ff;
+            }
+            to {
+                text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff0077, 0 0 60px #ff00ff;
+            }
+        }
+
+        p {
+            font-size: 1.2rem;
+            margin-top: 10px;
+            color: #aaa;
+        }
+
+        .btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            background: linear-gradient(45deg, #00c3ff, #ff00ff);
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 0 10px #00c3ff;
+            transition: 0.3s;
+        }
+
+        .btn:hover {
+            box-shadow: 0 0 20px #ff00ff, 0 0 40px #ff0077;
+            transform: scale(1.1);
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div class="container">
+    <h1>SkyDragon</h1>
+    <p>Почувствуй мощь неонового дракона</p>
+    <button class="btn" onclick="launchAnimation()">Взлететь!</button>
+</div>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let particles = [];
+
+    class Particle {
+        constructor(x, y, size, color, velocity) {
+            this.x = x;
+            this.y = y;
+            this.size = size;
+            this.color = color;
+            this.velocity = velocity;
+        }
+
+        update() {
+            this.x += this.velocity.x;
+            this.y += this.velocity.y;
+            this.size *= 0.97; // Уменьшается со временем
+        }
+
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+        }
+    }
+
+    function createExplosion(x, y) {
+        for (let i = 0; i < 20; i++) {
+            let size = Math.random() * 5 + 2;
+            let color = `hsl(${Math.random() * 360}, 100%, 60%)`;
+            let velocity = {
+                x: (Math.random() - 0.5) * 4,
+                y: (Math.random() - 0.5) * 4
+            };
+            particles.push(new Particle(x, y, size, color, velocity));
+        }
+    }
+
+    function animateParticles() {
+        requestAnimationFrame(animateParticles);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        particles.forEach((particle, index) => {
+            particle.update();
+            particle.draw();
+            if (particle.size < 0.5) {
+                particles.splice(index, 1);
+            }
+        });
+    }
+
+    animateParticles();
+
+    function launchAnimation() {
+        let x = canvas.width / 2;
+        let y = canvas.height / 2;
+        createExplosion(x, y);
+    }
+</script>
+
+</body>
+</html>

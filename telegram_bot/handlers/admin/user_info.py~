@@ -140,7 +140,6 @@ async def handle_user_subscriptions(callback_query: CallbackQuery, callback_data
                     cache_time=5
                 )
                 return
-            await callback_query.answer()
             for sub in subs:
                 response_message = (
                     f"🆔 ID подписки: {sub.subscription_id}\n"

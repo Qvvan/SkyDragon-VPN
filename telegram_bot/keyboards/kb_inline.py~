@@ -694,6 +694,15 @@ class InlineKeyboards:
             ],
             [
                 InlineKeyboardButton(
+                    text="Обновить ключ",
+                    callback_data=ChangeUserSubCallback(
+                        action='change_key',
+                        subscription_id=sub.subscription_id,
+                        server_ip=sub.server_ip
+                    ).pack())
+            ],
+            [
+                InlineKeyboardButton(
                     text="Отмена",
                     callback_data='cancel'
                 )

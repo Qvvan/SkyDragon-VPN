@@ -4,14 +4,15 @@ from aiogram import Bot
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from database.context_manager import DatabaseContextManager
-from handlers.services.active_servers import get_active_server_and_key
+from handlers.services.create_config_link import create_config_link
+from handlers.services.create_keys import create_keys
 from handlers.services.create_subscription_service import SubscriptionService
 from handlers.services.extend_latest_subscription import NoAvailableServersError, extend_user_subscription
-from handlers.services.key_create import BaseKeyManager
+from handlers.services.update_keys import update_keys
 from keyboards.kb_inline import InlineKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
-from models.models import StatusSubscriptionHistory, SubscriptionStatusEnum, Subscriptions, NameApp, Gifts
+from models.models import StatusSubscriptionHistory, SubscriptionStatusEnum, Subscriptions, Gifts
 
 
 class NoActiveSubscriptionsError(Exception):
@@ -22,7 +23,6 @@ class SubscriptionsServiceCard:
     @staticmethod
     async def process_new_subscription(bot: Bot, user_id: int, username: str, service_id: int, payment_response):
         async with DatabaseContextManager() as session_methods:
-            key_id = None
             service = await session_methods.services.get_service_by_id(service_id)
             durations_days = service.duration_days
             status_saved = payment_response.payment_method.saved
@@ -30,36 +30,26 @@ class SubscriptionsServiceCard:
             if status_saved:
                 card_details_id = payment_response.payment_method.id
             try:
-                vless_manager, server_ip, key, key_id = await get_active_server_and_key(
-                    user_id, username, session_methods
-                )
+                keys = await create_keys(user_id, username)
 
-                if not server_ip or not key or not key_id:
-                    await logger.log_error(
-                        message=f"Пользователь: @{username}, ID {user_id} попытался оформить подписку, но ни один сервер не ответил",
-                        error="Не удалось получить сессию ни по одному из серверов"
-                    )
-                    raise NoAvailableServersError("нет доступных серверов")
-
-                subscription_id = await SubscriptionService.create_subscription(
+                subscription = await SubscriptionService.create_subscription(
                     Subscriptions(
                         user_id=user_id,
                         service_id=service_id,
-                        key=key,
-                        key_id=key_id,
-                        server_ip=server_ip,
-                        name_app=NameApp.VLESS,
+                        key_ids=keys,
                         start_date=datetime.now(),
                         card_details_id=card_details_id,
                         end_date=datetime.now() + timedelta(days=durations_days)
                     ),
                     session_methods=session_methods
                 )
-                if not subscription_id:
+                if not subscription:
                     raise Exception("Ошибка создания подписки")
 
+                config_link = await create_config_link(user_id, subscription.subscription_id)
+
                 await session_methods.session.commit()
-                await SubscriptionsServiceCard.send_success_response(bot, user_id, key, subscription_id)
+                await SubscriptionsServiceCard.send_success_response(bot, user_id, config_link, subscription)
                 await logger.log_info(f"Пользователь: @{username}\n"
                                       f"ID: {user_id}\n"
                                       f"Оформил подписку на {durations_days} дней")
@@ -79,8 +69,9 @@ class SubscriptionsServiceCard:
 
                 await session_methods.session.rollback()
 
-                if vless_manager and key_id:
-                    await vless_manager.delete_key(key_id)
+                if len(keys) > 0:
+                    for key in keys:
+                        await logger.warning(f"Данный ключ надо удалить: {key}")
 
                 await session_methods.session.commit()
 
@@ -93,6 +84,7 @@ class SubscriptionsServiceCard:
                 durations_days = service.duration_days
                 status_saved = payment_response.payment_method.saved
                 card_details_id = None
+                status_update_key = True
                 if status_saved:
                     card_details_id = payment_response.payment_method.id
                 if subs:
@@ -102,6 +94,7 @@ class SubscriptionsServiceCard:
                                 new_end_date = datetime.now() + timedelta(days=int(durations_days))
                             else:
                                 new_end_date = sub.end_date + timedelta(days=int(durations_days))
+                                status_update_key = False
                             await session_methods.subscription.update_sub(
                                 subscription_id=sub.subscription_id,
                                 service_id=service_id,
@@ -118,8 +111,8 @@ class SubscriptionsServiceCard:
                                 end_date=new_end_date,
                                 status=StatusSubscriptionHistory.EXTENSION
                             )
-                            await BaseKeyManager(server_ip=sub.server_ip).update_key_enable(
-                                sub.key_id, True)
+                            if status_update_key:
+                                await update_keys(subscription_id, True)
                             await logger.info(f"Успешно создана подписка {subscription_id}")
                             await session_methods.session.commit()
                             await bot.send_message(chat_id=user_id, text=LEXICON_RU['subscription_renewed'])
@@ -165,7 +158,7 @@ class SubscriptionsServiceCard:
                 return
 
     @staticmethod
-    async def send_success_response(bot: Bot, user_id: int, vpn_key: str, subscription_id):
+    async def send_success_response(bot: Bot, user_id: int, vpn_key: str, subscription):
         await bot.send_message(chat_id=user_id,
                                text=LEXICON_RU[
                                         'purchase_thank_you'] + f'\nКлюч доступа VPN:\n<pre>{vpn_key}</pre>',
@@ -173,7 +166,7 @@ class SubscriptionsServiceCard:
                                )
         await bot.send_message(chat_id=user_id,
                                text=LEXICON_RU["choose_device"],
-                               reply_markup=await InlineKeyboards.get_menu_install_app(NameApp.VLESS, subscription_id)
+                               reply_markup=await InlineKeyboards.get_menu_install_app(subscription.subscription_id)
                                )
 
     @staticmethod
