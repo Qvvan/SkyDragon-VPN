@@ -144,17 +144,8 @@ async def handle_user_subscriptions(callback_query: CallbackQuery, callback_data
 
             await callback_query.answer()
 
-            key_ids = [sub.key_id for sub in subs]  # Получаем список ключей
-            keys_text = await keys_info(key_ids)  # Получаем информацию о ключах
-
-            total_usage = 0  # Суммарное использование всех подписок
-            messages = []  # Список сообщений для отправки
-
             for sub in subs:
-                # Получаем информацию по текущему ключу
-                key_info = await BaseKeyManager(server_ip=sub.server_ip).get_inbound_by_id(sub.key_id)
-                total = key_info.get("obj", {}).get("total", 0)  # Если данных нет, подставляем 0
-                total_usage += total  # Добавляем в общий трафик
+                keys_text = await keys_info(sub.key_ids)  # Получаем информацию о ключах
 
                 # Формируем сообщение по подписке
                 response_message = (
@@ -164,10 +155,7 @@ async def handle_user_subscriptions(callback_query: CallbackQuery, callback_data
                     f"🔑 <b>Конфиг:</b> <code>{sub.config_link}</code>\n"
                     f"📅 <b>Начало:</b> {sub.start_date.strftime('%Y-%m-%d %H:%M')}\n"
                     f"📅 <b>Конец:</b> {sub.end_date.strftime('%Y-%m-%d %H:%M')}\n"
-                    f"📊 <b>Использовано:</b> {human_readable_size(total)}"
                 )
-
-                messages.append(response_message)
 
                 await callback_query.message.answer(
                     text=response_message,
@@ -175,14 +163,9 @@ async def handle_user_subscriptions(callback_query: CallbackQuery, callback_data
                     parse_mode="HTML",
                     disable_web_page_preview=True
                 )
-
-            # Отправляем список ключей (если есть)
-            if keys_text:
-                await callback_query.message.answer(text=keys_text, parse_mode="HTML")
-
-            # Отправляем итоговое сообщение с общей суммой трафика
-            total_message = f"📊 <b>Общее потребление трафика по всем подпискам:</b> {human_readable_size(total_usage)}"
-            await callback_query.message.answer(text=total_message, parse_mode="HTML")
+                # Отправляем список ключей (если есть)
+                if keys_text:
+                    await callback_query.message.answer(text=keys_text, parse_mode="HTML")
 
         except Exception as e:
             await logger.error(f"Произошла ошибка:", e)
@@ -277,7 +260,6 @@ async def keys_info(key_ids: list):
                     continue
 
                 key_info = await BaseKeyManager(server_ip=key.server_ip).get_inbound_by_id(key.key_id)
-
                 total = key_info.get("obj", {}).get("total", 0)
                 total_usage += total
 
