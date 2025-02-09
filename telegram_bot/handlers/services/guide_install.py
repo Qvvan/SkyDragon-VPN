@@ -99,12 +99,12 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Inst
                 return
 
             part_link = sub.config_link.split("/")[-1]
-            url = f"skydragonvpn.ru/import/{name_device.lower()}/{part_link}"
+            url = f"skydragonvpn.ru/import/{name_device.lower()}/{part_link }"
         except Exception as e:
             await logger.log_error(f"При получении подписки что-то пошло не так: {e}")
 
     await callback_query.message.edit_text(
-        text="Установить профиль, нажав на кнопку 👇",
+        text="Выберите способ установки профиля в приложение 👇",
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=[
                 [
@@ -115,7 +115,7 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Inst
                 ],
                 [
                     InlineKeyboardButton(
-                        text="Ручная",
+                        text="🛠 Ручная",
                         callback_data=InstallProfileCallbackFactory(
                             action='get_manual_install',
                             subscription_id=subscription_id,

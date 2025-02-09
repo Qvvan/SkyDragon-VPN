@@ -130,32 +130,63 @@ async def handle_user_trial(callback_query: CallbackQuery, callback_data: UserIn
 @router.callback_query(UserSelectCallback.filter(F.action == "user_subs_info"))
 async def handle_user_subscriptions(callback_query: CallbackQuery, callback_data: UserSelectCallback):
     user_id = int(callback_data.user_id)
+
     async with DatabaseContextManager() as session_methods:
         try:
             subs = await session_methods.subscription.get_subscription(user_id)
             if not subs:
                 await callback_query.answer(
-                    text='У данного пользователя нет доступных подписок',
+                    text="У данного пользователя нет доступных подписок",
                     show_alert=True,
                     cache_time=5
                 )
                 return
+
+            await callback_query.answer()
+
+            key_ids = [sub.key_id for sub in subs]  # Получаем список ключей
+            keys_text = await keys_info(key_ids)  # Получаем информацию о ключах
+
+            total_usage = 0  # Суммарное использование всех подписок
+            messages = []  # Список сообщений для отправки
+
             for sub in subs:
+                # Получаем информацию по текущему ключу
+                key_info = await BaseKeyManager(server_ip=sub.server_ip).get_inbound_by_id(sub.key_id)
+                total = key_info.get("obj", {}).get("total", 0)  # Если данных нет, подставляем 0
+                total_usage += total  # Добавляем в общий трафик
+
+                # Формируем сообщение по подписке
                 response_message = (
-                    f"🆔 ID подписки: {sub.subscription_id}\n"
-                    f"📶 Статус: {'🟢 Активна' if sub.status == SubscriptionStatusEnum.ACTIVE else '🔴 Истекла'}\n"
-                    f"🏷 Автопродление: {'✅ Да' if sub.auto_renewal else '❌ Нет'}\n"
-                    f"🔑 Ссылка на конфиг: {sub.config_link}\n"
-                    f"📅 Начало подписки: {sub.start_date.strftime('%Y-%m-%d %H:%M')}\n"
-                    f"📅 Конец подписки: {sub.end_date.strftime('%Y-%m-%d %H:%M')}\n\n"
+                    f"🆔 <b>ID подписки:</b> {sub.subscription_id}\n"
+                    f"📶 <b>Статус:</b> {'🟢 <b>Активна</b>' if sub.status == SubscriptionStatusEnum.ACTIVE else '🔴 <b>Истекла</b>'}\n"
+                    f"🏷 <b>Автопродление:</b> {'✅ Да' if sub.auto_renewal else '❌ Нет'}\n"
+                    f"🔑 <b>Конфиг:</b> <code>{sub.config_link}</code>\n"
+                    f"📅 <b>Начало:</b> {sub.start_date.strftime('%Y-%m-%d %H:%M')}\n"
+                    f"📅 <b>Конец:</b> {sub.end_date.strftime('%Y-%m-%d %H:%M')}\n"
+                    f"📊 <b>Использовано:</b> {human_readable_size(total)}"
                 )
-                message_sub_info = await callback_query.message.answer(
+
+                messages.append(response_message)
+
+                await callback_query.message.answer(
                     text=response_message,
                     reply_markup=await InlineKeyboards.sub_info(user_id, sub),
+                    parse_mode="HTML",
+                    disable_web_page_preview=True
                 )
+
+            # Отправляем список ключей (если есть)
+            if keys_text:
+                await callback_query.message.answer(text=keys_text, parse_mode="HTML")
+
+            # Отправляем итоговое сообщение с общей суммой трафика
+            total_message = f"📊 <b>Общее потребление трафика по всем подпискам:</b> {human_readable_size(total_usage)}"
+            await callback_query.message.answer(text=total_message, parse_mode="HTML")
+
         except Exception as e:
-            await logger.error("Произошла ошибка", e)
-            await callback_query.message.answer(f"Произошла ошибка: \n{e}")
+            await logger.error(f"Произошла ошибка:", e)
+            await callback_query.message.answer(f"⚠️ <b>Произошла ошибка:</b>\n<code>{e}</code>", parse_mode="HTML")
 
 
 @router.callback_query(ChangeUserSubCallback.filter(F.action == "change_date_sub"))
@@ -233,3 +264,62 @@ async def handle_user_trial(callback_query: CallbackQuery, callback_data: Change
             await logger.error("Произошла ошибка при обновление ключа:", e)
             await callback_query.message.answer("Произошла ошибка при обновление ключа")
 
+
+async def keys_info(key_ids: list):
+    keys_data = []
+    total_usage = 0  # Общий трафик
+
+    async with DatabaseContextManager() as session_methods:
+        for key_id in key_ids:
+            try:
+                key = await session_methods.keys.get_key_by_id(key_id)
+                if not key:
+                    continue
+
+                key_info = await BaseKeyManager(server_ip=key.server_ip).get_inbound_by_id(key.key_id)
+
+                total = key_info.get("obj", {}).get("total", 0)
+                total_usage += total
+
+                key_data = {
+                    "key_id": key.key_id,
+                    "server_ip": key.server_ip,
+                    "total": total,
+                    "protocol": key_info.get("obj", {}).get("protocol", "Неизвестно"),
+                    "enable": "✅ Включен" if key_info.get("obj", {}).get("enable") else "❌ Отключен"
+                }
+
+                keys_data.append(key_data)
+
+            except Exception as e:
+                await logger.log_error(f"Произошла ошибка при получении ключа {key_id}", e)
+                continue
+
+    if not keys_data:
+        return ""
+
+    response_text = "<b>🔑 Информация по ключам:</b>\n\n"
+    for key in keys_data:
+        response_text += (
+            f"🆔 <b>ID ключа:</b> {key['key_id']}\n"
+            f"🌍 <b>Сервер:</b> {key['server_ip']}\n"
+            f"📡 <b>Протокол:</b> {key['protocol']}\n"
+            f"📊 <b>Использовано трафика:</b> {human_readable_size(key['total'])}\n"
+            f"⚙️ <b>Статус:</b> {key['enable']}\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+        )
+
+    response_text += f"\n<b>📊 Общее потребление трафика по всем ключам:</b> {human_readable_size(total_usage)}"
+    return response_text
+
+
+def human_readable_size(size: int) -> str:
+    """Конвертирует байты в читаемый формат (KB, MB, GB, TB)"""
+    if size == 0:
+        return "0 B"
+    sizes = ["B", "KB", "MB", "GB", "TB"]
+    i = 0
+    while size >= 1024 and i < len(sizes) - 1:
+        size /= 1024
+        i += 1
+    return f"{size:.2f} {sizes[i]}"
