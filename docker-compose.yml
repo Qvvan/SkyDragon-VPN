@@ -34,8 +34,8 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./frontend:/app/frontend:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro  # Фиксируем путь
+      - ./frontend:/app/frontend:ro  # Подключаем статику
     networks:
       - bot-network
 
