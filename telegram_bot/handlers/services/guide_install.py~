@@ -97,6 +97,8 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Inst
                     cache_time=5
                 )
                 return
+
+            part_link = sub.config_link.split("/")[-1]
             url = f"skydragonvpn.ru/import/{name_device.lower()}/{sub.config_link}"
         except Exception as e:
             await logger.log_error(f"При получении подписки что-то пошло не так: {e}")
@@ -169,7 +171,7 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Inst
                                 ).pack() if name_device in ["Android", "iPhone"] else SubscriptionCallbackFactory(
                                     action=name_device,
                                     subscription_id=subscription_id
-                                )
+                                ).pack()
                             )
                         ],
                         [

@@ -97,7 +97,9 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Inst
                     cache_time=5
                 )
                 return
-            url = f"skydragonvpn.ru/import/{name_device.lower()}/{sub.config_link}"
+
+            part_link = sub.config_link.split("/")[-1]
+            url = f"skydragonvpn.ru/import/{name_device.lower()}/{part_link}"
         except Exception as e:
             await logger.log_error(f"При получении подписки что-то пошло не так: {e}")
 
