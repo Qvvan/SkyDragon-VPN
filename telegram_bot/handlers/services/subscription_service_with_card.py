@@ -48,8 +48,13 @@ class SubscriptionsServiceCard:
 
                 config_link = await create_config_link(user_id, subscription.subscription_id)
 
-                await session_methods.session.commit()
+                await session_methods.subscription.update_sub(
+                    subscription_id=subscription.subscription_id,
+                    config_link=config_link
+                )
+
                 await SubscriptionsServiceCard.send_success_response(bot, user_id, config_link, subscription)
+                await session_methods.session.commit()
                 await logger.log_info(f"Пользователь: @{username}\n"
                                       f"ID: {user_id}\n"
                                       f"Оформил подписку на {durations_days} дней")
