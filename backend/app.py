@@ -58,7 +58,7 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
 @app.get("/import/iphone/{encrypted_part}")
 async def get_subscription(encrypted_part: str):
     # Формируем ссылку для редиректа
-    redirect_url = f"streisand://import/https://skydragonvpn/sub/{encrypted_part}"
+    redirect_url = f"streisand://import/https://skydragonvpn.ru/sub/{encrypted_part}"
 
     # Возвращаем редирект
     return RedirectResponse(url=redirect_url, status_code=302)
@@ -67,7 +67,7 @@ async def get_subscription(encrypted_part: str):
 @app.get("/import/android/{encrypted_part}")
 async def get_subscription(encrypted_part: str):
     # Формируем ссылку для редиректа
-    redirect_url = f"v2rayng://install-config?url=https://skydragonvpn/sub/{encrypted_part}"
+    redirect_url = f"v2rayng://install-config?url=https://skydragonvpn.ru/sub/{encrypted_part}"
 
     # Возвращаем редирект
     return RedirectResponse(url=redirect_url, status_code=302)
