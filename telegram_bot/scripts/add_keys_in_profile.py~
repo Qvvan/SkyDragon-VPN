@@ -9,17 +9,15 @@ async def update_config_link():
         subs = await session.subscription.get_subs()
         for sub in subs:
             if len(sub.key_ids) == 1:
-                keys = await create_keys_in_profile(sub.user_id, sub)
+                keys = await create_keys_in_profile(sub.user_id, sub.username, sub)
                 await session.subscription.update_sub(sub.subscription_id, key_ids=keys)
         await session.session.commit()
 
 
-async def create_keys_in_profile(user_id: int, sub: Subscriptions):
+async def create_keys_in_profile(user_id: int, username: str, sub: Subscriptions):
     keys = sub.key_ids
     async with DatabaseContextManager() as session_methods:
         try:
-            user = await session_methods.users.get_user(sub.user_id)
-            username = user.username
             key_info = await session_methods.keys.get_key_by_id(keys[0])
             server_ips = await session_methods.servers.get_all_servers()
             for server in server_ips:
