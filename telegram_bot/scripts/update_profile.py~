@@ -20,7 +20,7 @@ async def update_profile():
                 user_keys[tg_id].append(key.id)
             else:
                 user_keys[tg_id] = [key.id]
-            print(user_keys)
+        print(user_keys)
         for user_id, key_list in user_keys.items():
             try:
                 sub = await session.subscription.get_subscription(user_id)

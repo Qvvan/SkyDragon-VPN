@@ -9,7 +9,10 @@ async def update_profile():
         user_keys = {}
         for key in keys:
             key_info = await BaseKeyManager(server_ip=key.server_ip).get_inbound_by_id(key.key_id)
-            remark = key_info.get("obj", {}).get("remark", '')
+            if key_info:
+                remark = key_info.get("obj", {}).get("remark", '')
+            else:
+                await logger.warning(f"Пустой ключ с айди {key.key_id} сервер {key.server_ip}")
             try:
                 tg_id = remark.split("TgId:")[1].strip().split()[0]
                 tg_id = int(tg_id)
