@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 from aiogram import Bot
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from database.context_manager import DatabaseContextManager
 from handlers.services.create_config_link import create_config_link
@@ -134,16 +135,12 @@ class SubscriptionsServiceCard:
                             except Exception:
                                 pass
                             return
-
                 subscription = await extend_user_subscription(user_id, username, int(durations_days), session_methods)
                 await bot.send_message(
                     chat_id=user_id,
-                    text="Ваша старая подписка больше не актуальна, поэтому мы создали новую. \n\n"
-                         "Чтобы продолжить пользоваться сервисом, нужно заново установить профиль. Это займет всего пару кликов! 🚀"
+                    text="Ваша старая подписка больше не актуальна, поэтому мы создали новую. Чтобы продолжить пользоваться сервисом, нужно заново установить профиль. Это займет всего пару минут! 🚀"
                 )
-                await SubscriptionsServiceCard.send_success_response(bot, user_id, subscription.config_link,
-                                                                     subscription)
-                await session_methods.session.commit()
+                await SubscriptionsServiceCard.send_success_response(bot, user_id, subscription.config_link, subscription)
                 await logger.log_info(
                     f"Пользователь: @{username}\n"
                     f"ID: {user_id}\n"
