@@ -8,6 +8,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from database.context_manager import DatabaseContextManager
 from handlers.services.card_service import auto_renewal_payment
 from handlers.services.create_receipt import create_receipt
+from handlers.services.delete_keys import delete_keys
 from handlers.services.key_create import BaseKeyManager
 from handlers.services.update_keys import update_keys
 from keyboards.kb_inline import SubscriptionCallbackFactory, InlineKeyboards
@@ -192,7 +193,7 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
 async def handle_subscription_deletion(sub, session_methods):
     username = None
     try:
-        await BaseKeyManager(server_ip=sub.server_ip).delete_key(sub.key_id)
+        await delete_keys(sub.subscription_id)
 
         result = await session_methods.subscription.delete_sub(subscription_id=sub.subscription_id)
         if not result:
