@@ -10,8 +10,8 @@ async def update_profile():
         for key in keys:
             key_info = await BaseKeyManager(server_ip=key.server_ip).get_inbound_by_id(key.key_id)
             remark = key_info.get("obj", {}).get("remark", '')
-            tg_id = remark.split("TgId:")[1].strip().split()[0]
             try:
+                tg_id = remark.split("TgId:")[1].strip().split()[0]
                 tg_id = int(tg_id)
             except:
                 await logger.warning(f"У данного ключа нет айдишника: {key.key_id} {key.server_ip}")
@@ -20,7 +20,7 @@ async def update_profile():
                 user_keys[tg_id].append(key.id)
             else:
                 user_keys[tg_id] = [key.id]
-        print(user_keys)
+            print(user_keys)
         for user_id, key_list in user_keys.items():
             try:
                 sub = await session.subscription.get_subscription(user_id)
