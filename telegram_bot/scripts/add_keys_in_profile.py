@@ -11,7 +11,7 @@ async def update_config_link():
             if len(sub.key_ids) == 1:
                 keys = await create_keys_in_profile(sub.user_id, sub)
                 await session.subscription.update_sub(sub.subscription_id, key_ids=keys)
-                await session.session.commit()
+        await session.session.commit()
 
 
 async def create_keys_in_profile(user_id: int, sub: Subscriptions):
