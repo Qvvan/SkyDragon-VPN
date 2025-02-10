@@ -17,8 +17,6 @@ from handlers.user import subs, replace_server, replace_app, referrer, menu, jus
 from logger.logging_config import logger
 from middleware.logging_middleware import CallbackLoggingMiddleware, MessageLoggingMiddleware
 from middleware.trottling import ThrottlingMiddleware
-from scripts.add_keys_in_profile import update_config_link
-from scripts.update_profile import update_profile
 from utils import check_servers
 from utils.check_servers import ping_servers
 from utils.gift_checker import run_gift_checker
@@ -105,7 +103,6 @@ async def main():
     asyncio.create_task(payment_status_checker(bot))
     asyncio.create_task(run_trial_checker(bot))
     asyncio.create_task(run_gift_checker(bot))
-    asyncio.create_task(update_profile())
 
     await bot.delete_webhook(drop_pending_updates=True)
     try:

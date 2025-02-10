@@ -129,8 +129,8 @@ async def send_notification(callback_query: types.CallbackQuery, state: FSMConte
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                     [
                         InlineKeyboardButton(
-                            text="🎁 Подарить подарок",
-                            callback_data="gift_sub"
+                            text="🐲 Мои подписки",
+                            callback_data="view_subs"
                         )
                     ],
                 ])
