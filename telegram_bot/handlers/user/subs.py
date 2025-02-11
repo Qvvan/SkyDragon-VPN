@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import pytz
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -11,6 +12,8 @@ from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 
 router = Router()
+
+moscow_tz = pytz.timezone("Europe/Moscow")
 
 
 # Обработчик callback для показа подписок
@@ -104,6 +107,32 @@ async def show_user_subscriptions(user_id, username, message, state: FSMContext)
                 return
 
             buttons = []
+
+            if len(subscription_data) == 1:
+                detailed_info = await format_subscription_details(subscription_data[0])
+
+                try:
+                    await message.edit_text(
+                        text=detailed_info,
+                        parse_mode="HTML",
+                        reply_markup=await InlineKeyboards.menu_subs(
+                            subscription_id=subscription_data[0].subscription_id,
+                            auto_renewal=subscription_data[0].auto_renewal,
+                            back_button="main_menu"
+                        )
+                    )
+                except:
+                    await message.answer(
+                        text=detailed_info,
+                        parse_mode="HTML",
+                        reply_markup=await InlineKeyboards.menu_subs(
+                            subscription_id=subscription_data[0].subscription_id,
+                            auto_renewal=subscription_data[0].auto_renewal,
+                            back_button="main_menu"
+                        )
+                    )
+                return
+
             for index, data in enumerate(subscription_data):
                 end_date = data.end_date.date()
                 days_left = (end_date - datetime.now().date()).days
@@ -168,29 +197,52 @@ async def show_subscription_details(callback: CallbackQuery, state: FSMContext):
         try:
             subscription = await session.subscription.get_subscription_by_id(subscription_id)
             if subscription:
-                end_date = subscription.end_date
-                config_link = subscription.config_link
-                status = subscription.status
-                auto_renewal = subscription.auto_renewal
-                card_details_id = subscription.card_details_id
+                detailed_info = await format_subscription_details(subscription)
 
-                detailed_info = (
-                    f"<b>🐉 Статус подписки:</b> {'Активна' if status == 'активная' else 'Истекла'}\n"
-                    f"<b>📅 Окончание подписки:</b> {end_date.strftime('%d-%m-%Y')}\n"
-                    f"<b>🔄 Автопродление:</b> {'✅' if auto_renewal else '❌'}\n"
-                    f"<b>🐲🔑 Ключ:</b>\n"
-                    f"<pre>{config_link}</pre>"
-                )
                 await state.update_data(back_target=f"view_details_{subscription_id}")
                 # Клавиатура для управления подпиской
                 await callback.message.edit_text(
                     text=detailed_info,
                     parse_mode="HTML",
-                    reply_markup=await InlineKeyboards.menu_subs(subscription_id, auto_renewal)
+                    reply_markup=await InlineKeyboards.menu_subs(subscription_id, subscription.auto_renewal)
                 )
         except Exception as e:
             await logger.log_error("Ошибка при получении подробностей подписки\n"
                                    f"ID: {callback.from_user.id}\n", e)
+
+
+async def format_subscription_details(subscription):
+    """Форматирует данные подписки в текстовое представление."""
+    created_at_msk = subscription.created_at.replace(tzinfo=pytz.utc).astimezone(moscow_tz)
+    end_date_msk = subscription.end_date.replace(tzinfo=pytz.utc).astimezone(moscow_tz)
+
+    # Определение оставшегося времени
+    now_msk = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(moscow_tz)
+    remaining_days = (end_date_msk.date() - now_msk.date()).days
+
+    # Формируем блок про истечение подписки
+    if subscription.status == 'активная':
+        subscription_status = (
+            "<b>📆 Подписка истекает</b>\n"
+            f"├ <code>{end_date_msk.strftime('%d %B %Y, %H:%M:%S')} MSK</code>\n"
+            f"└ <b>Осталось:</b> <code>{remaining_days} {'день' if remaining_days == 1 else 'дня' if 1 < remaining_days < 5 else 'дней'}</code>\n\n"
+        )
+    else:
+        subscription_status = (
+            "<b>📆 Подписка истекла</b>\n"
+            f"└ <code>{end_date_msk.strftime('%d %B %Y, %H:%M:%S')} MSK</code>\n\n"
+        )
+
+    return (
+        "<b>📊 Информация о подписке</b>\n"
+        f"├ <b>Создана:</b> <code>{created_at_msk.strftime('%d %B %Y, %H:%M:%S')} MSK</code>\n"
+        f"└ <b>Статус:</b> {'✅ <code>Активна</code>' if subscription.status == 'активная' else '❌ <code>Неактивна, истекла</code>'}\n\n"
+        f"{subscription_status}"
+        "<b>🏷 Автопродление</b>\n"
+        f"└ {'✅ <code>Включено</code>' if subscription.auto_renewal else '❌ <code>Выключено</code>'}\n\n"
+        "<b>🔗 Ссылка активации</b>\n"
+        f"<code>{subscription.config_link if subscription.config_link else '⚠️ Информация недоступна'}</code>"
+    )
 
 
 @router.callback_query(SubscriptionCallbackFactory.filter(F.action == 'extend_subscription'))

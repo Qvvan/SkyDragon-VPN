@@ -265,7 +265,7 @@ class InlineKeyboards:
         return keyboard.as_markup()
 
     @staticmethod
-    async def menu_subs(subscription_id, auto_renewal):
+    async def menu_subs(subscription_id, auto_renewal, back_button="view_subs"):
         async with DatabaseContextManager() as session_methods:
             try:
                 keyboard = InlineKeyboardBuilder()
@@ -273,14 +273,14 @@ class InlineKeyboards:
                 if subscription.status == SubscriptionStatusEnum.ACTIVE:
                     keyboard.add(
                         InlineKeyboardButton(
-                            text='⏳ Продлить подписку',
+                            text='⏳ Продлить',
                             callback_data=SubscriptionCallbackFactory(
                                 action='extend_subscription',
                                 subscription_id=subscription_id,
                                 back=f"view_details_{subscription_id}"
                             ).pack()),
                         InlineKeyboardButton(
-                            text='Как подключиться ❔',
+                            text='📜 Инструкция',
                             callback_data=SubscriptionCallbackFactory(
                                 action='get_guide_install_app',
                                 subscription_id=subscription_id,
@@ -293,11 +293,11 @@ class InlineKeyboards:
                                 subscription_id=subscription_id,
                             ).pack()),
                         InlineKeyboardButton(
-                            text='🔙 Назад',
-                            callback_data='view_subs',
+                            text="🌌 Главное меню" if back_button == "main_menu" else '🔙 Назад',
+                            callback_data=back_button,
                         )
                     )
-                keyboard.adjust(1, 1)
+                keyboard.adjust(2, 1)
 
                 return keyboard.as_markup()
             except Exception as e:

@@ -133,10 +133,10 @@ class SubscriptionMethods:
                     Subscriptions.subscription_id,
                     Subscriptions.card_details_id,
                     Subscriptions.auto_renewal,
+                    Subscriptions.created_at,
                     Services.duration_days,
                     Services.price,
                     Services.service_id,
-                    Servers.name.label('server_name')
                 )
                 .select_from(Subscriptions)
                 .outerjoin(Services, Subscriptions.service_id == Services.service_id)
