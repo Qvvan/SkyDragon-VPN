@@ -265,7 +265,7 @@ class InlineKeyboards:
         return keyboard.as_markup()
 
     @staticmethod
-    async def menu_subs(subscription_id, auto_renewal, back_button="main_menu"):
+    async def menu_subs(subscription_id, auto_renewal, back_button="view_subs"):
         async with DatabaseContextManager() as session_methods:
             try:
                 keyboard = InlineKeyboardBuilder()

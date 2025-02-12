@@ -111,15 +111,26 @@ async def show_user_subscriptions(user_id, username, message, state: FSMContext)
             if len(subscription_data) == 1:
                 detailed_info = await format_subscription_details(subscription_data[0])
 
-                await message.edit_text(
-                    text=detailed_info,
-                    parse_mode="HTML",
-                    reply_markup=await InlineKeyboards.menu_subs(
-                        subscription_id=subscription_data[0].subscription_id,
-                        auto_renewal=subscription_data[0].auto_renewal,
-                        back_button="main_menu"
+                try:
+                    await message.edit_text(
+                        text=detailed_info,
+                        parse_mode="HTML",
+                        reply_markup=await InlineKeyboards.menu_subs(
+                            subscription_id=subscription_data[0].subscription_id,
+                            auto_renewal=subscription_data[0].auto_renewal,
+                            back_button="main_menu"
+                        )
                     )
-                )
+                except:
+                    await message.answer(
+                        text=detailed_info,
+                        parse_mode="HTML",
+                        reply_markup=await InlineKeyboards.menu_subs(
+                            subscription_id=subscription_data[0].subscription_id,
+                            auto_renewal=subscription_data[0].auto_renewal,
+                            back_button="main_menu"
+                        )
+                    )
                 return
 
             for index, data in enumerate(subscription_data):
@@ -253,7 +264,7 @@ async def extend_subscription(callback: CallbackQuery, callback_data: Subscripti
 
     data = await state.get_data()
     previous_message_id = data.get("text_dragons_overview_id")
-    if previous_message_id:
+    if previous_message_id:цц
         try:
             await callback.bot.delete_message(callback.message.chat.id, previous_message_id)
             await state.update_data(text_dragons_overview_id=None)
