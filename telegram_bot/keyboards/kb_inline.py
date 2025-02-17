@@ -293,8 +293,8 @@ class InlineKeyboards:
                                 subscription_id=subscription_id,
                             ).pack()),
                         InlineKeyboardButton(
-                            text="🌌 Главное меню" if back_button == "main_menu" else '🔙 Назад',
-                            callback_data=back_button,
+                            text="🌌 Главное меню",
+                            callback_data="main_menu",
                         )
                     )
                 keyboard.adjust(2, 1)

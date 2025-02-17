@@ -88,7 +88,6 @@ class SubscriptionsServiceCard:
                 durations_days = service.duration_days
                 status_saved = payment_response.payment_method.saved
                 card_details_id = None
-                status_update_key = True
                 if status_saved:
                     card_details_id = payment_response.payment_method.id
                 if subs:
@@ -98,7 +97,6 @@ class SubscriptionsServiceCard:
                                 new_end_date = datetime.now() + timedelta(days=int(durations_days))
                             else:
                                 new_end_date = sub.end_date + timedelta(days=int(durations_days))
-                                status_update_key = False
                             await session_methods.subscription.update_sub(
                                 subscription_id=sub.subscription_id,
                                 service_id=service_id,
@@ -115,8 +113,7 @@ class SubscriptionsServiceCard:
                                 end_date=new_end_date,
                                 status=StatusSubscriptionHistory.EXTENSION
                             )
-                            if status_update_key:
-                                await update_keys(subscription_id, True)
+                            await update_keys(subscription_id, True)
                             await logger.info(f"Успешно создана подписка {subscription_id}")
                             await session_methods.session.commit()
                             await bot.send_message(chat_id=user_id, text=LEXICON_RU['subscription_renewed'])

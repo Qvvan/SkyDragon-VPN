@@ -260,7 +260,7 @@ async def keys_info(key_ids: list):
                     continue
 
                 key_info = await BaseKeyManager(server_ip=key.server_ip).get_inbound_by_id(key.key_id)
-                total = key_info.get("obj", {}).get("total", 0)
+                total = key_info.get("obj", {}).get("down", 0)
                 total_usage += total
 
                 key_data = {

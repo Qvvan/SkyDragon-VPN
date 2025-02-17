@@ -6,6 +6,7 @@ from aiogram.types import CallbackQuery
 from config_data.config import ADMIN_IDS
 from database.context_manager import DatabaseContextManager
 from filters.admin import IsAdmin
+from handlers.services.delete_keys import delete_keys
 from handlers.services.extend_latest_subscription import extend_user_subscription
 from handlers.services.key_create import BaseKeyManager
 from keyboards.kb_inline import InlineKeyboards, UserInfoCallbackFactory, UserSelectCallback, ChangeUserSubCallback
@@ -205,21 +206,20 @@ async def process_duration_days(message: types.Message, state: FSMContext):
 async def handle_user_trial(callback_query: CallbackQuery, callback_data: ChangeUserSubCallback):
     async with DatabaseContextManager() as session_methods:
         try:
+            await delete_keys(callback_data.subscription_id)
             sub = await session_methods.subscription.get_subscription_by_id(callback_data.subscription_id)
-            user = await session_methods.users.get_user(callback_data.user_id)
-            await BaseKeyManager(server_ip=sub.server_ip).delete_key(sub.key_id)
 
             result = await session_methods.subscription.delete_sub(subscription_id=sub.subscription_id)
             if not result:
                 await logger.log_error('Не удалось удалить подписку при ее истечении\n'
-                                       f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\n', Exception)
+                                       f'Пользователь:\nID: {sub.user_id}\n', Exception)
                 return
 
             await session_methods.session.commit()
         except Exception as e:
             await session_methods.session.rollback()
             await logger.log_error(
-                f'Пользователь:\nID: {sub.user_id}\nUsername: @{user.username}\nОшибка при удалении подписки', e)
+                f'Пользователь:\nID: {sub.user_id}\nОшибка при удалении подписки', e)
 
         await callback_query.message.answer("Подписка успешно удалена")
 
