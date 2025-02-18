@@ -44,9 +44,11 @@ async def extend_user_subscription(user_id: int, username: str, days: int, sessi
         latest_subscription = max(subscriptions, key=lambda sub: sub.end_date or datetime.min)
         subscription_id = latest_subscription.subscription_id
         end_date = latest_subscription.end_date
+        status_update_keys = True
 
         if end_date and end_date > datetime.utcnow():
             new_end_date = end_date + timedelta(days=days)
+            status_update_keys = False
         else:
             new_end_date = max(datetime.utcnow(), end_date or datetime.utcnow()) + timedelta(days=days)
 
@@ -56,7 +58,8 @@ async def extend_user_subscription(user_id: int, username: str, days: int, sessi
             status=SubscriptionStatusEnum.ACTIVE,
             reminder_sent=0
         )
-        await update_keys(subscription_id, True)
+        if status_update_keys:
+            await update_keys(subscription_id, True)
         return latest_subscription
 
     except Exception as e:
