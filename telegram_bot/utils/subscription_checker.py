@@ -124,8 +124,11 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
                     status='succeeded',
                     receipt_link=receipt_link
                 )
-                await bot.send_message(chat_id=sub.user_id, text=f"✅ Ваша подписка успешно продлена!\n"
+                try:
+                    await bot.send_message(chat_id=sub.user_id, text=f"✅ Ваша подписка успешно продлена!\n"
                                                                  f"Если хотите отключить автопродление, перейдите в свою подписку /profile")
+                except:
+                    await logger.warning(message=f"Не удалось отправить сообщение о продлении подписки ID: {sub.user_id}")
                 await logger.log_info(message="Успешное автопродление у пользователя\n"
                                               f"ID: {sub.user_id}")
                 new_end_date = sub.end_date + timedelta(days=int(service.duration_days))
