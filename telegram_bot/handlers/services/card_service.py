@@ -80,10 +80,6 @@ async def payment_status_checker(bot):
 
                 for payment in unpaid_payments:
                     try:
-                        payment_time_limit = payment.created_at + timedelta(hours=1)
-                        if datetime.utcnow() > payment_time_limit:
-                            await session_methods.payments.delete_payment(payment.payment_id)
-                            continue
 
                         payment_response = await check_payment_status(payment.payment_id)
                         if payment_response.status == 'succeeded':
@@ -101,6 +97,11 @@ async def payment_status_checker(bot):
                             await bot.send_message(chat_id=user_id, text="Платеж успешно прошел!")
 
                             await successful_payment(bot, payment_response)
+
+                        payment_time_limit = payment.created_at + timedelta(hours=1)
+                        if datetime.utcnow() > payment_time_limit:
+                            await session_methods.payments.delete_payment(payment.payment_id)
+                            continue
                     except Exception as e:
                         await logger.log_error("Ошибка проверки статуса платежа", e)
                 await session_methods.session.commit()

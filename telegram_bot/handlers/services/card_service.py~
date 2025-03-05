@@ -60,19 +60,7 @@ def create_payment(amount, description, return_url, service_id, service_type, us
                 "user_id": user_id,
                 "username": username,
                 "receiver_username": receiver_username,
-                "subscription_id": subscription_id,
-            "payment_method_types": [
-                    "bank_card",  # Банковские карты
-                    "apple_pay",  # Apple Pay
-                    "yoo_money",  # ЮMoney (бывшие Яндекс.Деньги)
-                    "sberbank",  # Сбербанк Онлайн
-                    "alfabank",  # Альфа-Клик
-                    "tinkoff_bank",  # Тинькофф
-                    "b2b_sberbank",  # Сбербанк Бизнес Онлайн
-                    "mobile_balance",  # Оплата с баланса телефона
-                    "cash",  # Наличные через терминалы
-                    "installments"  # Оплата в рассрочку
-                ]
+                "subscription_id": subscription_id
             }
         }
     )
