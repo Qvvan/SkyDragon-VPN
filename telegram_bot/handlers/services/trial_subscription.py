@@ -14,6 +14,10 @@ router = Router()
 
 @router.callback_query(lambda callback: callback.data == "activate_trial")
 async def process_trial_subscription_callback(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text(
+        text=callback.message.text,
+        reply_markup=None
+    )
     async with DatabaseContextManager() as session_methods:
         try:
             user = await session_methods.users.get_user(user_id=callback.from_user.id)

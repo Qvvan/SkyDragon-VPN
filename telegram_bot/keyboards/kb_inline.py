@@ -286,6 +286,10 @@ class InlineKeyboards:
                                 subscription_id=subscription_id,
                             ).pack()),
                         InlineKeyboardButton(
+                            text="💰 История платежей",
+                            callback_data="history_payments"
+                        ),
+                        InlineKeyboardButton(
                             text='🔄 Автопродление',
                             callback_data=AutoRenewalCallbackFactory(
                                 action='auto_renewal',

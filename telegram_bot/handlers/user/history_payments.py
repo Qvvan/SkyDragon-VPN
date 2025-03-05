@@ -13,7 +13,7 @@ async def handle_know_more(callback: CallbackQuery):
     async with DatabaseContextManager() as session:
         try:
             payments = await session.payments.get_payments_by_user_id(callback.from_user.id)
-            answer = "Все ваши платежи:\n\n"
+            answer = f"Все ваши платежи: {len(payments)}\n\n"
             for payment in payments:
                 if payment.status == 'succeeded':
                     service = await session.services.get_service_by_id(payment.service_id)
