@@ -73,7 +73,7 @@ async def process_duration_days(message: types.Message, state: FSMContext):
                                                    ])
                                                )
                 await logger.log_info(f"Администрация подарила подарок пользователю с ID: {user_id}\n"
-                                      f"Получил: {duration_days} дней к подписке")
+                                      f"Получил подарок: {duration_days} дней к подписке")
                 await session_methods.session.commit()
                 await message.answer('Подписка успешно подарена')
 
