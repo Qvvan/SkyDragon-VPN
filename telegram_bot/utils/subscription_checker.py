@@ -14,7 +14,7 @@ from handlers.services.update_keys import update_keys
 from keyboards.kb_inline import SubscriptionCallbackFactory, InlineKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
-from models.models import SubscriptionStatusEnum
+from models.models import SubscriptionStatusEnum, Payments
 
 
 async def check_subscriptions(bot: Bot):
@@ -119,11 +119,27 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
                     receipt_link = await create_receipt(service.name, service.price, service.duration_days)
                 except Exception as e:
                     receipt_link = None
-                await session_methods.payments.update_payment_status(
-                    payment_id=res['id'],
-                    status='succeeded',
-                    receipt_link=receipt_link
-                )
+
+                try:
+                    await session_methods.payments.create_payments(Payments(
+                        payment_id=res['id'],
+                        user_id=sub.user_id,
+                        service_id=service.service_id,
+                        status='succeeded',
+                        receipt_link=receipt_link))
+                except Exception as e:
+                    await logger.warning(message=f"Не удалось создать статус оплаты: {e}")
+
+                try:
+                    await session_methods.subscription_history.create_history_entry(
+                        user_id=sub.user_id,
+                        service_id=service.service_id,
+                        start_date=sub.start_date,
+                        end_date=sub.end_date,
+                        status="автопродление"
+                    )
+                except Exception as e:
+                    await logger.warning(message=f"Не удалось создать историю подписки: {e}")
                 try:
                     await bot.send_message(chat_id=sub.user_id, text=f"✅ Ваша подписка успешно продлена!\n"
                                                                  f"Если хотите отключить автопродление, перейдите в свою подписку /profile")

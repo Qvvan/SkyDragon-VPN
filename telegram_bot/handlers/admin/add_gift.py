@@ -10,6 +10,7 @@ from filters.admin import IsAdmin
 from handlers.services.extend_latest_subscription import extend_user_subscription
 from keyboards.kb_inline import InlineKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
+from logger.logging_config import logger
 from state.state import GiveSub
 
 router = Router()
@@ -52,7 +53,14 @@ async def process_duration_days(message: types.Message, state: FSMContext):
             if not user:
                 await message.answer('Пользователь не найден. Попробуйте снова.')
             else:
-                await extend_user_subscription(user_id, user.username, duration_days, session_methods)
+                subscription = await extend_user_subscription(user_id, user.username, duration_days, session_methods)
+                await session_methods.subscription_history.create_history_entry(
+                    user_id=user_id,
+                    service_id=subscription.service_id,
+                    start_date=subscription.start_date,
+                    end_date=subscription.end_date,
+                    status="gift"
+                )
                 await message.bot.send_message(chat_id=user_id, text=LEXICON_RU['add_gift_success'].format(duration_days=duration_days),
                                                reply_markup=InlineKeyboardMarkup(
                                                    inline_keyboard=[
@@ -64,6 +72,7 @@ async def process_duration_days(message: types.Message, state: FSMContext):
                                                        ],
                                                    ])
                                                )
+                await logger.log_info(f"Пользователь с ID: {user_id} получил подарок подписки на {duration_days} дней")
                 await session_methods.session.commit()
                 await message.answer('Подписка успешно подарена')
 
