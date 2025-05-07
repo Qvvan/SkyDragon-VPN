@@ -297,6 +297,10 @@ class InlineKeyboards:
                                 subscription_id=subscription_id,
                             ).pack()),
                         InlineKeyboardButton(
+                            text='🧑‍💻 Онлайн на серверах',
+                            callback_data="online",
+                        ),
+                        InlineKeyboardButton(
                             text="🌌 Главное меню",
                             callback_data="main_menu",
                         )

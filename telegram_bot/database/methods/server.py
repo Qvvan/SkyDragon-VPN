@@ -1,3 +1,5 @@
+from typing import List
+
 from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,7 +56,7 @@ class ServerMethods:
             await logger.log_error(f"SQLAlchemy error when adding server", e)
             return False
 
-    async def get_all_servers(self):
+    async def get_all_servers(self) -> List[Servers]:
         """
         Получает список всех серверов из базы данных.
         """

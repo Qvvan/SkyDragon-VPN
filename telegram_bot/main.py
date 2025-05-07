@@ -11,7 +11,7 @@ from handlers.admin import add_server, user_info, cancel, refund, help_info, pus
     add_gift, message_for_user
 from handlers.services import payments_service, guide_install, trial_subscription
 from handlers.services.card_service import payment_status_checker
-from handlers.user import start, support, createorder
+from handlers.user import start, support, createorder, online_users_vpn
 from handlers.user import subs, replace_server, replace_app, referrer, menu, just_message, stars, gift_sub, \
     send_stikers, history_payments
 from logger.logging_config import logger
@@ -86,6 +86,7 @@ async def main():
     dp.include_router(gift_sub.router)
 
     # admin-handlers
+    dp.include_router(online_users_vpn.router)
     dp.include_router(add_server.router)
     dp.include_router(help_info.router)
     dp.include_router(refund.router)

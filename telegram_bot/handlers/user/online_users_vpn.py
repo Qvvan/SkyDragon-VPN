@@ -1,0 +1,111 @@
+import aiohttp
+from aiogram import Router
+from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+
+from config_data.config import PORT_X_UI
+from database.context_manager import DatabaseContextManager
+from handlers.services.get_session_cookies import get_session_cookie
+from logger.logging_config import logger
+
+router = Router()
+
+
+@router.message(Command(commands='online'))
+async def get_online_users(message: Message):
+    async with DatabaseContextManager() as session_methods:
+        try:
+            servers = await session_methods.servers.get_all_servers()
+            answer = "Сейчас онлайн на серверах\n"
+
+            async with aiohttp.ClientSession() as session:
+                for server in servers:
+                    try:
+                        url = f"https://{server.server_ip}:{PORT_X_UI}/0PkmGmepRhDqrFJ/panel/inbound/onlines"
+                        cookies = await get_session_cookie(server.server_ip)
+
+                        if not cookies:
+                            answer += f"\n{server.name}: Не удалось получить данные авторизации"
+                            continue
+
+                        async with session.post(url=url, cookies=cookies, timeout=10, ssl=False) as response:
+                            if response.status == 200:
+                                data = await response.json()
+                                users = data.get('obj', {})
+                                answer += f"\n{server.name}: {len(users) if users else 0} человек"
+                            else:
+                                answer += f"\n{server.name}: Ошибка {response.status}"
+                    except aiohttp.ClientError as e:
+                        answer += f"\n{server.name}: Ошибка соединения"
+                        await logger.log_error(f"Ошибка соединения с сервером {server.name}", e)
+                    except Exception as e:
+                        answer += f"\n{server.name}: Неизвестная ошибка"
+                        await logger.log_error(f"Неизвестная ошибка при обработке сервера {server.name}", e)
+
+            await message.answer(
+                text=answer,
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text="🌌 Главное меню",
+                                callback_data='main_menu'
+                            )
+                        ]
+                    ]
+                )
+            )
+        except Exception as e:
+            await logger.log_error("Ошибки при отправке онлайн пользователей", e)
+            await message.answer("Произошла ошибка при получении данных о пользователях онлайн")
+
+
+@router.callback_query(lambda c: c.data == 'online')
+async def callback_get_support(callback: CallbackQuery):
+    await callback.answer()
+    async with DatabaseContextManager() as session_methods:
+        try:
+            servers = await session_methods.servers.get_all_servers()
+            answer = "Сейчас онлайн на серверах\n"
+
+            async with aiohttp.ClientSession() as session:
+                for server in servers:
+                    try:
+                        url = f"https://{server.server_ip}:{PORT_X_UI}/0PkmGmepRhDqrFJ/panel/inbound/onlines"
+                        cookies = await get_session_cookie(server.server_ip)
+
+                        if not cookies:
+                            answer += f"\n{server.name}: Не удалось получить данные авторизации"
+                            continue
+
+                        async with session.post(url=url, cookies=cookies, timeout=10, ssl=False) as response:
+                            if response.status == 200:
+                                data = await response.json()
+                                users = data.get('obj', {})
+                                answer += f"\n{server.name}: {len(users) if users else 0} человек"
+                            else:
+                                answer += f"\n{server.name}: Ошибка {response.status}"
+                    except aiohttp.ClientError as e:
+                        answer += f"\n{server.name}: Ошибка соединения"
+                        await logger.log_error(f"Ошибка соединения с сервером {server.name}", e)
+                    except Exception as e:
+                        answer += f"\n{server.name}: Неизвестная ошибка"
+                        await logger.log_error(f"Неизвестная ошибка при обработке сервера {server.name}", e)
+
+            await callback.message.answer(
+                text=answer,
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text="🌌 Главное меню",
+                                callback_data='main_menu'
+                            )
+                        ]
+                    ]
+                )
+            )
+        except Exception as e:
+            await logger.log_error("Ошибки при отправке онлайн пользователей", e)
+            await callback.message.answer("Произошла ошибка при получении данных о пользователях онлайн")
