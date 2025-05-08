@@ -1,0 +1,125 @@
+/**
+ * dragonIcons.css - Стили для иконок драконов
+ *
+ * Содержит все SVG-иконки и стили для драконов.
+ */
+
+/* Стили для драконьих элементов */
+.dragon-emblem {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="%23d97706" stroke-width="2"/><path d="M50 15 L60 45 L90 50 L60 55 L50 85 L40 55 L10 50 L40 45 Z" fill="none" stroke="%23d97706" stroke-width="2"/></svg>');
+  background-size: contain;
+  animation: spin-slow 20s linear infinite;
+}
+
+.dragon-seal {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="%23d97706" stroke-width="2"/><text x="50" y="55" font-family="serif" font-size="20" text-anchor="middle" fill="%23d97706">龍</text></svg>');
+  background-size: contain;
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
+.dragon-seal-large {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="%23d97706" stroke-width="2"/><text x="50" y="65" font-family="serif" font-size="60" text-anchor="middle" fill="%23d97706">龍</text></svg>');
+  background-size: contain;
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
+.dragon-corner-ornament {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><path d="M0 0 L50 0 L50 50 C30 40 20 30 0 0 Z" fill="%23d97706" opacity="0.1"/><path d="M45 5 L45 40 C30 30 20 25 5 5 Z" fill="none" stroke="%23d97706" stroke-width="1" opacity="0.3"/></svg>');
+  background-size: contain;
+}
+
+.dragon-bg-pattern {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g fill="none" stroke="%23d97706" stroke-width="0.5" opacity="0.2"><circle cx="50" cy="50" r="40"/><circle cx="50" cy="50" r="35"/><circle cx="50" cy="50" r="30"/><circle cx="50" cy="50" r="25"/><circle cx="50" cy="50" r="20"/><path d="M50 10 L50 90 M10 50 L90 50 M25 25 L75 75 M25 75 L75 25"/></g></svg>');
+  background-size: 200px 200px;
+  width: 200%;
+  height: 200%;
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  animation: spin-slow 120s linear infinite;
+}
+
+.dragon-scroll-icon {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M20 20 L80 20 L80 80 L20 80 Z" fill="none" stroke="%23d97706" stroke-width="2"/><path d="M25 30 L75 30 M25 40 L75 40 M25 50 L60 50 M25 60 L50 60 M25 70 L40 70" stroke="%23d97706" stroke-width="2"/></svg>');
+  background-size: contain;
+  width: 100%;
+  height: 100%;
+}
+
+.dragon-gift-icon {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="20" y="40" width="60" height="40" rx="3" fill="none" stroke="%23d97706" stroke-width="2"/><rect x="40" y="40" width="20" height="40" fill="none" stroke="%23d97706" stroke-width="2"/><path d="M40 40 L30 20 L50 30 L70 20 L60 40" fill="none" stroke="%23d97706" stroke-width="2"/></svg>');
+  background-size: contain;
+  width: 100%;
+  height: 100%;
+}
+
+/* Контейнеры для иконок */
+.dragon-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 165, 0, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 165, 0, 0.3);
+}
+
+.dragon-icon {
+  width: 30px;
+  height: 30px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.dragon-icon-small {
+  width: 24px;
+  height: 24px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Иконки драконов */
+.dragon-шааргос {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 20 C60 20, 80 40, 80 60 C80 80, 60 90, 50 90 C40 90, 20 80, 20 60 C20 40, 40 20, 50 20 Z" fill="none" stroke="%233b82f6" stroke-width="2"/><circle cx="40" cy="45" r="5" fill="%233b82f6"/><path d="M30 60 Q50 80, 70 60" fill="none" stroke="%233b82f6" stroke-width="2"/></svg>');
+}
+
+.dragon-валдрим {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M10 10 L90 10 L90 90 L10 90 Z" fill="none" stroke="%23d97706" stroke-width="3"/><path d="M30 30 L70 30 L70 70 L30 70 Z" fill="none" stroke="%23d97706" stroke-width="3"/><path d="M10 10 L30 30 M90 10 L70 30 M10 90 L30 70 M90 90 L70 70" stroke="%23d97706" stroke-width="3"/></svg>');
+}
+
+.dragon-сангрил {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 10 L75 25 L90 50 L75 75 L50 90 L25 75 L10 50 L25 25 Z" fill="none" stroke="%23dc2626" stroke-width="2"/><path d="M40 50 L45 55 L50 40 L55 55 L60 50" fill="none" stroke="%23dc2626" stroke-width="2" stroke-linecap="round"/><path d="M40 70 Q50 60, 60 70" fill="none" stroke="%23dc2626" stroke-width="2"/></svg>');
+}
+
+.dragon-элдрагон {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="%238b5cf6" stroke-width="2"/><path d="M30 50 L70 50 M50 30 L50 70" stroke="%238b5cf6" stroke-width="2"/><circle cx="50" cy="50" r="20" fill="none" stroke="%238b5cf6" stroke-width="2"/><circle cx="50" cy="50" r="10" fill="none" stroke="%238b5cf6" stroke-width="2"/></svg>');
+}
+
+/* Водяные знаки драконов */
+.dragon-watermark {
+  width: 100%;
+  height: 100%;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.2;
+}
+
+.dragon-шааргос-mark {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0 50 C20 30, 50 0, 100 40 C100 70, 70 100, 40 100 C10 100, 0 70, 0 50 Z" fill="none" stroke="%233b82f6" stroke-width="3"/></svg>');
+}
+
+.dragon-валдрим-mark {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M10 10 L90 10 L90 90 L10 90 Z" fill="none" stroke="%23d97706" stroke-width="3"/></svg>');
+}
+
+.dragon-сангрил-mark {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 0 L100 50 L50 100 L0 50 Z" fill="none" stroke="%23dc2626" stroke-width="3"/><path d="M25 25 L75 25 L75 75 L25 75 Z" fill="none" stroke="%23dc2626" stroke-width="3"/></svg>');
+}
+
+.dragon-элдрагон-mark {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="%238b5cf6" stroke-width="3"/><path d="M20 20 L80 80 M80 20 L20 80" stroke="%238b5cf6" stroke-width="3"/><circle cx="50" cy="50" r="25" fill="none" stroke="%238b5cf6" stroke-width="3"/></svg>');
+}
