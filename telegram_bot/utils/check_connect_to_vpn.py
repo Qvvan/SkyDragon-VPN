@@ -103,6 +103,11 @@ async def check_connect(bot: Bot):
                             parse_mode="Markdown",
                             reply_markup=support_keyboard
                         )
+
+                        await bot.send_message(
+                            chat_id=CHAT_ADMIN_ID,
+                            text=f"Уведомили пользователя с ID: {sub.user_id}"
+                        )
                     except Exception as e:
                         await logger.log_error(f"Ошибка при отправке уведомления пользователю {sub.user_id}", e)
 
