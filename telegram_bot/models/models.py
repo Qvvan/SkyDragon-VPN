@@ -163,9 +163,9 @@ class Pushes(Base):
 class Notification(Base):
     __tablename__ = "notifications"
 
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, nullable=False)
-    subscription_id = Column(Integer, nullable=True)  # ID подписки, если уведомление связано с подпиской
+    id = Column(BigInteger, primary_key=True)
+    user_id = Column(BigInteger, nullable=False)
+    subscription_id = Column(BigInteger, nullable=True)  # ID подписки, если уведомление связано с подпиской
     notification_type = Column(String, nullable=False)  # Тип уведомления (no_connection, payment_reminder, etc.)
     message = Column(Text, nullable=True)  # Текст уведомления
     status = Column(String, default="active")  # Статус: active, resolved, expired
