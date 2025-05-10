@@ -250,7 +250,7 @@ async def handle_user_trial(callback_query: CallbackQuery, callback_data: Change
 
 async def keys_info(key_ids: list):
     keys_data = []
-    total_usage = 0  # Общий трафик
+    total_usage = 0
 
     async with DatabaseContextManager() as session_methods:
         for key_id in key_ids:

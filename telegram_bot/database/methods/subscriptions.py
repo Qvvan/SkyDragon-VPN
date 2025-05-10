@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import List
 
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -82,20 +83,17 @@ class SubscriptionMethods:
             await logger.log_error(f"Error creating subscription", e)
             return False
 
-    async def get_subs(self):
+    async def get_subs(self) -> List[Subscriptions]:
         try:
             result = await self.session.execute(
                 select(Subscriptions)
             )
             subs = result.scalars().all()
-            if len(subs) == 0:
-                await logger.info('Нет ни одной подписки')
-                return False
 
             return subs
         except SQLAlchemyError as e:
             await logger.log_error('Не удалось получить подписки', e)
-            raise
+            return []
 
     async def delete_sub(self, subscription_id: int):
         try:

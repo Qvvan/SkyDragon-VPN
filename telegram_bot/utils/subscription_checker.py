@@ -21,7 +21,7 @@ async def check_subscriptions(bot: Bot):
     async with DatabaseContextManager() as session_methods:
         try:
             subs = await session_methods.subscription.get_subs()
-            if not subs:
+            if len(subs) == 0:
                 return
         except Exception as e:
             await logger.log_error(f'Ошибка при получении подписок', e)

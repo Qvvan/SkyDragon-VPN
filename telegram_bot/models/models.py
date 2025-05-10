@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, String, Integer, DateTime, Enum, BigInteger, ARRAY, Boolean
+from sqlalchemy import Column, String, Integer, DateTime, Enum, BigInteger, ARRAY, Boolean, Text, JSON
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -158,3 +158,17 @@ class Pushes(Base):
     message = Column(String, nullable=False)
     user_ids = Column(ARRAY(BigInteger), default=[])
     timestamp = Column(DateTime, default=datetime.utcnow)
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, nullable=False)
+    subscription_id = Column(Integer, nullable=True)  # ID подписки, если уведомление связано с подпиской
+    notification_type = Column(String, nullable=False)  # Тип уведомления (no_connection, payment_reminder, etc.)
+    message = Column(Text, nullable=True)  # Текст уведомления
+    status = Column(String, default="active")  # Статус: active, resolved, expired
+    additional_data = Column(JSON, nullable=True)  # Дополнительные данные
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)

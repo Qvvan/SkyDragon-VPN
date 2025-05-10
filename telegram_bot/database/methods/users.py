@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, List
 
 from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -81,7 +81,7 @@ class UserMethods:
         except Exception as e:
             await logger.log_error(f"Error unbanning user", e)
 
-    async def get_all_users(self):
+    async def get_all_users(self) -> List[Users]:
         try:
             result = await self.session.execute(select(Users))
             users = result.scalars().all()
