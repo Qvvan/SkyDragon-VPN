@@ -14,14 +14,19 @@ router = Router()
 @router.message(Command(commands="update_keys"), IsAdmin(ADMIN_IDS))
 async def show_servers_handler(message: types.Message):
     async with DatabaseContextManager() as session:
-        keys = await session.keys.get_all_keys()
-        for key in keys:
-            async with DatabaseContextManager() as session_methods:
-                try:
-                    email = await BaseKeyManager(server_ip=key.server_ip).get_traffic_by_id(key.key_id)
-                    email = email["obj"][0]["email"]
-                    await session_methods.keys.update_key(key.id, email=email)
-                    await session_methods.session.commit()
-                except Exception as e:
-                    await logger.log_error(f"произошла ошбика при обновление email у ключа ID: {key.key_id}\n"
-                                           f"сервер: {key.server_ip}", e)
+        servers = await session.servers.get_all_servers()
+        for server in servers:
+            keys = await BaseKeyManager(server_ip=server.server_ip).get_inbounds()
+            keys = keys.get("obj", {})
+            for key in keys:
+                async with DatabaseContextManager() as session_methods:
+                    email = key.get("clientStats", {})[0].get("email", "")
+                    key_id = key.get("id")
+                    if key_id:
+                        continue
+                    key_exists =  await session_methods.keys.get_key_by_key_id(key_id)
+                    if key_exists:
+                        await session_methods.keys.update_key(key_id, email=email)
+                    else:
+                        await logger.warning(f"ключа нет в базе данных {key_id}\n"
+                                             f"сервер: {server.server_ip}")
