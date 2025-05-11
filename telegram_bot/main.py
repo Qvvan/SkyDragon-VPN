@@ -19,6 +19,7 @@ from middleware.logging_middleware import CallbackLoggingMiddleware, MessageLogg
 from middleware.trottling import ThrottlingMiddleware
 from utils import check_servers
 from utils.check_connect_to_vpn import run_checker_connect
+from utils.check_double_connect import run_multiple_connections_checker
 from utils.check_servers import ping_servers
 from utils.gift_checker import run_gift_checker
 from utils.subscription_checker import run_checker
@@ -107,6 +108,7 @@ async def main():
     asyncio.create_task(run_trial_checker(bot))
     asyncio.create_task(run_gift_checker(bot))
     asyncio.create_task(run_checker_connect(bot))
+    asyncio.create_task(run_multiple_connections_checker(bot))
 
     await bot.delete_webhook(drop_pending_updates=True)
     try:
