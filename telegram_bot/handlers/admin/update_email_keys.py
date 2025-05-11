@@ -39,7 +39,7 @@ async def show_servers_handler(message: types.Message):
                     else:
                         await logger.warning(f"ключа нет в базе данных {key_id}\n"
                                              f"сервер: {server.server_ip}")
-                    await logger.log_info(f"из {len(keys)} обновили {k}")
+            await logger.log_info(f"из {len(keys)} обновили {k}")
             update_total += k
             await logger.log_info(f"закончили с сервером {server.server_ip}")
         await logger.log_info(f"закончили обновление ключей {total}/{update_total}")
