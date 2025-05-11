@@ -59,7 +59,7 @@ async def check_multiple_connections(bot: Bot):
                     email_to_key_id[key.email] = key.key_id
 
             # Получаем все подписки с ключами
-            all_subscriptions = await session.subscriptions.get_subs()
+            all_subscriptions = await session.subscription.get_subs()
 
             # Создаем словарь subscription_id -> [key_ids]
             for sub in all_subscriptions:
@@ -115,7 +115,7 @@ async def check_multiple_connections(bot: Bot):
 
                     # Получаем информацию о пользователе
                     try:
-                        sub_info = await session.subscriptions.get_subscription_by_id(sub_id)
+                        sub_info = await session.subscription.get_subscription_by_id(sub_id)
                         if sub_info:
                             user_id = sub_info.get('user_id')
                             message += f"\nПользователь ID: {user_id}\n"
