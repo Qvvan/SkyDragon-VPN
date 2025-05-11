@@ -1,3 +1,5 @@
+from typing import List
+
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,7 +39,7 @@ class KeysMethods:
         except SQLAlchemyError as e:
             await logger.log_error(f"Error getting key by ID", e)
 
-    async def get_all_keys(self):
+    async def get_all_keys(self) -> List[Keys]:
         try:
             result = await self.session.execute(select(Keys))
             keys = result.scalars().all()

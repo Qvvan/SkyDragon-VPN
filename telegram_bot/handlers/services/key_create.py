@@ -52,7 +52,31 @@ class BaseKeyManager:
                         status=response.status, message=await response.text()
                     )
 
-            return None
+    async def get_traffic_by_id(self, inbound_id):
+        get_traffic_api_url = f"{self.base_url}/api/inbounds/getClientTrafficsById/{inbound_id}"
+        cookies = await get_session_cookie(self.server_ip)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(get_traffic_api_url, cookies=cookies, ssl=False) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    raise aiohttp.ClientResponseError(
+                        response.request_info, response.history,
+                        status=response.status, message=await response.text()
+                    )
+
+    async def get_online_users(self):
+        url = f"{self.base_url}/inbound/onlines"
+        cookies = await get_session_cookie(self.server_ip)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, cookies=cookies, ssl=False) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    raise aiohttp.ClientResponseError(
+                        response.request_info, response.history,
+                        status=response.status, message=await response.text()
+                    )
 
     async def delete_key(self, key_id: str):
         """
@@ -295,10 +319,11 @@ class VlessKeyManager(BaseKeyManager):
     async def manage_vless_key(self, tg_id, username, server_name):
         async with aiohttp.ClientSession() as session:
             try:
+                email = self.generate_uuid(),
                 new_client = {
                     "id": self.generate_uuid(),
                     "flow": "xtls-rprx-vision",
-                    "email": self.generate_uuid(),
+                    "email": email,
                     "limitIp": 1,
                     "totalGB": 0,
                     "expiryTime": 0,
@@ -322,7 +347,7 @@ class VlessKeyManager(BaseKeyManager):
                     public_key=cert_data["publicKey"],
                     server_name=server_name,
                 )
-                return vless_link, key_id
+                return vless_link, key_id, email
             except aiohttp.ClientResponseError as e:
                 print(f"Request error: {e}")
 
@@ -415,11 +440,12 @@ class ShadowsocksKeyManager(BaseKeyManager):
             try:
                 new_port = self.generate_port()
                 new_password = uuid.uuid4().hex
+                email =  self.generate_uuid()
                 method = "chacha20-ietf-poly1305"
                 new_client = {
                     "method": method,
                     "password": new_password,
-                    "email": self.generate_uuid(),
+                    "email": email,
                     "limitIp": 1,
                     "totalGB": 0,
                     "expiryTime": 0,
@@ -431,7 +457,7 @@ class ShadowsocksKeyManager(BaseKeyManager):
                 # Используем session_cookie в create_shadowsocks_key
                 response = await self.create_shadowsocks_key(session, new_client, new_password, new_port)
                 key_id = response.get('obj', {}).get('id')
-                return self.generate_ss_link(new_port, new_password, method, key_id, server_name), key_id
+                return self.generate_ss_link(new_port, new_password, method, key_id, server_name), key_id, email
             except aiohttp.ClientResponseError as e:
                 print(f"Request error: {e}")
 

@@ -2,6 +2,8 @@ from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
+from config_data.config import ADMIN_IDS
+from filters.admin import IsAdmin
 from keyboards.kb_inline import InlineKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
@@ -10,7 +12,7 @@ from state.state import CancelTransaction
 router = Router()
 
 
-@router.message(Command(commands="refund"))
+@router.message(Command(commands="refund"), IsAdmin(ADMIN_IDS))
 async def start_another_feature(message: types.Message, state: FSMContext):
     await message.answer(
         text="Введите код транзакции",

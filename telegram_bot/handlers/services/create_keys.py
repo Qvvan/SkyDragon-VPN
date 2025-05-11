@@ -13,7 +13,7 @@ async def create_keys(user_id: int, username: str):
             for server in server_ips:
                 try:
                     vless_manager = VlessKeyManager(server.server_ip)
-                    key, key_id = await vless_manager.manage_vless_key(
+                    key, key_id, email = await vless_manager.manage_vless_key(
                         tg_id=str(user_id),
                         username=username,
                         server_name=server.name
@@ -23,6 +23,7 @@ async def create_keys(user_id: int, username: str):
                         Keys(
                             key_id=key_id,
                             key=key,
+                            email=email,
                             server_ip=server.server_ip,
                             name_app=NameApp.VLESS
                         ))
@@ -30,7 +31,7 @@ async def create_keys(user_id: int, username: str):
                     keys.append(vless_key.id)
 
                     outline_manager = ShadowsocksKeyManager(server.server_ip)
-                    outline_key, outline_key_id = await outline_manager.manage_shadowsocks_key(
+                    outline_key, outline_key_id, email = await outline_manager.manage_shadowsocks_key(
                         tg_id=str(user_id),
                         username=username,
                         server_name=server.name
@@ -39,6 +40,7 @@ async def create_keys(user_id: int, username: str):
                         Keys(
                             key_id=outline_key_id,
                             key=outline_key,
+                            email=email,
                             server_ip=server.server_ip,
                             name_app=NameApp.OUTLINE
                         ))

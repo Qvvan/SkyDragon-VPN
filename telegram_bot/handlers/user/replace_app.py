@@ -90,7 +90,7 @@ async def handle_server_selection(callback_query: CallbackQuery,
             if subscription.name_app == NameApp.OUTLINE:
                 name_app = NameApp.VLESS
                 vless_manager = VlessKeyManager(subscription.server_ip)
-                key, key_id = await vless_manager.manage_vless_key(
+                key, key_id, email = await vless_manager.manage_vless_key(
                     tg_id=str(user_id),
                     username=username,
                 )
@@ -106,7 +106,7 @@ async def handle_server_selection(callback_query: CallbackQuery,
             elif subscription.name_app == NameApp.VLESS:
                 name_app = NameApp.OUTLINE
                 shadowsocks_manager = ShadowsocksKeyManager(subscription.server_ip)
-                key, key_id = await shadowsocks_manager.manage_shadowsocks_key(
+                key, key_id, email = await shadowsocks_manager.manage_shadowsocks_key(
                     tg_id=str(user_id),
                     username=username,
                 )

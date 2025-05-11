@@ -14,7 +14,7 @@ async def get_active_server_and_key(user_id: int, username: str, session_methods
             try:
                 server_ip = server.server_ip
                 vless_manager = VlessKeyManager(server_ip)
-                key, key_id = await vless_manager.manage_vless_key(
+                key, key_id, email = await vless_manager.manage_vless_key(
                     tg_id=str(user_id),
                     username=username,
                 )

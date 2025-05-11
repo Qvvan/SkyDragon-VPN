@@ -4,6 +4,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+from config_data.config import ADMIN_IDS
+from filters.admin import IsAdmin
+
 # Создание роутера
 router = Router()
 
@@ -30,7 +33,7 @@ PREDEFINED_KEYBOARDS = {
 
 
 # Команда для отправки сообщения
-@router.message(Command(commands="sms"))
+@router.message(Command(commands="sms"),  IsAdmin(ADMIN_IDS))
 async def start_sending_message(message: types.Message, state: FSMContext):
     await message.answer(
         text="Введите user_id, кому хотите написать:",
