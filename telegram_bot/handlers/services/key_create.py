@@ -319,7 +319,7 @@ class VlessKeyManager(BaseKeyManager):
     async def manage_vless_key(self, tg_id, username, server_name):
         async with aiohttp.ClientSession() as session:
             try:
-                email = self.generate_uuid(),
+                email = self.generate_uuid()
                 new_client = {
                     "id": self.generate_uuid(),
                     "flow": "xtls-rprx-vision",
