@@ -17,7 +17,7 @@ from handlers.user import subs, replace_server, replace_app, referrer, menu, jus
 from logger.logging_config import logger
 from middleware.logging_middleware import CallbackLoggingMiddleware, MessageLoggingMiddleware
 from middleware.trottling import ThrottlingMiddleware
-from utils import check_servers
+from utils import check_servers, check_double_connect
 from utils.check_connect_to_vpn import run_checker_connect
 from utils.check_double_connect import run_multiple_connections_checker
 from utils.check_servers import ping_servers
@@ -89,6 +89,7 @@ async def main():
 
     # admin-handlers
     dp.include_router(update_email_keys.router)
+    dp.include_router(check_double_connect.router)
     dp.include_router(online_users_vpn.router)
     dp.include_router(add_server.router)
     dp.include_router(help_info.router)
