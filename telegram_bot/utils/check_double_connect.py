@@ -140,4 +140,4 @@ async def run_multiple_connections_checker(bot: Bot):
             await logger.log_error("Ошибка в проверке множественных подключений", e)
 
         # Проверка каждые 10 минут
-        await asyncio.sleep(600)
+        await asyncio.sleep(300)
