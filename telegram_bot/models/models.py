@@ -63,9 +63,9 @@ class Services(Base):
 class Keys(Base):
     __tablename__ = 'keys'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    key_id = Column(Integer, nullable=False)
-    key = Column(String, nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True) # айди в нашей базе
+    key_id = Column(Integer, nullable=False) # Сам ключ с панели
+    key = Column(String, nullable=False) # ключ конфиг
     server_ip = Column(String, nullable=False)
     email = Column(String, nullable=True)
     name_app = Column(String, nullable=False)
