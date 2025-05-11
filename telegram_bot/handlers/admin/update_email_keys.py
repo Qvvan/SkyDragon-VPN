@@ -26,7 +26,7 @@ async def show_servers_handler(message: types.Message):
                 async with DatabaseContextManager() as session_methods:
                     email = key.get("clientStats", {})[0].get("email", "")
                     key_id = key.get("id")
-                    if key_id:
+                    if not key_id:
                         continue
                     key_exists =  await session_methods.keys.get_key_by_key_id(key_id)
                     if key_exists:
