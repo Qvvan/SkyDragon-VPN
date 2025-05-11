@@ -15,13 +15,16 @@ router = Router()
 async def show_servers_handler(message: types.Message):
     await message.answer(text="начинаю обновление ключей")
     async with DatabaseContextManager() as session:
+        total = 0
+        update_total = 0
         servers = await session.servers.get_all_servers()
         for server in servers:
             await logger.log_info(f"Начинаем проверку сервера: {server.server_ip}")
             keys = await BaseKeyManager(server_ip=server.server_ip).get_inbounds()
             keys = keys.get("obj", {})
-            await logger.info(keys)
             await logger.log_info(f"ключей найдено: {len(keys)}")
+            total += len(keys)
+            k = 0
             for key in keys:
                 async with DatabaseContextManager() as session_methods:
                     email = key.get("clientStats", {})[0].get("email", "")
@@ -31,7 +34,12 @@ async def show_servers_handler(message: types.Message):
                     key_exists =  await session_methods.keys.get_key_by_key_id(key_id)
                     if key_exists:
                         await session_methods.keys.update_key(key_id, email=email)
+                        k += 1
                         await session_methods.session.commit()
                     else:
                         await logger.warning(f"ключа нет в базе данных {key_id}\n"
                                              f"сервер: {server.server_ip}")
+                    await logger.log_info(f"из {len(keys)} обновили {k}")
+            update_total += k
+            await logger.log_info(f"закончили с сервером {server.server_ip}")
+        await logger.log_info(f"закончили обновление ключей {total}/{update_total}")
