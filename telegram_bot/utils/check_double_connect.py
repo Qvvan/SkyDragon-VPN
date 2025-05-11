@@ -6,6 +6,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from database.context_manager import DatabaseContextManager
 from handlers.services.key_create import BaseKeyManager
+from keyboards.kb_inline import InlineKeyboards
 from logger.logging_config import logger
 
 router = Router()
@@ -129,7 +130,11 @@ async def check_multiple_connections(bot: Bot):
                             message += f"    Key ID (БД): {db_id}\n"
 
                     # Отправляем информацию в лог
-                    await logger.log_info(message)
+                    keyboard = await InlineKeyboards.get_user_info(user_id)
+                    try:
+                        await logger.log_info(message, keyboard)
+                    except:
+                        await logger.log_info(message)
 
     except Exception as e:
         await logger.log_error(f"Ошибка при проверке множественных подключений: {str(e)}")
