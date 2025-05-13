@@ -70,7 +70,7 @@ async def check_multiple_connections(bot: Bot):
 
             # Если нет онлайн пользователей, выходим
             if not server_online_users:
-                await logger.warning("Нет онлайн пользователей на серверах")
+                await logger.log_info("Нет онлайн пользователей на серверах")
                 return
 
             # Словарь для отслеживания подключений: subscription_id -> {server_ip -> [(email, key_in_db_id)]}
@@ -123,7 +123,7 @@ async def check_multiple_connections(bot: Bot):
                             message += f"    Key ID (панель): {key_in_panel_id}\n"
 
                     # Отправляем информацию в лог
-                    await logger.warning(message)
+                    await logger.log_info(message)
 
     except Exception as e:
         await logger.log_error(f"Ошибка при проверке множественных подключений: {str(e)}")
