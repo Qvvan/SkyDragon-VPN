@@ -13,7 +13,7 @@ router = Router()
 CHAT_ADMIN_ID = 323993202
 # Период в днях, после которого можно повторно отправить уведомление
 NOTIFICATION_COOLDOWN_DAYS = 7
-MIN_SUBSCRIPTION_AGE_HOURS = 8
+MIN_SUBSCRIPTION_AGE_HOURS = 4
 
 
 async def check_connect(bot: Bot):
