@@ -102,7 +102,7 @@ async def check_multiple_connections(bot: Bot):
                 # Подсчитываем общее количество подключений
                 total_connections = sum(len(connections) for connections in server_data.values())
 
-                if total_connections > 1:
+                if total_connections > 2:
                     user_id = subscription_to_user.get(sub_id, "Неизвестный пользователь")
 
                     # Формируем информационное сообщение
