@@ -67,7 +67,7 @@ async def get_subscription(encrypted_part: str):
 @app.get("/import/android/{encrypted_part}")
 async def get_subscription(encrypted_part: str):
     # Формируем ссылку для редиректа
-    redirect_url = f"v2raytun://import/https://skydragonvpn.ru/sub/{encrypted_part}"
+    redirect_url = f"v2rayng://install-config?url=https://skydragonvpn.ru/sub/{encrypted_part}"
 
     # Возвращаем редирект
     return RedirectResponse(url=redirect_url, status_code=302)

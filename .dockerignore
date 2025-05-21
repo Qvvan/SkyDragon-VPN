@@ -1,0 +1,79 @@
+# Exclude version control
+.git
+.gitignore
+.svn
+.hg
+
+# Exclude Python bytecode files
+**/__pycache__
+**/*.py[cod]
+**/*$py.class
+**/*.so
+
+# Exclude Python virtual environments
+venv/
+env/
+ENV/
+**/venv/
+**/env/
+**/.env
+
+# Exclude development and IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Exclude test and documentation
+tests/
+test/
+docs/
+doc/
+**/README.md
+**/CHANGELOG.md
+**/LICENSE
+**/CONTRIBUTING.md
+
+# Exclude package management
+**/*.egg-info
+**/*.egg
+**/pip-log.txt
+**/pip-delete-this-directory.txt
+**/.Python
+**/build/
+**/develop-eggs/
+**/dist/
+**/downloads/
+**/eggs/
+**/.eggs/
+**/lib/
+**/lib64/
+**/parts/
+**/sdist/
+**/var/
+**/wheels/
+
+# Exclude local development files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.log
+*.sqlite
+*.db
+
+# Exclude Docker related files (to prevent recursion)
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Project specific files to exclude
+**/*.drawio.bkp
+**/*.drawio.dtmp
+**/.cache/
+**/block_diagrams/ # Если эти файлы не нужны в образе
+data/tmp/
+frontend/node_modules/
