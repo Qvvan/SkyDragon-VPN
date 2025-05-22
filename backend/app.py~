@@ -78,7 +78,7 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
             else:
                 key_part = key
             # Добавляем новое название
-            modified_key = f"{key_part}#Неработают!"
+            modified_key = f"{key_part}#Неработает!Обратитесь в поддержку"
             modified_keys.append(modified_key)
         else:
             modified_keys.append(key)
