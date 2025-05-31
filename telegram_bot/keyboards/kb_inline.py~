@@ -216,7 +216,7 @@ class InlineKeyboards:
                         subscription_id=subscription_id,
                         back=back_target,
                         status_pay=callback_data.status_pay
-                    ).pack() if subscription_id else "subscribe"
+                    ).pack()
                 )
             ]
         ])

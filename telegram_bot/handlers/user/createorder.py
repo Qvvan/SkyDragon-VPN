@@ -48,8 +48,6 @@ async def handle_subscribe(callback: CallbackQuery, state: FSMContext):
     """Обработчик кнопки 'Оформить подписку' в главном меню."""
     await callback.answer()
 
-    data = await state.get_data()
-    back_target = data.get('back_target')
     async with DatabaseContextManager() as session_methods:
         try:
             subs = await session_methods.subscription.get_subscription(callback.from_user.id)
