@@ -264,6 +264,9 @@ class VlessKeyManager(BaseKeyManager):
             port = self.generate_port()
             sub_id = str(uuid.uuid4())
 
+            # ✅ Генерируем shortIds самостоятельно
+            generated_short_ids = self.generate_short_ids()
+
             new_vless_key_data = {
                 "up": 0,
                 "down": 0,
@@ -278,7 +281,6 @@ class VlessKeyManager(BaseKeyManager):
                     "clients": [
                         {
                             "id": new_client["id"],
-                            # ✅ Исправляем flow на стандартный
                             "flow": "xtls-rprx-vision",
                             "email": new_client.get("email", ""),
                             "limitIp": LIMIT,
@@ -306,8 +308,8 @@ class VlessKeyManager(BaseKeyManager):
                         "minClient": "",
                         "maxClient": "",
                         "maxTimediff": 0,
-                        # ✅ Убираем хардкод shortIds - пусть 3X-UI генерирует сам
-                        "shortIds": [],  # Пустой массив - 3X-UI автоматически сгенерирует
+                        # ✅ Используем сгенерированные shortIds
+                        "shortIds": generated_short_ids,
                         "settings": {
                             "publicKey": public_key,
                             "fingerprint": "chrome",
@@ -343,11 +345,7 @@ class VlessKeyManager(BaseKeyManager):
                     if response.status == 200:
                         response_data = await response.json()
 
-                        # ✅ Извлекаем shortIds из ответа сервера
-                        stream_settings = json.loads(response_data['obj']['streamSettings'])
-                        generated_short_ids = stream_settings['realitySettings']['shortIds']
-
-                        # ✅ Выбираем случайный shortId из сгенерированных сервером
+                        # ✅ Выбираем случайный shortId из тех, что мы сгенерировали
                         selected_short_id = random.choice(generated_short_ids)
 
                         return response_data, port, selected_short_id

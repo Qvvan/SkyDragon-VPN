@@ -77,19 +77,3 @@ class KeysMethods:
 
         except SQLAlchemyError as e:
             await logger.log_error(f"Error updating key", e)
-
-    async def update_key_by_key_id(self, key_id: int, **kwargs):
-        try:
-            result = await self.session.execute(select(Keys).where(Keys.key_id == key_id))
-            key = result.scalars().first()
-
-            if key:
-                for field, value in kwargs.items():
-                    setattr(key, field, value)
-
-                self.session.add(key)
-
-            return key
-
-        except SQLAlchemyError as e:
-            await logger.log_error(f"Error updating key", e)
