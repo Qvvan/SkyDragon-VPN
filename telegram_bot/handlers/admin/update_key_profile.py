@@ -1,10 +1,5 @@
-import asyncio
 import json
-import random
-import secrets
-from typing import List, Dict
 
-import aiohttp
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
@@ -12,29 +7,17 @@ from aiogram.types import Message
 from config_data.config import ADMIN_IDS, PORT_X_UI, MY_SECRET_URL
 from database.context_manager import DatabaseContextManager
 from filters.admin import IsAdmin
-from handlers.services.get_session_cookies import get_session_cookie
+from handlers.services.key_create import BaseKeyManager
 from logger.logging_config import logger
 
 router = Router()
 
 
 class VlessKeyUpdater:
-    def __init__(self, server_ip: str, server_name: str, base_url: str):
+    def __init__(self, server_ip: str, server_name: str):
         self.server_ip = server_ip
-        self.base_url = base_url
+        self.base_url = f"https://{server_ip}:{PORT_X_UI}/{MY_SECRET_URL}/panel"
         self.server_name = server_name
-
-    def generate_short_ids(self, count=8):
-        """Генерирует массив shortIds в hex формате разной длины."""
-        short_ids = []
-        possible_lengths = [2, 4, 6, 8, 10, 12, 14, 16]
-
-        for _ in range(count):
-            length = random.choice(possible_lengths)
-            short_id = secrets.token_hex(length // 2)
-            short_ids.append(short_id)
-
-        return short_ids
 
     def generate_vless_link(self, client_id, port, short_id, public_key, server_name):
         """Генерирует правильный VLESS URL."""
@@ -43,428 +26,7 @@ class VlessKeyUpdater:
                 f"&fp=chrome&sni=github.com&sid={short_id}&flow=xtls-rprx-vision"
                 f"#{server_name} - VLESS")
 
-    async def get_all_inbounds(self, session) -> List[Dict]:
-        """Получает список всех inbound соединений."""
-        try:
-            cookies = await get_session_cookie(self.server_ip)
-            get_all_url = f"{self.base_url}/api/inbounds/list"
 
-            async with session.get(get_all_url, cookies=cookies, ssl=False) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    if data.get("success"):
-                        return data.get("obj", [])
-                    else:
-                        print(f"❌ API Error for {self.server_ip}: {data.get('msg', 'Unknown error')}")
-                        return []
-                else:
-                    print(f"❌ Failed to get inbounds from {self.server_ip}: {response.status}")
-                    return []
-
-        except Exception as e:
-            print(f"❌ Error getting inbounds from {self.server_ip}: {e}")
-            return []
-
-    def needs_update(self, inbound_data: Dict) -> tuple[bool, List[str]]:
-        """
-        Проверяет, нужно ли обновлять этот inbound.
-        Возвращает (needs_update, issues_list).
-        """
-        try:
-            # Проверяем только VLESS протокол
-            if inbound_data.get("protocol") != "vless":
-                return False, []
-
-            stream_settings = json.loads(inbound_data["streamSettings"])
-
-            # Проверяем только Reality security
-            if stream_settings.get("security") != "reality":
-                return False, []
-
-            settings = json.loads(inbound_data["settings"])
-            reality_settings = stream_settings.get("realitySettings", {})
-
-            issues = []
-
-            # ✅ Проверяем проблемы в clients
-            if "clients" in settings:
-                for client in settings["clients"]:
-                    # Проверяем flow
-                    current_flow = client.get("flow", "")
-                    if current_flow != "xtls-rprx-vision":
-                        issues.append(f"Wrong flow: {current_flow}")
-
-            # ✅ Проверяем Reality настройки
-            if reality_settings.get("dest") != "github.com:443":
-                issues.append(f"Wrong dest: {reality_settings.get('dest')}")
-
-            server_names = reality_settings.get("serverNames", [])
-            if "github.com" not in server_names:
-                issues.append(f"Wrong serverNames: {server_names}")
-
-            # ✅ Проверяем settings внутри realitySettings
-            reality_inner_settings = reality_settings.get("settings", {})
-
-            if reality_inner_settings.get("fingerprint") != "chrome":
-                issues.append(f"Wrong fingerprint: {reality_inner_settings.get('fingerprint')}")
-
-            if reality_inner_settings.get("spiderX") != "":
-                issues.append(f"Wrong spiderX: '{reality_inner_settings.get('spiderX')}'")
-
-            return len(issues) > 0, issues
-
-        except Exception as e:
-            print(f"❌ Error checking key {inbound_data.get('id')}: {e}")
-            return False, []
-
-    async def update_vless_key_prepare(self, session, key_data: Dict) -> tuple[bool, List[Dict]]:
-        """
-        Обновляет VLESS ключ на сервере и подготавливает данные для обновления БД.
-        Возвращает (success, db_update_data).
-        """
-        key_id = key_data["id"]
-        db_update_data = []
-
-        try:
-            # Парсим настройки
-            settings = json.loads(key_data["settings"])
-            stream_settings = json.loads(key_data["streamSettings"])
-            sniffing = json.loads(key_data["sniffing"])
-
-            changes_made = []
-
-            # ✅ Исправляем клиентские настройки
-            if "clients" in settings:
-                for client in settings["clients"]:
-                    # Исправляем flow только если он неправильный
-                    current_flow = client.get("flow", "")
-                    if current_flow != "xtls-rprx-vision":
-                        client["flow"] = "xtls-rprx-vision"
-                        changes_made.append(f"Fixed flow: {current_flow} → xtls-rprx-vision")
-
-            # ✅ Исправляем Reality настройки
-            if "realitySettings" in stream_settings:
-                reality_settings = stream_settings["realitySettings"]
-
-                # Исправляем destination
-                if reality_settings.get("dest") != "github.com:443":
-                    old_dest = reality_settings.get("dest")
-                    reality_settings["dest"] = "github.com:443"
-                    changes_made.append(f"Fixed dest: {old_dest} → github.com:443")
-
-                # Исправляем serverNames
-                if "github.com" not in reality_settings.get("serverNames", []):
-                    reality_settings["serverNames"] = ["github.com", "www.github.com"]
-                    changes_made.append("Fixed serverNames → github.com")
-
-                # Генерируем новые shortIds
-                new_short_ids = self.generate_short_ids()
-                reality_settings["shortIds"] = new_short_ids
-                changes_made.append("Generated new shortIds")
-
-                # Исправляем settings внутри realitySettings
-                if "settings" in reality_settings:
-                    inner_settings = reality_settings["settings"]
-
-                    # Исправляем spiderX
-                    if inner_settings.get("spiderX") != "":
-                        old_spider = inner_settings.get("spiderX")
-                        inner_settings["spiderX"] = ""
-                        changes_made.append(f"Fixed spiderX: '{old_spider}' → ''")
-
-                    # Исправляем fingerprint
-                    if inner_settings.get("fingerprint") != "chrome":
-                        old_fp = inner_settings.get("fingerprint")
-                        inner_settings["fingerprint"] = "chrome"
-                        changes_made.append(f"Fixed fingerprint: {old_fp} → chrome")
-
-            # Подготавливаем данные для отправки
-            updated_key_data = key_data.copy()
-            updated_key_data["settings"] = json.dumps(settings)
-            updated_key_data["streamSettings"] = json.dumps(stream_settings)
-            updated_key_data["sniffing"] = json.dumps(sniffing)
-
-            # Отправляем обновление
-            cookies = await get_session_cookie(self.server_ip)
-            update_url = f"{self.base_url}/api/inbounds/update/{key_id}"
-
-            async with session.post(update_url, cookies=cookies, json=updated_key_data, ssl=False) as response:
-                if response.status == 200:
-                    result = await response.json()
-                    if result.get("success"):
-                        print(f"✅ Key {key_id} on {self.server_ip} updated: {', '.join(changes_made)}")
-
-                        # ✅ Подготавливаем данные для batch обновления БД
-                        if "clients" in settings:
-                            public_key = reality_settings.get("settings", {}).get("publicKey", "")
-                            port = key_data.get("port")
-
-                            for client in settings["clients"]:
-                                client_id = client.get("id")
-                                client_email = client.get("email")
-
-                                if client_id and client_email:
-                                    selected_short_id = random.choice(new_short_ids)
-                                    new_vless_url = self.generate_vless_link(
-                                        client_id=client_id,
-                                        port=port,
-                                        short_id=selected_short_id,
-                                        public_key=public_key,
-                                        server_name=self.server_name
-                                    )
-
-                                    # ✅ Добавляем в список для batch обновления
-                                    db_update_data.append({
-                                        'key_id': key_id,
-                                        'new_url': new_vless_url,
-                                        'email': client_email
-                                    })
-
-                        return True, db_update_data
-                    else:
-                        print(
-                            f"❌ Failed to update key {key_id} on {self.server_ip}: {result.get('msg', 'Unknown error')}")
-                        return False, []
-                else:
-                    error_text = await response.text()
-                    print(f"❌ HTTP Error updating key {key_id} on {self.server_ip}: {response.status}")
-                    return False, []
-
-        except Exception as e:
-            print(f"❌ Exception updating key {key_id} on {self.server_ip}: {e}")
-            return False, []
-
-    async def update_all_vless_keys(self, session_methods) -> tuple[int, int, int, int, str]:
-        """
-        Основная функция для обновления проблемных VLESS ключей.
-        Возвращает (updated_count, failed_count, total_vless_keys, db_updated_count, summary_log).
-        """
-        print(f"🚀 Starting VLESS keys analysis on {self.server_ip}...")
-
-        summary_log = []
-        db_updated_count = 0
-
-        async with aiohttp.ClientSession() as session:
-            # Получаем все inbounds
-            inbounds = await self.get_all_inbounds(session)
-
-            if not inbounds:
-                summary_log.append(f"❌ No inbounds found on {self.server_ip}")
-                return 0, 0, 0, 0, "\n".join(summary_log)
-
-            # Фильтруем только VLESS протокол
-            vless_keys = [inbound for inbound in inbounds if inbound.get("protocol") == "vless"]
-            summary_log.append(f"📋 {self.server_ip}: Found {len(vless_keys)} VLESS keys")
-
-            if not vless_keys:
-                return 0, 0, 0, 0, "\n".join(summary_log)
-
-            # ✅ Собираем ВСЕ ключи для синхронизации БД (не только проблемные)
-            all_db_updates = []
-
-            # Проверяем какие ключи нужно обновить на сервере
-            keys_to_update = []
-            problem_summary = {}
-
-            for key_data in vless_keys:
-                needs_update, issues = self.needs_update(key_data)
-
-                # ✅ Генерируем данные для БД для ВСЕХ ключей
-                db_data = await self.generate_db_data_for_key(key_data)
-                all_db_updates.extend(db_data)
-
-                if needs_update:
-                    keys_to_update.append(key_data)
-                    for issue in issues:
-                        problem_type = issue.split(':')[0]
-                        problem_summary[problem_type] = problem_summary.get(problem_type, 0) + 1
-
-            if problem_summary:
-                summary_log.append(f"🔧 {self.server_ip}: {len(keys_to_update)} keys need server updates:")
-                for problem, count in problem_summary.items():
-                    summary_log.append(f"   • {problem}: {count} keys")
-
-            # Обновляем проблемные ключи на сервере
-            updated_count = 0
-            failed_count = 0
-
-            for i, key_data in enumerate(keys_to_update, 1):
-                print(f"📝 Updating key {i}/{len(keys_to_update)} (ID: {key_data['id']}) on {self.server_ip}")
-
-                success = await self.update_vless_key_server_only(session, key_data)
-                if success:
-                    updated_count += 1
-
-                    # ✅ После обновления сервера - обновляем данные для БД
-                    updated_db_data = await self.generate_db_data_for_key(key_data, updated=True)
-                    # Заменяем старые данные новыми для этого ключа
-                    all_db_updates = [item for item in all_db_updates if item['inbound_id'] != key_data['id']]
-                    all_db_updates.extend(updated_db_data)
-                else:
-                    failed_count += 1
-
-                await asyncio.sleep(0.3)
-
-            # ✅ Обновляем ВСЕ ключи в БД (и обновленные на сервере, и уже корректные)
-            for update_item in all_db_updates:
-                try:
-                    updated_key = await session_methods.keys.update_key_by_key_id(
-                        key_id=update_item['key_id'],
-                        key=update_item['new_url'],
-                        email=update_item['email']
-                    )
-
-                    if updated_key:
-                        db_updated_count += 1
-                        print(f"✅ Synced key in DB for {update_item['email']} (key_id: {update_item['key_id']})")
-                    else:
-                        print(f"⚠️ Key not found in DB: key_id={update_item['key_id']}, email={update_item['email']}")
-
-                except Exception as db_e:
-                    print(f"❌ Failed to sync key in DB for {update_item['email']}: {db_e}")
-
-            summary_log.append(
-                f"🎉 {self.server_ip}: Updated {updated_count} inbounds, Synced {db_updated_count} DB keys, Failed {failed_count}")
-            return updated_count, failed_count, len(vless_keys), db_updated_count, "\n".join(summary_log)
-
-    async def generate_db_data_for_key(self, key_data: Dict, updated: bool = False) -> List[Dict]:
-        """
-        Генерирует данные для обновления БД на основе текущего состояния ключа.
-        updated=True если ключ только что был обновлен на сервере.
-        """
-        db_data = []
-
-        try:
-            settings = json.loads(key_data["settings"])
-            stream_settings = json.loads(key_data["streamSettings"])
-
-            if "realitySettings" in stream_settings and "clients" in settings:
-                reality_settings = stream_settings["realitySettings"]
-                public_key = reality_settings.get("settings", {}).get("publicKey", "")
-                port = key_data.get("port")
-
-                # ✅ Если ключ был обновлен, берем новые shortIds, иначе текущие
-                if updated:
-                    short_ids = reality_settings.get("shortIds", [])
-                else:
-                    short_ids = reality_settings.get("shortIds", [])
-
-                for client in settings["clients"]:
-                    client_id = client.get("id")
-                    client_email = client.get("email")
-
-                    if client_id and client_email and short_ids:
-                        # Выбираем случайный shortId
-                        selected_short_id = random.choice(short_ids)
-
-                        # ✅ Генерируем URL с текущими параметрами сервера
-                        new_vless_url = self.generate_vless_link(
-                            client_id=client_id,
-                            port=port,
-                            short_id=selected_short_id,
-                            public_key=public_key,
-                            server_name=self.server_name
-                        )
-
-                        db_data.append({
-                            'inbound_id': key_data['id'],  # Для замены данных
-                            'key_id': key_data['id'],
-                            'new_url': new_vless_url,
-                            'email': client_email
-                        })
-
-        except Exception as e:
-            print(f"❌ Error generating DB data for key {key_data.get('id')}: {e}")
-
-        return db_data
-
-    async def update_vless_key_server_only(self, session, key_data: Dict) -> bool:
-        """
-        Обновляет только сервер, без генерации данных для БД.
-        """
-        key_id = key_data["id"]
-
-        try:
-            # Парсим настройки
-            settings = json.loads(key_data["settings"])
-            stream_settings = json.loads(key_data["streamSettings"])
-            sniffing = json.loads(key_data["sniffing"])
-
-            changes_made = []
-
-            # ✅ Исправляем клиентские настройки
-            if "clients" in settings:
-                for client in settings["clients"]:
-                    current_flow = client.get("flow", "")
-                    if current_flow != "xtls-rprx-vision":
-                        client["flow"] = "xtls-rprx-vision"
-                        changes_made.append(f"Fixed flow: {current_flow} → xtls-rprx-vision")
-
-            # ✅ Исправляем Reality настройки
-            if "realitySettings" in stream_settings:
-                reality_settings = stream_settings["realitySettings"]
-
-                if reality_settings.get("dest") != "github.com:443":
-                    old_dest = reality_settings.get("dest")
-                    reality_settings["dest"] = "github.com:443"
-                    changes_made.append(f"Fixed dest: {old_dest} → github.com:443")
-
-                if "github.com" not in reality_settings.get("serverNames", []):
-                    reality_settings["serverNames"] = ["github.com", "www.github.com"]
-                    changes_made.append("Fixed serverNames → github.com")
-
-                # Генерируем новые shortIds
-                new_short_ids = self.generate_short_ids()
-                reality_settings["shortIds"] = new_short_ids
-                changes_made.append("Generated new shortIds")
-
-                if "settings" in reality_settings:
-                    inner_settings = reality_settings["settings"]
-
-                    if inner_settings.get("spiderX") != "":
-                        old_spider = inner_settings.get("spiderX")
-                        inner_settings["spiderX"] = ""
-                        changes_made.append(f"Fixed spiderX: '{old_spider}' → ''")
-
-                    if inner_settings.get("fingerprint") != "chrome":
-                        old_fp = inner_settings.get("fingerprint")
-                        inner_settings["fingerprint"] = "chrome"
-                        changes_made.append(f"Fixed fingerprint: {old_fp} → chrome")
-
-            # Подготавливаем данные для отправки
-            updated_key_data = key_data.copy()
-            updated_key_data["settings"] = json.dumps(settings)
-            updated_key_data["streamSettings"] = json.dumps(stream_settings)
-            updated_key_data["sniffing"] = json.dumps(sniffing)
-
-            # Отправляем обновление
-            cookies = await get_session_cookie(self.server_ip)
-            update_url = f"{self.base_url}/api/inbounds/update/{key_id}"
-
-            async with session.post(update_url, cookies=cookies, json=updated_key_data, ssl=False) as response:
-                if response.status == 200:
-                    result = await response.json()
-                    if result.get("success"):
-                        print(f"✅ Key {key_id} on {self.server_ip} updated: {', '.join(changes_made)}")
-
-                        # ✅ Обновляем key_data для генерации новых URL
-                        key_data["settings"] = json.dumps(settings)
-                        key_data["streamSettings"] = json.dumps(stream_settings)
-
-                        return True
-                    else:
-                        print(
-                            f"❌ Failed to update key {key_id} on {self.server_ip}: {result.get('msg', 'Unknown error')}")
-                        return False
-                else:
-                    print(f"❌ HTTP Error updating key {key_id} on {self.server_ip}: {response.status}")
-                    return False
-
-        except Exception as e:
-            print(f"❌ Exception updating key {key_id} on {self.server_ip}: {e}")
-            return False
-
-# Функция для запуска скрипта
 @router.message(Command(commands="update_vless_keys"), IsAdmin(ADMIN_IDS))
 async def update_vless_keys_command(message: Message):
     """Команда для обновления всех VLESS ключей на всех серверах."""
@@ -473,108 +35,81 @@ async def update_vless_keys_command(message: Message):
 
     async with DatabaseContextManager() as session_methods:
         try:
-            servers = await session_methods.servers.get_all_servers()
-
-            if not servers:
-                await message.answer("❌ Серверы не найдены в базе данных")
-                return
-
-            total_updated = 0
-            total_failed = 0
-            total_vless_keys = 0
-            total_db_updated = 0
-            processed_servers = 0
-
-            # ✅ Собираем все логи для одного сообщения
-            all_logs = []
-
-            for server in servers:
+            keys = await session_methods.keys.get_all_keys()
+            for key in keys:
                 try:
-                    print(f"Processing server: {server.server_ip}")
+                    async with DatabaseContextManager() as session:
+                        server = await session.servers.get_server_by_ip(key.server_ip)
+                        get_inbound = await BaseKeyManager(key.server_ip).get_inbound_by_id(key.key_id)
 
-                    base_url = f"https://{server.server_ip}:{PORT_X_UI}/{MY_SECRET_URL}/panel"
+                        # Проверяем что get_inbound не None и имеет правильную структуру
+                        if not get_inbound or not get_inbound.get("success") or not get_inbound.get("obj"):
+                            await logger.warning(f"Inbound не найден для ключа {key.key_id}")
+                            continue
 
-                    updater = VlessKeyUpdater(server.server_ip, server.name, base_url)
+                        inbound_obj = get_inbound["obj"]
+                        if inbound_obj.get("protocol") != "vless":
+                            continue
 
-                    # ✅ Создаем savepoint для каждого сервера
-                    savepoint = await session_methods.session.begin_nested()
+                        # Парсим settings для получения client_id
+                        settings_str = inbound_obj.get("settings", "")
+                        if not settings_str:
+                            await logger.warning(f"Нет settings для ключа {key.key_id}")
+                            continue
 
-                    try:
-                        updated, failed, total_keys, db_updated, server_log = await updater.update_all_vless_keys(
-                            session_methods)
+                        settings = json.loads(settings_str)
+                        if not settings.get("clients"):
+                            await logger.warning(f"Нет клиентов для ключа {key.key_id}")
+                            continue
 
-                        total_updated += updated
-                        total_failed += failed
-                        total_vless_keys += total_keys
-                        total_db_updated += db_updated
-                        processed_servers += 1
+                        client_id = settings["clients"][0]["id"]
 
-                        # Добавляем логи сервера
-                        all_logs.append(server_log)
+                        # Парсим streamSettings для получения параметров Reality
+                        stream_settings_str = inbound_obj.get("streamSettings", "")
+                        if not stream_settings_str:
+                            await logger.warning(f"Нет streamSettings для ключа {key.key_id}")
+                            continue
 
-                        # ✅ Коммитим savepoint для этого сервера
-                        await savepoint.commit()
-                        print(f"✅ Committed changes for server {server.server_ip}")
+                        stream_settings = json.loads(stream_settings_str)
+                        reality_settings = stream_settings.get("realitySettings", {})
 
-                    except Exception as server_e:
-                        # ✅ Откатываем только изменения этого сервера
-                        await savepoint.rollback()
-                        error_msg = f"❌ Ошибка сервера {server.server_ip}: {str(server_e)[:100]}"
-                        print(error_msg)
-                        all_logs.append(error_msg)
-                        continue
+                        if not reality_settings.get("shortIds"):
+                            await logger.warning(f"Нет shortIds для ключа {key.key_id}")
+                            continue
+
+                        short_id = reality_settings["shortIds"][0]
+
+                        reality_inner_settings = reality_settings.get("settings", {})
+                        public_key = reality_inner_settings.get("publicKey")
+
+                        if not public_key:
+                            await logger.warning(f"Нет publicKey для ключа {key.key_id}")
+                            continue
+
+                        # Получаем порт
+                        port = inbound_obj.get("port")
+                        if not port:
+                            await logger.warning(f"Нет порта для ключа {key.key_id}")
+                            continue
+
+                        # Создаем updater и генерируем ссылку
+                        updater = VlessKeyUpdater(key.server_ip, server.name)
+                        vless_link = updater.generate_vless_link(
+                            client_id, port, short_id, public_key, server.name
+                        )
+
+                        # Обновляем ключ в базе
+                        await session.keys.update_key_by_key_id(key.key_id, key=vless_link)
+                        await session.session.commit()
+
+                        await logger.info(f"Ключ {key.key_id} обновлен")
 
                 except Exception as e:
-                    error_msg = f"❌ Критическая ошибка сервера {server.server_ip}: {str(e)[:100]}"
-                    print(error_msg)
-                    all_logs.append(error_msg)
+                    await logger.error(f"Ошибка обработки ключа {key.key_id}:", e)
                     continue
 
-            # ✅ Финальный commit всех успешных изменений
-            await session_methods.session.commit()
-            print("✅ Final commit completed")
-
-            # ✅ Отправляем один итоговый отчет
-            report = (
-                f"🎉 **Обновление VLESS ключей завершено!**\n\n"
-                f"📊 **Общая статистика:**\n"
-                f"• Обработано серверов: {processed_servers}\n"
-                f"• Найдено VLESS ключей: {total_vless_keys}\n"
-                f"• ✅ Обновлено на серверах: {total_updated}\n"
-                f"• ✅ Обновлено в БД: {total_db_updated}\n"
-                f"• ❌ Ошибок: {total_failed}\n\n"
-                f"📋 **Детали по серверам:**\n"
-                f"{chr(10).join(all_logs)}"
-            )
-
-            # Разбиваем длинные сообщения
-            if len(report) > 4000:
-                # Отправляем краткую статистику
-                short_report = (
-                    f"🎉 **Обновление VLESS ключей завершено!**\n\n"
-                    f"📊 **Статистика:**\n"
-                    f"• Обработано серверов: {processed_servers}\n"
-                    f"• Найдено VLESS ключей: {total_vless_keys}\n"
-                    f"• ✅ Обновлено на серверах: {total_updated}\n"
-                    f"• ✅ Обновлено в БД: {total_db_updated}\n"
-                    f"• ❌ Ошибок: {total_failed}"
-                )
-                await message.answer(short_report)
-
-                # Отправляем детали отдельно, если нужно
-                if total_updated > 0 or total_failed > 0:
-                    details = f"📋 **Детали:**\n{chr(10).join(all_logs[:5])}"  # Только первые 5 серверов
-                    if len(details) < 4000:
-                        await message.answer(details)
-            else:
-                await message.answer(report)
-
-            # ✅ Логируем только итоговую статистику в логи
-            await logger.log_info(
-                f"VLESS keys update completed: {total_updated} servers updated, {total_db_updated} DB keys updated, {total_failed} failed on {processed_servers} servers")
+            await message.answer("✅ Все VLESS ключи обновлены!")
 
         except Exception as e:
-            # ✅ Откатываем все изменения при критической ошибке
-            await session_methods.session.rollback()
-            await logger.log_error("Критическая ошибка при обновлении VLESS ключей", e)
-            await message.answer("❌ Произошла критическая ошибка при обновлении ключей VLESS.")
+            await logger.error(f"Ошибка обновления ключей:", e)
+            await message.answer(f"❌ Ошибка: {str(e)}")

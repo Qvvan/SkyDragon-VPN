@@ -83,6 +83,7 @@ class ServerMethods:
             await logger.log_error(f"Error updating server {server_ip}", e)
             raise
 
+
     async def get_server_by_ip(self, server_ip: str) -> Servers:
         try:
             result = await self.session.execute(select(Servers).where(Servers.server_ip == server_ip))
