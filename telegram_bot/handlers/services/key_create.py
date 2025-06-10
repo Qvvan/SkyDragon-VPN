@@ -3,6 +3,7 @@ import base64
 import json
 import os
 import random
+import secrets
 import string
 import uuid
 
@@ -31,6 +32,26 @@ class BaseKeyManager:
     @staticmethod
     def generate_port():
         return random.randint(10000, 65535)
+
+    def generate_short_ids(self, count=8):
+        """
+        Генерирует массив shortIds в hex формате разной длины.
+        Формат: от 2 до 16 символов hex (как в твоем примере)
+        """
+        short_ids = []
+
+        # Возможные длины shortId (в hex символах)
+        possible_lengths = [2, 4, 6, 8, 10, 12, 14, 16]
+
+        for _ in range(count):
+            # Выбираем случайную длину
+            length = random.choice(possible_lengths)
+
+            # Генерируем hex строку нужной длины
+            short_id = secrets.token_hex(length // 2)
+            short_ids.append(short_id)
+
+        return short_ids
 
     async def get_inbounds(self):
         list_api_url = f"{self.base_url}/inbound/list"
@@ -241,8 +262,10 @@ class VlessKeyManager(BaseKeyManager):
             cookies = await get_session_cookie(self.server_ip)
 
             port = self.generate_port()
-            short_id = uuid.uuid4().hex[:8]
             sub_id = str(uuid.uuid4())
+
+            # ✅ Генерируем shortIds самостоятельно
+            generated_short_ids = self.generate_short_ids()
 
             new_vless_key_data = {
                 "up": 0,
@@ -258,7 +281,7 @@ class VlessKeyManager(BaseKeyManager):
                     "clients": [
                         {
                             "id": new_client["id"],
-                            "flow": "xtls-rprx-vision-udp443",
+                            "flow": "xtls-rprx-vision",
                             "email": new_client.get("email", ""),
                             "limitIp": LIMIT,
                             "totalGB": 0,
@@ -285,10 +308,8 @@ class VlessKeyManager(BaseKeyManager):
                         "minClient": "",
                         "maxClient": "",
                         "maxTimediff": 0,
-                        "shortIds": [
-                            "99", "b5056a7fd4c966", "7a331546705f21a6", "0f6e",
-                            "2f08168c", "c68d0a1befc3", "53b0e4", "e3b7a4adcc"
-                        ],
+                        # ✅ Используем сгенерированные shortIds
+                        "shortIds": generated_short_ids,
                         "settings": {
                             "publicKey": public_key,
                             "fingerprint": "chrome",
@@ -315,7 +336,6 @@ class VlessKeyManager(BaseKeyManager):
             }
 
             try:
-                # Попытка отправить запрос с текущими данными
                 async with session.post(
                         create_api_url,
                         cookies=cookies,
@@ -323,8 +343,13 @@ class VlessKeyManager(BaseKeyManager):
                         ssl=False
                 ) as response:
                     if response.status == 200:
-                        # Если запрос успешен, возвращаем результат
-                        return await response.json(), port, short_id
+                        response_data = await response.json()
+
+                        # ✅ Выбираем случайный shortId из тех, что мы сгенерировали
+                        selected_short_id = random.choice(generated_short_ids)
+
+                        return response_data, port, selected_short_id
+
                     elif response.status == 400 and "port already in use" in (await response.text()).lower():
                         print(f"Port {port} is already in use, trying a new port...")
                         continue
@@ -380,11 +405,16 @@ class VlessKeyManager(BaseKeyManager):
                         continue
 
                     key_id = response['obj']['id']
+
+                    # ✅ Извлекаем публичный ключ из ответа для точности
+                    stream_settings = json.loads(response['obj']['streamSettings'])
+                    actual_public_key = stream_settings['realitySettings']['settings']['publicKey']
+
                     vless_link = self.generate_vless_link(
                         client_id=new_client["id"],
                         port=port,
                         short_id=short_id,
-                        public_key=cert_data["publicKey"],
+                        public_key=actual_public_key,
                         server_name=server_name
                     )
                     return vless_link, key_id, email
@@ -394,13 +424,13 @@ class VlessKeyManager(BaseKeyManager):
                 retries += 1
                 await asyncio.sleep(2)
 
-        # Если после всех попыток ключ не создан
         raise Exception(f"Failed to create VLESS key after {max_retries} attempts")
 
     def generate_vless_link(self, client_id, port, short_id, public_key, server_name):
+        # ✅ Исправляем SNI на github.com для соответствия серверным настройкам
         return (f"vless://{client_id}@{self.server_ip}:{port}"
                 f"?type=tcp&security=reality&pbk={public_key}"
-                f"&fp=chrome&sni=google.com&sid={short_id}&flow=xtls-rprx-vision"
+                f"&fp=chrome&sni=github.com&sid={short_id}&flow=xtls-rprx-vision"
                 f"#{server_name} - VLESS")
 
 
