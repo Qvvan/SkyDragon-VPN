@@ -31,39 +31,26 @@ async def update_profile(message: Message):
                 if key.server_ip != NEW_SERVER_IP
             }
 
-            # Получаем подписки из БД
             subscriptions = await session_methods.subscription.get_subs()
-            logger.info(f"Найдено {len(subscriptions)} подписок для обработки")
+            await logger.info(f"Найдено {len(subscriptions)} подписок для обработки")
 
-            # ✅ КРИТИЧНО: Извлекаем ВСЕ данные из SQLAlchemy объектов ДО цикла
-            subscription_data = []
+            # Обрабатываем каждую подписку
             for sub in subscriptions:
-                subscription_data.append({
-                    'subscription_id': sub.subscription_id,
-                    'user_id': sub.user_id,
-                    'key_ids': list(sub.key_ids) if sub.key_ids else []
-                })
-
-            # Обрабатываем каждую подписку, используя извлечённые данные
-            for sub_data in subscription_data:
                 try:
-                    result = await _process_subscription(session_methods, sub_data, existing_key_ids)
+                    result = await _process_subscription(session_methods, sub, existing_key_ids)
                     if result:
                         processed_count += 1
                 except Exception as e:
                     error_count += 1
-                    # ✅ Безопасно используем данные из dict
-                    await logger.log_error(
-                        f"Ошибка обработки подписки {sub_data['subscription_id']}",
-                        e
-                    )
+                    # ✅ Используем subscription_id вместо user_id
+                    await logger.log_error(f"Ошибка обработки подписки {sub.subscription_id}", e)
 
             # Отправляем отчёт админу
             await message.answer(
                 f"✅ Обработка завершена:\n"
                 f"• Обработано: {processed_count}\n"
                 f"• Ошибок: {error_count}\n"
-                f"• Всего подписок: {len(subscription_data)}"
+                f"• Всего подписок: {len(subscriptions)}"
             )
 
         except Exception as e:
@@ -71,20 +58,17 @@ async def update_profile(message: Message):
             await message.answer(f"❌ Критическая ошибка: {str(e)}")
 
 
-async def _process_subscription(session_methods, sub_data: dict, existing_key_ids) -> bool:
+async def _process_subscription(session_methods, subscription, existing_key_ids) -> bool:
     """
-    Обрабатывает одну подписку, используя данные из dict вместо SQLAlchemy объекта.
-
-    Args:
-        sub_data: dict с полями subscription_id, user_id, key_ids
+    Обрабатывает одну подписку.
 
     Returns:
-        bool: True если подписка была обновлена
+        bool: True если подписка была обновлена, False если не требовалось обновление
     """
-    # ✅ Используем данные из dict - никаких обращений к SQLAlchemy объектам
-    user_id = sub_data['user_id']
-    subscription_id = sub_data['subscription_id']
-    current_key_ids = sub_data['key_ids']
+    # ✅ Извлекаем все нужные данные из модели ДО входа в try блок
+    user_id = subscription.user_id
+    subscription_id = subscription.subscription_id
+    current_key_ids = list(subscription.key_ids) if subscription.key_ids else []
 
     try:
         # Проверяем, есть ли у пользователя ключи от нового сервера
@@ -94,10 +78,10 @@ async def _process_subscription(session_methods, sub_data: dict, existing_key_id
         )
 
         if user_has_new_server_keys:
-            logger.info(f"Пользователь {user_id} уже имеет ключи нового сервера")
+            await logger.info(f"Пользователь {user_id} уже имеет ключи нового сервера")
             return False
 
-        # Получаем данные пользователя СВЕЖИМ запросом
+        # Получаем данные пользователя
         user = await session_methods.users.get_user(user_id=user_id)
         if not user:
             await logger.log_error(f"Пользователь {user_id} не найден", None)
@@ -111,12 +95,13 @@ async def _process_subscription(session_methods, sub_data: dict, existing_key_id
         )
 
         if not new_key_ids:
-            logger.warning(f"Не удалось создать ключи для пользователя {user_id}")
+            await logger.warning(f"Не удалось создать ключи для пользователя {user_id}")
             return False
 
-        # Обновляем подписку
+        # Обновляем подписку - добавляем новые ключи к существующим
         updated_key_ids = current_key_ids + new_key_ids
 
+        # ✅ Используем правильный метод update_sub
         await session_methods.subscription.update_sub(
             subscription_id=subscription_id,
             key_ids=updated_key_ids
@@ -124,12 +109,13 @@ async def _process_subscription(session_methods, sub_data: dict, existing_key_id
 
         # ✅ Коммитим изменения для этой подписки
         await session_methods.session.commit()
-        logger.info(f"✅ Обновлена подписка {subscription_id} для пользователя {user_id}")
+        await logger.info(f"✅ Обновлена подписка {subscription_id} для пользователя {user_id}")
         return True
 
     except Exception as e:
-        # Откатываем изменения
+        # ✅ Откатываем изменения
         await session_methods.session.rollback()
+        # ✅ Используем сохранённые переменные вместо обращения к модели
         await logger.log_error(
             f"Ошибка обработки подписки {subscription_id} пользователя {user_id}",
             e
@@ -138,7 +124,12 @@ async def _process_subscription(session_methods, sub_data: dict, existing_key_id
 
 
 async def _create_server_keys(session_methods, user_id: int, username: str) -> list[int]:
-    """Создаёт VLESS и Shadowsocks ключи для указанного пользователя."""
+    """
+    Создаёт VLESS и Shadowsocks ключи для указанного пользователя.
+
+    Returns:
+        list[int]: Список ID созданных ключей
+    """
     created_key_ids = []
 
     try:
@@ -152,7 +143,7 @@ async def _create_server_keys(session_methods, user_id: int, username: str) -> l
         if shadowsocks_key_id:
             created_key_ids.append(shadowsocks_key_id)
 
-        logger.info(f"Создано {len(created_key_ids)} ключей для пользователя {user_id}")
+        await logger.info(f"Создано {len(created_key_ids)} ключей для пользователя {user_id}")
 
     except Exception as e:
         await logger.log_error(f"Ошибка создания ключей для пользователя {user_id}", e)
