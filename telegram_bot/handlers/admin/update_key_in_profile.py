@@ -33,7 +33,7 @@ async def update_profile(message: Message):
 
             # Получаем подписки из БД
             subscriptions = await session_methods.subscription.get_subs()
-            logger.info(f"Найдено {len(subscriptions)} подписок для обработки")
+            await logger.info(f"Найдено {len(subscriptions)} подписок для обработки")
 
             # ✅ КРИТИЧНО: Извлекаем ВСЕ данные из SQLAlchemy объектов ДО цикла
             subscription_data = []
@@ -94,7 +94,7 @@ async def _process_subscription(session_methods, sub_data: dict, existing_key_id
         )
 
         if user_has_new_server_keys:
-            logger.info(f"Пользователь {user_id} уже имеет ключи нового сервера")
+            await logger.info(f"Пользователь {user_id} уже имеет ключи нового сервера")
             return False
 
         # Получаем данные пользователя СВЕЖИМ запросом
@@ -111,7 +111,7 @@ async def _process_subscription(session_methods, sub_data: dict, existing_key_id
         )
 
         if not new_key_ids:
-            logger.warning(f"Не удалось создать ключи для пользователя {user_id}")
+            await logger.warning(f"Не удалось создать ключи для пользователя {user_id}")
             return False
 
         # Обновляем подписку
@@ -124,7 +124,7 @@ async def _process_subscription(session_methods, sub_data: dict, existing_key_id
 
         # ✅ Коммитим изменения для этой подписки
         await session_methods.session.commit()
-        logger.info(f"✅ Обновлена подписка {subscription_id} для пользователя {user_id}")
+        await logger.info(f"✅ Обновлена подписка {subscription_id} для пользователя {user_id}")
         return True
 
     except Exception as e:
@@ -152,7 +152,7 @@ async def _create_server_keys(session_methods, user_id: int, username: str) -> l
         if shadowsocks_key_id:
             created_key_ids.append(shadowsocks_key_id)
 
-        logger.info(f"Создано {len(created_key_ids)} ключей для пользователя {user_id}")
+        await logger.info(f"Создано {len(created_key_ids)} ключей для пользователя {user_id}")
 
     except Exception as e:
         await logger.log_error(f"Ошибка создания ключей для пользователя {user_id}", e)
