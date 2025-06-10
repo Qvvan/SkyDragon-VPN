@@ -352,11 +352,10 @@ class VlessKeyManager(BaseKeyManager):
         while retries < max_retries:
             try:
                 async with aiohttp.ClientSession() as session:
-                    email = self.generate_uuid()
                     new_client = {
                         "id": self.generate_uuid(),
                         "flow": "xtls-rprx-vision",
-                        "email": email,
+                        "email": self.generate_uuid(),
                         "limitIp": LIMIT,
                         "totalGB": 0,
                         "expiryTime": 0,
