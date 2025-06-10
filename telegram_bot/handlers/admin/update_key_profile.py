@@ -52,7 +52,7 @@ async def update_vless_keys_command(message: Message):
                         get_inbound = await BaseKeyManager(key.server_ip).get_inbound_by_id(key.key_id)
 
                         if not get_inbound or not get_inbound.get("success") or not get_inbound.get("obj"):
-                            logger.warning(f"Inbound не найден для ключа {key.key_id}")
+                            await logger.warning(f"Inbound не найден для ключа {key.key_id}")
                             continue
 
                         inbound_obj = get_inbound["obj"]
@@ -121,19 +121,19 @@ async def update_vless_keys_command(message: Message):
                             await session.keys.update_key(key.id, key=ss_link)
 
                         else:
-                            logger.info(f"Неизвестный протокол {protocol} для ключа {key.key_id}")
+                            await logger.info(f"Неизвестный протокол {protocol} для ключа {key.key_id}")
                             continue
 
                         await session.session.commit()
                         updated_count += 1
-                        logger.info(f"Ключ {key.key_id} ({protocol}) обновлен")
+                        await logger.info(f"Ключ {key.key_id} ({protocol}) обновлен, в бд ID {key.id}")
 
                 except Exception as e:
-                    logger.error(f"Ошибка обработки ключа {key.key_id}: {e}")
+                    await logger.error(f"Ошибка обработки ключа {key.key_id}: {e}")
                     continue
 
             await message.answer(f"✅ Обновление завершено! Обновлено ключей: {updated_count}")
 
         except Exception as e:
-            logger.error(f"Ошибка обновления ключей: {e}")
+            await logger.error(f"Ошибка обновления ключей: {e}")
             await message.answer(f"❌ Ошибка: {str(e)}")
