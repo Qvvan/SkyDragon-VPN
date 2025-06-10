@@ -46,6 +46,9 @@ async def update_vless_keys_command(message: Message):
                         if key.name_app != "Vless":
                             continue
 
+                        if "google.com" not in key.key:
+                            continue
+
                         await logger.info("Вот такой ключ мы пропустили для обновления: " + key.key)
 
                         server = await session.servers.get_server_by_ip(key.server_ip)
@@ -108,7 +111,7 @@ async def update_vless_keys_command(message: Message):
                         )
 
                         # Обновляем ключ в базе
-                        await session.keys.update_key_by_key_id(key.key_id, key=vless_link)
+                        await session.keys.update_key(key.id, key=vless_link)
                         await session.session.commit()
 
                         await logger.info(f"Ключ {key.key_id} обновлен, в бд ID {key.id}")
