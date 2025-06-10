@@ -43,8 +43,10 @@ async def update_vless_keys_command(message: Message):
                         if "github" in key.key:
                             continue
 
-                        if key.name_app != NameApp.VLESS:
+                        if key.name_app != "Vless":
                             continue
+
+                        await logger.info("Вот такой ключ мы пропустили для обновления: " + key.key)
 
                         server = await session.servers.get_server_by_ip(key.server_ip)
                         get_inbound = await BaseKeyManager(key.server_ip).get_inbound_by_id(key.key_id)
@@ -109,7 +111,7 @@ async def update_vless_keys_command(message: Message):
                         await session.keys.update_key_by_key_id(key.key_id, key=vless_link)
                         await session.session.commit()
 
-                        await logger.info(f"Ключ {key.key_id} обновлен")
+                        await logger.info(f"Ключ {key.key_id} обновлен, в бд ID {key.id}")
 
                 except Exception as e:
                     await logger.error(f"Ошибка обработки ключа {key.key_id}:", e)

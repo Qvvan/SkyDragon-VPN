@@ -40,10 +40,10 @@ async def update_vless_keys_command(message: Message):
             for key in keys:
                 try:
                     async with DatabaseContextManager() as session:
-                        if "github.com" in key.key:
+                        if "github" in key.key:
                             continue
 
-                        if key.name_app != NameApp.VLESS:
+                        if key.name_app != "Vless":
                             continue
 
                         server = await session.servers.get_server_by_ip(key.server_ip)
