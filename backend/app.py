@@ -47,7 +47,7 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
     headers = {
         "Content-Type": "text/plain; charset=utf-8",
         "Profile-Title": "SkyDragon",
-        "Profile-Update-Interval": "2",
+        "Profile-Update-Interval": "1",
         "Subscription-Userinfo": "upload=0; download=0; total=0; expire=0",
         "Content-Length": str(len(encoded_subscription))
     }
