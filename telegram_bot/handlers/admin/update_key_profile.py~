@@ -40,7 +40,7 @@ async def update_vless_keys_command(message: Message):
             for key in keys:
                 try:
                     async with DatabaseContextManager() as session:
-                        if "github" in key.key:
+                        if "github.com" in key.key:
                             continue
 
                         if key.name_app != NameApp.VLESS:
