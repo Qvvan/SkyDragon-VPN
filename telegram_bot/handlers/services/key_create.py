@@ -279,8 +279,8 @@ class VlessKeyManager(BaseKeyManager):
                     "realitySettings": {
                         "show": False,
                         "xver": 0,
-                        "dest": "google.com:443",
-                        "serverNames": ["google.com", "www.google.com"],
+                        "dest": "github.com:443",
+                        "serverNames": ["github.com", "www.github.com"],
                         "privateKey": private_key,
                         "minClient": "",
                         "maxClient": "",
@@ -293,7 +293,7 @@ class VlessKeyManager(BaseKeyManager):
                             "publicKey": public_key,
                             "fingerprint": "chrome",
                             "serverName": "",
-                            "spiderX": "/"
+                            "spiderX": ""
                         }
                     },
                     "tcpSettings": {
@@ -400,7 +400,7 @@ class VlessKeyManager(BaseKeyManager):
     def generate_vless_link(self, client_id, port, short_id, public_key, server_name):
         return (f"vless://{client_id}@{self.server_ip}:{port}"
                 f"?type=tcp&security=reality&pbk={public_key}"
-                f"&fp=chrome&sni=google.com&sid={short_id}&spx=%2F&flow=xtls-rprx-vision"
+                f"&fp=chrome&sni=google.com&sid={short_id}&flow=xtls-rprx-vision"
                 f"#{server_name} - VLESS")
 
 

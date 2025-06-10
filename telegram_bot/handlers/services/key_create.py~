@@ -279,8 +279,8 @@ class VlessKeyManager(BaseKeyManager):
                     "realitySettings": {
                         "show": False,
                         "xver": 0,
-                        "dest": "google.com:443",
-                        "serverNames": ["google.com", "www.google.com"],
+                        "dest": "github.com:443",
+                        "serverNames": ["github.com", "www.github.com"],
                         "privateKey": private_key,
                         "minClient": "",
                         "maxClient": "",
@@ -293,7 +293,7 @@ class VlessKeyManager(BaseKeyManager):
                             "publicKey": public_key,
                             "fingerprint": "chrome",
                             "serverName": "",
-                            "spiderX": "/"
+                            "spiderX": ""
                         }
                     },
                     "tcpSettings": {
@@ -352,10 +352,11 @@ class VlessKeyManager(BaseKeyManager):
         while retries < max_retries:
             try:
                 async with aiohttp.ClientSession() as session:
+                    email = self.generate_uuid()
                     new_client = {
                         "id": self.generate_uuid(),
                         "flow": "xtls-rprx-vision",
-                        "email": self.generate_uuid(),
+                        "email": email,
                         "limitIp": LIMIT,
                         "totalGB": 0,
                         "expiryTime": 0,
