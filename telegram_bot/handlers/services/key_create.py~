@@ -427,7 +427,6 @@ class VlessKeyManager(BaseKeyManager):
         raise Exception(f"Failed to create VLESS key after {max_retries} attempts")
 
     def generate_vless_link(self, client_id, port, short_id, public_key, server_name):
-        # ✅ Исправляем SNI на github.com для соответствия серверным настройкам
         return (f"vless://{client_id}@{self.server_ip}:{port}"
                 f"?type=tcp&security=reality&pbk={public_key}"
                 f"&fp=chrome&sni=github.com&sid={short_id}&flow=xtls-rprx-vision"
@@ -470,7 +469,7 @@ class ShadowsocksKeyManager(BaseKeyManager):
                     "externalProxy": []
                 }),
                 "sniffing": json.dumps({
-                    "enabled": True,
+                    "enabled": False,
                     "destOverride": ["http", "tls", "quic", "fakedns"],
                     "metadataOnly": False,
                     "routeOnly": False

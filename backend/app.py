@@ -39,6 +39,8 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
 
     keys = await methods.get_user_keys(db, user_id, sub_id)
 
+    keys = [key for key in keys if key.server_ip != "150.241.94.108"]
+
     if not keys:
         return Response(content="No keys found", status_code=404)
 

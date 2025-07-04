@@ -323,7 +323,7 @@ class VlessKeyManager(BaseKeyManager):
                     }
                 }),
                 "sniffing": json.dumps({
-                    "enabled": True,
+                    "enabled": False,
                     "destOverride": ["http", "tls", "quic", "fakedns"],
                     "metadataOnly": False,
                     "routeOnly": False
@@ -469,7 +469,7 @@ class ShadowsocksKeyManager(BaseKeyManager):
                     "externalProxy": []
                 }),
                 "sniffing": json.dumps({
-                    "enabled": True,
+                    "enabled": False,
                     "destOverride": ["http", "tls", "quic", "fakedns"],
                     "metadataOnly": False,
                     "routeOnly": False
