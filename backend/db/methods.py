@@ -1,7 +1,7 @@
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
-from backend.models.models import Servers
+from models.models import Servers
 from models.models import Keys, Subscriptions
 
 
