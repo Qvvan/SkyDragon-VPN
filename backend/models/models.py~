@@ -23,12 +23,3 @@ class Subscriptions(Base):
     subscription_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(BigInteger, nullable=False)
     key_ids = Column(ARRAY(Integer), default=[], nullable=True)
-
-class Servers(Base):
-    __tablename__ = 'servers'
-
-    server_ip = Column(String, primary_key=True)
-    name = Column(String, nullable=False)
-    limit = Column(Integer, nullable=True)
-    hidden = Column(Integer, nullable=True, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
