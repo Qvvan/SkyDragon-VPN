@@ -11,12 +11,11 @@ DELAY = 1
 
 
 async def get_session_cookie(server_ip: str):
+    if server_ip == "150.241.94.108":
+        return
     if server_ip in cookies_store:
         if await make_request_with_cookies(server_ip):
             return cookies_store[server_ip]
-    # fix
-    if server_ip == "150.241.94.108":
-        return
 
 
     url = f"https://{server_ip}:{PORT_X_UI}/{MY_SECRET_URL}/login"
@@ -47,6 +46,9 @@ async def get_session_cookie(server_ip: str):
 
 
 async def make_request_with_cookies(server_ip):
+    if server_ip == "150.241.94.108":
+        return
+
     cookies = cookies_store.get(server_ip)
     if not cookies:
         print(f"No cookies available for {server_ip}")
