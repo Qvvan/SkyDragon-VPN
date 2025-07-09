@@ -6,7 +6,7 @@ from config_data.config import MY_SECRET_URL, LOGIN_X_UI_PANEL, PASSWORD_X_UI_PA
 from logger.logging_config import logger
 
 cookies_store = {}
-RETRIES = 2
+RETRIES = 0
 DELAY = 1
 
 
