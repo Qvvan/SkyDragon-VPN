@@ -65,8 +65,8 @@ async def check_connect(bot: Bot):
                         total_usage += total
 
                     except Exception as e:
-                        await logger.log_error(f"Произошла ошибка при получении ключа {key_id}\n"
-                                               f"Сервер: {key.server_ip}", e)
+                        await logger.warning(f"Произошла ошибка при получении ключа {key_id}\n"
+                                               f"Сервер: {key.server_ip}")
                         continue
 
                 # Если трафик не использовался, отправляем уведомления
