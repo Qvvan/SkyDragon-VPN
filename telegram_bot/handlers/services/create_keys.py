@@ -11,6 +11,8 @@ async def create_keys(user_id: int, username: str):
         try:
             server_ips = await session_methods.servers.get_all_servers()
             for server in server_ips:
+                if server.hidden == 1:
+                    continue
                 try:
                     vless_manager = VlessKeyManager(server.server_ip)
                     key, key_id, email = await vless_manager.manage_vless_key(
