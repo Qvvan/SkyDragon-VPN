@@ -67,6 +67,8 @@ class BaseKeyManager:
                     )
 
     async def get_inbound_by_id(self, inbound_id):
+        if self.server_ip == "150.241.94.108":
+            return
         get_inbound_api_url = f"{self.base_url}/api/inbounds/get/{inbound_id}"
         cookies = await get_session_cookie(self.server_ip)
         async with aiohttp.ClientSession() as session:
@@ -80,6 +82,8 @@ class BaseKeyManager:
                     )
 
     async def get_traffic_by_id(self, inbound_id):
+        if self.server_ip == "150.241.94.108":
+            return
         get_traffic_api_url = f"{self.base_url}/api/inbounds/getClientTrafficsById/{inbound_id}"
         cookies = await get_session_cookie(self.server_ip)
         async with aiohttp.ClientSession() as session:

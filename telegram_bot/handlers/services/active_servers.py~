@@ -12,8 +12,6 @@ async def get_active_server_and_key(user_id: int, username: str, session_methods
 
         for server in available_servers:
             try:
-                if server.hidden == 1:
-                    continue
                 server_ip = server.server_ip
                 vless_manager = VlessKeyManager(server_ip)
                 key, key_id, email = await vless_manager.manage_vless_key(

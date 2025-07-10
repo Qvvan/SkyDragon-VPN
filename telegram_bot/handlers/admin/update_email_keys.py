@@ -26,6 +26,8 @@ async def show_servers_handler(message: types.Message):
         servers = await session.servers.get_all_servers()
 
         for server in servers:
+            if server.hidden == 1:
+                continue
             await logger.log_info(f"Начинаем проверку сервера: {server.server_ip}")
             try:
                 keys_response = await BaseKeyManager(server_ip=server.server_ip).get_inbounds()

@@ -22,7 +22,7 @@ async def check_multiple_connections(bot: Bot):
             servers = await session.servers.get_all_servers()
 
             # Создаем словарь server_ip -> server_name
-            server_names = {server.server_ip: server.name for server in servers}
+            server_names = {server.server_ip: server.name for server in servers if server.hidden == 0}
 
             # Получаем все ключи из базы
             all_keys = await session.keys.get_all_keys()
@@ -59,6 +59,8 @@ async def check_multiple_connections(bot: Bot):
 
             for server in servers:
                 try:
+                    if server.hidden == 1:
+                        continue
                     online_data = await BaseKeyManager(server_ip=server.server_ip).get_online_users()
                     if online_data and online_data.get("success") and online_data.get("obj"):
                         online_emails = online_data.get("obj", [])
