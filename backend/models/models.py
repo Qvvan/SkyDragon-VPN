@@ -14,6 +14,7 @@ class Keys(Base):
     key_id = Column(Integer, nullable=False)
     key = Column(String, nullable=False)
     server_ip = Column(String, nullable=False)
+    name_app = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
