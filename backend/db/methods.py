@@ -1,8 +1,15 @@
+from enum import Enum
+
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
-from models.models import Keys, Subscriptions, NameApp
+from models.models import Keys, Subscriptions
 from models.models import Servers
+
+
+class NameApp(str, Enum):
+    OUTLINE = 'Outline'
+    VLESS = 'Vless'
 
 
 async def get_user_keys(session: Session, user_id: int, sub_id: int):
@@ -20,5 +27,3 @@ async def get_user_keys(session: Session, user_id: int, sub_id: int):
 
     result = await session.execute(query)
     return result.scalars().all()
-
-
