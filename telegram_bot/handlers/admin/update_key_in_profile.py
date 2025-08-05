@@ -11,8 +11,8 @@ from models.models import Keys, NameApp
 
 router = Router()
 
-NEW_SERVER_IP = "193.247.81.254"
-SERVER_NAME = "🇵🇱 Польша"
+NEW_SERVER_IP = "66.151.43.161"
+SERVER_NAME = "🇩🇪 Германия"
 
 
 @router.message(Command(commands="update_profile"), IsAdmin(ADMIN_IDS))

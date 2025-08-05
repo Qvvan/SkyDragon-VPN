@@ -11,7 +11,7 @@ from models.models import Keys, NameApp
 
 router = Router()
 
-NEW_SERVER_IP = "109.120.187.33"
+NEW_SERVER_IP = "66.151.43.161"
 SERVER_NAME = "🇵🇱 Польша"
 
 
