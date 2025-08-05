@@ -67,6 +67,8 @@ class BaseKeyManager:
                     )
 
     async def get_inbound_by_id(self, inbound_id):
+        if self.server_ip == "150.241.94.108":
+            return
         get_inbound_api_url = f"{self.base_url}/api/inbounds/get/{inbound_id}"
         cookies = await get_session_cookie(self.server_ip)
         async with aiohttp.ClientSession() as session:
@@ -80,6 +82,8 @@ class BaseKeyManager:
                     )
 
     async def get_traffic_by_id(self, inbound_id):
+        if self.server_ip == "150.241.94.108":
+            return
         get_traffic_api_url = f"{self.base_url}/api/inbounds/getClientTrafficsById/{inbound_id}"
         cookies = await get_session_cookie(self.server_ip)
         async with aiohttp.ClientSession() as session:
@@ -253,19 +257,30 @@ class VlessKeyManager(BaseKeyManager):
         raise ValueError("Failed to generate certificate after multiple attempts")
 
     async def create_vless_key(self, session, new_client, private_key, public_key):
+        """
+        Создает VLESS ключ для новой панели 3x-ui с xhttp протоколом.
+
+        Args:
+            session: aiohttp session
+            new_client: данные клиента
+            private_key: приватный ключ Reality
+            public_key: публичный ключ Reality
+
+        Returns:
+            tuple: (response_data, port, selected_short_id, xhttp_path)
+        """
         create_api_url = f"{self.base_url}/inbound/add"
         max_retries = 5
         retries = 0
 
         while True:
-            # Получаем (или обновляем) куки
             cookies = await get_session_cookie(self.server_ip)
-
             port = self.generate_port()
             sub_id = str(uuid.uuid4())
 
-            # ✅ Генерируем shortIds самостоятельно
+            # Генерируем shortIds и xhttp path
             generated_short_ids = self.generate_short_ids()
+            xhttp_path = f"/{new_client['id'][:8]}"  # Используем первые 8 символов client ID
 
             new_vless_key_data = {
                 "up": 0,
@@ -281,7 +296,7 @@ class VlessKeyManager(BaseKeyManager):
                     "clients": [
                         {
                             "id": new_client["id"],
-                            "flow": "xtls-rprx-vision",
+                            "flow": "",  # ❗ Убираем flow для xhttp
                             "email": new_client.get("email", ""),
                             "limitIp": LIMIT,
                             "totalGB": 0,
@@ -289,6 +304,7 @@ class VlessKeyManager(BaseKeyManager):
                             "enable": True,
                             "tgId": new_client.get("tgId", ""),
                             "subId": sub_id,
+                            "comment": "",
                             "reset": 0
                         }
                     ],
@@ -296,7 +312,7 @@ class VlessKeyManager(BaseKeyManager):
                     "fallbacks": []
                 }),
                 "streamSettings": json.dumps({
-                    "network": "tcp",
+                    "network": "xhttp",  # ❗ Изменено с tcp на xhttp
                     "security": "reality",
                     "externalProxy": [],
                     "realitySettings": {
@@ -305,25 +321,34 @@ class VlessKeyManager(BaseKeyManager):
                         "dest": "github.com:443",
                         "serverNames": ["github.com", "www.github.com"],
                         "privateKey": private_key,
-                        "minClient": "",
-                        "maxClient": "",
+                        "minClientVer": "",  # ❗ Обновлено название поля
+                        "maxClientVer": "",  # ❗ Обновлено название поля
                         "maxTimediff": 0,
-                        # ✅ Используем сгенерированные shortIds
                         "shortIds": generated_short_ids,
+                        "mldsa65Seed": "",  # ❗ Новое поле
                         "settings": {
                             "publicKey": public_key,
                             "fingerprint": "chrome",
                             "serverName": "",
-                            "spiderX": ""
+                            "spiderX": "",
+                            "mldsa65Verify": ""  # ❗ Новое поле
                         }
                     },
-                    "tcpSettings": {
-                        "acceptProxyProtocol": False,
-                        "header": {"type": "none"}
+                    # ❗ Новые настройки xhttp вместо tcpSettings
+                    "xhttpSettings": {
+                        "path": xhttp_path,
+                        "host": "",
+                        "headers": {},
+                        "scMaxBufferedPosts": 30,
+                        "scMaxEachPostBytes": "1000000",
+                        "scStreamUpServerSecs": "20-80",
+                        "noSSEHeader": False,
+                        "xPaddingBytes": "100-1000",
+                        "mode": "auto"
                     }
                 }),
                 "sniffing": json.dumps({
-                    "enabled": True,
+                    "enabled": False,  # ❗ Изменено на False
                     "destOverride": ["http", "tls", "quic", "fakedns"],
                     "metadataOnly": False,
                     "routeOnly": False
@@ -344,11 +369,8 @@ class VlessKeyManager(BaseKeyManager):
                 ) as response:
                     if response.status == 200:
                         response_data = await response.json()
-
-                        # ✅ Выбираем случайный shortId из тех, что мы сгенерировали
                         selected_short_id = random.choice(generated_short_ids)
-
-                        return response_data, port, selected_short_id
+                        return response_data, port, selected_short_id, xhttp_path
 
                     elif response.status == 400 and "port already in use" in (await response.text()).lower():
                         print(f"Port {port} is already in use, trying a new port...")
@@ -371,27 +393,39 @@ class VlessKeyManager(BaseKeyManager):
                 await asyncio.sleep(1)
 
     async def manage_vless_key(self, tg_id, username, server_name):
+        """
+        Управляет созданием VLESS ключа для обновленной панели 3x-ui.
+
+        Args:
+            tg_id: Telegram ID пользователя
+            username: имя пользователя
+            server_name: название сервера
+
+        Returns:
+            tuple: (vless_link, key_id, email)
+        """
         max_retries = 3
         retries = 0
 
         while retries < max_retries:
             try:
                 async with aiohttp.ClientSession() as session:
-                    email = self.generate_uuid()
+                    client_id = self.generate_uuid()
+                    email = self.generate_short_id()  # Используем короткий ID как email
+
                     new_client = {
-                        "id": self.generate_uuid(),
-                        "flow": "xtls-rprx-vision",
+                        "id": client_id,
                         "email": email,
                         "limitIp": LIMIT,
                         "totalGB": 0,
                         "expiryTime": 0,
                         "enable": True,
                         "tgId": tg_id,
-                        "remark": f"Пользователь: {username}, TgId: {tg_id}"
+                        "remark": f"Пользователь: {username}, TgID: "  # ❗ Обновленный формат remark
                     }
 
                     cert_data = await self.get_certificate(session)
-                    response, port, short_id = await self.create_vless_key(
+                    response, port, short_id, xhttp_path = await self.create_vless_key(
                         session,
                         new_client,
                         cert_data["privateKey"],
@@ -406,16 +440,18 @@ class VlessKeyManager(BaseKeyManager):
 
                     key_id = response['obj']['id']
 
-                    # ✅ Извлекаем публичный ключ из ответа для точности
+                    # Извлекаем публичный ключ из ответа
                     stream_settings = json.loads(response['obj']['streamSettings'])
                     actual_public_key = stream_settings['realitySettings']['settings']['publicKey']
 
                     vless_link = self.generate_vless_link(
-                        client_id=new_client["id"],
+                        client_id=client_id,
                         port=port,
                         short_id=short_id,
                         public_key=actual_public_key,
-                        server_name=server_name
+                        server_name=server_name,
+                        xhttp_path=xhttp_path,
+                        email=email
                     )
                     return vless_link, key_id, email
 
@@ -426,11 +462,32 @@ class VlessKeyManager(BaseKeyManager):
 
         raise Exception(f"Failed to create VLESS key after {max_retries} attempts")
 
-    def generate_vless_link(self, client_id, port, short_id, public_key, server_name):
+    def generate_vless_link(self, client_id, port, short_id, public_key, server_name, xhttp_path, email):
+        """
+        Генерирует VLESS ссылку для нового формата 3x-ui с xhttp протоколом.
+
+        Args:
+            client_id: UUID клиента
+            port: порт подключения
+            short_id: короткий ID для Reality
+            public_key: публичный ключ Reality
+            server_name: название сервера
+            xhttp_path: путь для xhttp соединения
+            email: идентификатор клиента
+
+        Returns:
+            str: готовая VLESS ссылка
+        """
         return (f"vless://{client_id}@{self.server_ip}:{port}"
-                f"?type=tcp&security=reality&pbk={public_key}"
-                f"&fp=chrome&sni=github.com&sid={short_id}&flow=xtls-rprx-vision"
-                f"#{server_name} - VLESS")
+                f"?type=xhttp&path={xhttp_path}&host=&mode=auto"
+                f"&security=reality&pbk={public_key}"
+                f"&fp=chrome&pqv=&sni=github.com&sid={short_id}"
+                f"#{server_name}-VLESS")
+
+    def generate_short_id(self, length=8):
+        """Генерирует короткий идентификатор из букв и цифр для email."""
+        characters = string.ascii_lowercase + string.digits
+        return ''.join(random.choice(characters) for _ in range(length))
 
 
 class ShadowsocksKeyManager(BaseKeyManager):

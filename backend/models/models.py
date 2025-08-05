@@ -24,6 +24,7 @@ class Subscriptions(Base):
     user_id = Column(BigInteger, nullable=False)
     key_ids = Column(ARRAY(Integer), default=[], nullable=True)
 
+
 class Servers(Base):
     __tablename__ = 'servers'
 

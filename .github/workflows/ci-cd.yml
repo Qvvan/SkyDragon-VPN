@@ -66,7 +66,7 @@ jobs:
           -d text="*✅ Деплой завершен успешно\\!*"
 
       - name: Notify deployment failure
-        if: failure()  # Это сообщение будет отправлено только если деплой завершился ошибкой
+        if: failure()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

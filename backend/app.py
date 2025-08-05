@@ -57,7 +57,6 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
 
 @app.get("/import/iphone/{encrypted_part}")
 async def get_subscription(encrypted_part: str):
-    # Формируем ссылку для редиректа
     redirect_url = f"streisand://import/https://skydragonvpn.ru/sub/{encrypted_part}"
 
     # Возвращаем редирект
