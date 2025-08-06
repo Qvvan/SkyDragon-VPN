@@ -33,7 +33,7 @@ PREDEFINED_KEYBOARDS = {
 
 
 # Команда для отправки сообщения
-@router.message(Command(commands="sms"),  IsAdmin(ADMIN_IDS))
+@router.message(Command(commands="sms"), IsAdmin(ADMIN_IDS))
 async def start_sending_message(message: types.Message, state: FSMContext):
     await message.answer(
         text="Введите user_id, кому хотите написать:",

@@ -1,7 +1,5 @@
 import asyncio
-import base64
 import json
-import os
 import random
 import secrets
 import string
@@ -24,36 +22,45 @@ class BaseKeyManager:
     def __init__(self, server_ip):
         self.server_ip = server_ip
         self.base_url = f"https://{server_ip}:{PORT_X_UI}/{MY_SECRET_URL}/panel"
+        self.get_cert_api_url = f"https://{server_ip}:{PORT_X_UI}/{MY_SECRET_URL}/server/getNewX25519Cert"
 
     @staticmethod
     def generate_uuid():
+        """Генерирует UUID для клиентов."""
         return str(uuid.uuid4())
 
     @staticmethod
     def generate_port():
+        """Генерирует случайный порт в диапазоне 10000-65535."""
         return random.randint(10000, 65535)
 
     def generate_short_ids(self, count=8):
         """
         Генерирует массив shortIds в hex формате разной длины.
-        Формат: от 2 до 16 символов hex (как в твоем примере)
+        Формат: от 2 до 16 символов hex для Reality протокола.
         """
         short_ids = []
-
-        # Возможные длины shortId (в hex символах)
         possible_lengths = [2, 4, 6, 8, 10, 12, 14, 16]
 
         for _ in range(count):
-            # Выбираем случайную длину
             length = random.choice(possible_lengths)
-
-            # Генерируем hex строку нужной длины
             short_id = secrets.token_hex(length // 2)
             short_ids.append(short_id)
 
         return short_ids
 
+    def generate_short_id(self, length=8):
+        """Генерирует короткий идентификатор из букв и цифр для email."""
+        characters = string.ascii_lowercase + string.digits
+        return ''.join(random.choice(characters) for _ in range(length))
+
+    def generate_subid(self, length=16):
+        """Генерирует ID подписки из букв и цифр."""
+        characters = string.ascii_lowercase + string.digits
+        return ''.join(random.choice(characters) for _ in range(length))
+
     async def get_inbounds(self):
+        """Получает список всех инбаундов."""
         list_api_url = f"{self.base_url}/inbound/list"
         cookies = await get_session_cookie(self.server_ip)
         async with aiohttp.ClientSession() as session:
@@ -67,8 +74,7 @@ class BaseKeyManager:
                     )
 
     async def get_inbound_by_id(self, inbound_id):
-        if self.server_ip == "150.241.94.108":
-            return
+        """Получает данные инбаунда по ID."""
         get_inbound_api_url = f"{self.base_url}/api/inbounds/get/{inbound_id}"
         cookies = await get_session_cookie(self.server_ip)
         async with aiohttp.ClientSession() as session:
@@ -81,22 +87,8 @@ class BaseKeyManager:
                         status=response.status, message=await response.text()
                     )
 
-    async def get_traffic_by_id(self, inbound_id):
-        if self.server_ip == "150.241.94.108":
-            return
-        get_traffic_api_url = f"{self.base_url}/api/inbounds/getClientTrafficsById/{inbound_id}"
-        cookies = await get_session_cookie(self.server_ip)
-        async with aiohttp.ClientSession() as session:
-            async with session.get(get_traffic_api_url, cookies=cookies, ssl=False) as response:
-                if response.status == 200:
-                    return await response.json()
-                else:
-                    raise aiohttp.ClientResponseError(
-                        response.request_info, response.history,
-                        status=response.status, message=await response.text()
-                    )
-
     async def get_online_users(self):
+        """Получает список онлайн пользователей."""
         url = f"{self.base_url}/inbound/onlines"
         cookies = await get_session_cookie(self.server_ip)
         async with aiohttp.ClientSession() as session:
@@ -109,531 +101,315 @@ class BaseKeyManager:
                         status=response.status, message=await response.text()
                     )
 
-    async def delete_key(self, key_id: str):
-        """
-        Удаляет ключ с указанным key_id.
-
-        Args:
-            key_id (str): Идентификатор ключа для удаления.
-        """
-        delete_api_url = f"{self.base_url}/api/inbounds/del/{key_id}"
+    async def get_certificate(self):
+        """Получает X25519 сертификат для Reality протокола."""
+        max_retries = 3
+        retries = 0
 
         async with aiohttp.ClientSession() as session:
-            cookies = await get_session_cookie(self.server_ip)
-            async with session.post(delete_api_url, cookies=cookies, ssl=False) as response:
-                if response.status == 200:
-                    print(f"Key with ID {key_id} successfully deleted.")
-                elif response.status == 401:
-                    # Получаем новый session_cookie
+            while retries < max_retries:
+                try:
                     cookies = await get_session_cookie(self.server_ip)
-                    async with session.post(delete_api_url, cookies=cookies, ssl=False) as retry_response:
+                    async with session.post(self.get_cert_api_url, cookies=cookies, ssl=False) as response:
+                        if response.status == 200:
+                            cert_data = await response.json()
+                            if cert_data.get("success"):
+                                return cert_data["obj"]
+                        print(f"Certificate generation failed (attempt {retries + 1}/{max_retries})")
+                        retries += 1
+                        await asyncio.sleep(1)
+                except Exception as e:
+                    print(f"Certificate request failed (attempt {retries + 1}/{max_retries}): {e}")
+                    retries += 1
+                    await asyncio.sleep(1)
+
+            raise ValueError("Failed to generate certificate after multiple attempts")
+
+    async def get_or_create_port_443_inbound(self):
+        """
+        Получает инбаунд с портом 443, создает если не существует.
+
+        Returns:
+            dict: данные инбаунда с портом 443
+        """
+        # Ищем существующий инбаунд с портом 443
+        try:
+            inbounds_data = await self.get_inbounds()
+            if inbounds_data and inbounds_data.get("success"):
+                for inbound in inbounds_data.get("obj", []):
+                    if inbound.get("port") == 443:
+                        print(f"Found existing inbound with port 443, ID: {inbound['id']}")
+                        return inbound
+        except Exception as e:
+            print(f"Error checking existing inbounds: {e}")
+
+        # Создаем новый инбаунд с портом 443
+        print("Creating new inbound with port 443...")
+
+        cert_data = await self.get_certificate()
+        generated_short_ids = self.generate_short_ids()
+
+        inbound_data = {
+            "up": 0,
+            "down": 0,
+            "total": 0,
+            "remark": "Main VLESS Inbound - Port 443",
+            "enable": True,
+            "expiryTime": 0,
+            "listen": "",
+            "port": 443,
+            "protocol": "vless",
+            "settings": json.dumps({
+                "clients": [],
+                "decryption": "none",
+                "fallbacks": []
+            }),
+            "streamSettings": json.dumps({
+                "network": "xhttp",
+                "security": "reality",
+                "externalProxy": [],
+                "realitySettings": {
+                    "show": False,
+                    "xver": 0,
+                    "dest": "github.com:443",
+                    "serverNames": ["github.com", "www.github.com"],
+                    "privateKey": cert_data["privateKey"],
+                    "minClientVer": "",
+                    "maxClientVer": "",
+                    "maxTimediff": 0,
+                    "shortIds": generated_short_ids,
+                    "mldsa65Seed": "",
+                    "settings": {
+                        "publicKey": cert_data["publicKey"],
+                        "fingerprint": "chrome",
+                        "serverName": "",
+                        "spiderX": "",
+                        "mldsa65Verify": ""
+                    }
+                },
+                "xhttpSettings": {
+                    "path": "/main443",
+                    "host": "",
+                    "headers": {},
+                    "scMaxBufferedPosts": 30,
+                    "scMaxEachPostBytes": "1000000",
+                    "scStreamUpServerSecs": "20-80",
+                    "noSSEHeader": False,
+                    "xPaddingBytes": "100-1000",
+                    "mode": "auto"
+                }
+            }),
+            "sniffing": json.dumps({
+                "enabled": False,
+                "destOverride": ["http", "tls", "quic", "fakedns"],
+                "metadataOnly": False,
+                "routeOnly": False
+            }),
+            "allocate": json.dumps({
+                "strategy": "always",
+                "refresh": 5,
+                "concurrency": 3
+            })
+        }
+
+        create_api_url = f"{self.base_url}/inbound/add"
+        cookies = await get_session_cookie(self.server_ip)
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(create_api_url, cookies=cookies, json=inbound_data, ssl=False) as response:
+                if response.status == 200:
+                    response_data = await response.json()
+                    if response_data.get("success"):
+                        print(f"Successfully created inbound with port 443, ID: {response_data['obj']['id']}")
+                        return response_data["obj"]
+                    else:
+                        raise Exception(f"API Error: {response_data.get('msg', 'Unknown error')}")
+                elif response.status == 400:
+                    error_text = await response.text()
+                    if "port already in use" in error_text.lower():
+                        # Race condition - проверяем еще раз
+                        await asyncio.sleep(1)
+                        inbounds_data = await self.get_inbounds()
+                        if inbounds_data and inbounds_data.get("success"):
+                            for inbound in inbounds_data.get("obj", []):
+                                if inbound.get("port") == 443:
+                                    return inbound
+                        raise Exception("Port 443 is occupied but inbound not found")
+                    else:
+                        raise Exception(f"Bad request: {error_text}")
+                elif response.status == 401:
+                    # Повторяем с новыми cookies
+                    cookies = await get_session_cookie(self.server_ip)
+                    async with session.post(create_api_url, cookies=cookies, json=inbound_data,
+                                            ssl=False) as retry_response:
                         if retry_response.status == 200:
-                            print(f"Key with ID {key_id} successfully deleted after refreshing session.")
-                        else:
-                            error_text = await retry_response.text()
-                            print(f"Error deleting key after retry: {retry_response.status}, {error_text}")
-                            raise aiohttp.ClientResponseError(
-                                retry_response.request_info, retry_response.history,
-                                status=retry_response.status, message=error_text
-                            )
+                            response_data = await retry_response.json()
+                            if response_data.get("success"):
+                                return response_data["obj"]
+                    raise Exception("Failed to create inbound after session refresh")
                 else:
                     error_text = await response.text()
-                    print(f"Error deleting key: {response.status}, {error_text}")
-                    raise aiohttp.ClientResponseError(
-                        response.request_info, response.history,
-                        status=response.status, message=error_text
-                    )
+                    raise Exception(f"HTTP Error {response.status}: {error_text}")
 
-    async def update_key_enable(self, key_id: str, enable: bool):
+    async def add_client_to_inbound(self, tg_id: str, server_name: str):
         """
-        Обновляет только поле `enable` для ключа с указанным key_id.
-
-        Args:
-            key_id (str): Идентификатор ключа для обновления.
-            enable (bool): Новый статус для поля `enable`.
-
-        Raises:
-            ValueError: Если ключ не удалось получить или обновить.
+        Добавляет нового клиента в существующий инбаунд.
+        Returns:
+            tuple: (client_uuid, email, success)
         """
-        # Получаем текущий объект ключа
-        get_api_url = f"{self.base_url}/api/inbounds/get/{key_id}"
-        update_api_url = f"{self.base_url}/api/inbounds/update/{key_id}"
+        add_client_url = f"{self.base_url}/inbound/addClient"
+
+        client_uuid = self.generate_uuid()
+        email = self.generate_short_id()
+        sub_id = self.generate_subid()
+
+        new_client = {
+            "id": client_uuid,
+            "flow": "",
+            "email": email,
+            "limitIp": LIMIT,
+            "totalGB": 0,
+            "expiryTime": 0,
+            "enable": True,
+            "tgId": str(tg_id),
+            "subId": str(tg_id),
+            "comment": f"TgID: {tg_id}",
+            "reset": 0
+        }
+
+        main_inbound = await self.get_or_create_port_443_inbound()
+        inbound_id = main_inbound["id"]
+
+        payload = {
+            "id": inbound_id,
+            "settings": json.dumps({
+                "clients": [new_client]
+            })
+        }
 
         async with aiohttp.ClientSession() as session:
             try:
                 cookies = await get_session_cookie(self.server_ip)
-                async with session.get(get_api_url, cookies=cookies, ssl=False) as response:
-                    if response.status != 200:
-                        error_text = await response.text()
-                        raise ValueError(f"Failed to fetch key with ID {key_id}: {response.status}, {error_text}")
-
-                    data = await response.json()
-                    if not data.get("success"):
-                        raise ValueError(
-                            f"API Error while fetching key with ID {key_id}: {data.get('msg', 'Unknown error')}"
-                        )
-
-                    # Получаем объект ключа
-                    key_data = data["obj"]
-
-                # Обновляем только поле `enable` в объекте
-                key_data["enable"] = enable
-
-                # Если поле `settings` или `streamSettings` — строка, декодируем для обновления
-                if isinstance(key_data.get("settings"), str):
-                    key_data["settings"] = json.loads(key_data["settings"])
-                if isinstance(key_data.get("streamSettings"), str):
-                    key_data["streamSettings"] = json.loads(key_data["streamSettings"])
-                if isinstance(key_data.get("sniffing"), str):
-                    key_data["sniffing"] = json.loads(key_data["sniffing"])
-
-                # Возвращаем преобразованные строки
-                key_data["settings"] = json.dumps(key_data["settings"])
-                key_data["streamSettings"] = json.dumps(key_data["streamSettings"])
-                key_data["sniffing"] = json.dumps(key_data["sniffing"])
-
-                # Отправляем обновленный объект на сервер
-                async with session.post(update_api_url, cookies=cookies, json=key_data,
-                                        ssl=False) as update_response:
-                    if update_response.status == 200:
-                        print(f"Key with ID {key_id} successfully updated to {'enabled' if enable else 'disabled'}.")
-                    elif update_response.status == 401:
-                        cookies = await get_session_cookie(self.server_ip)
-
-                        async with session.post(update_api_url, cookies=cookies, json=key_data,
-                                                ssl=False) as retry_response:
-                            if retry_response.status == 200:
-                                print(f"Key with ID {key_id} successfully updated after refreshing session.")
-                            else:
-                                error_text = await retry_response.text()
-                                raise ValueError(
-                                    f"Failed to update key with ID {key_id} after retry: {retry_response.status}, {error_text}")
-                    else:
-                        error_text = await update_response.text()
-                        raise ValueError(
-                            f"Failed to update key with ID {key_id}: {update_response.status}, {error_text}")
-
-            except aiohttp.ClientError as e:
-                raise ValueError(f"HTTP Client Error while processing key with ID {key_id}: {e}")
-            except ValueError as e:
-                # Логируем ошибку и возвращаем информативное сообщение
-                print(f"Error: {e}")
-                raise
-            except Exception as e:
-                print(f"Unexpected error while updating key with ID {key_id}: {e}")
-                raise ValueError(f"Unexpected error while updating key with ID {key_id}: {e}")
-
-
-class VlessKeyManager(BaseKeyManager):
-    def __init__(self, server_ip):
-        super().__init__(server_ip)
-        self.get_cert_api_url = f"https://{server_ip}:{PORT_X_UI}/{MY_SECRET_URL}/server/getNewX25519Cert"
-
-    async def get_certificate(self, session):
-        max_retries = 3
-        retries = 0
-
-        while retries < max_retries:
-            try:
-                cookies = await get_session_cookie(self.server_ip)
-                async with session.post(self.get_cert_api_url, cookies=cookies, ssl=False) as response:
-                    if response.status == 200:
-                        cert_data = await response.json()
-                        if cert_data.get("success"):
-                            return cert_data["obj"]
-                        else:
-                            print(f"Certificate generation failed (attempt {retries + 1}/{max_retries})")
-                            retries += 1
-                            await asyncio.sleep(1)
-                    else:
-                        print(f"Error getting certificate: {response.status} (attempt {retries + 1}/{max_retries})")
-                        retries += 1
-                        await asyncio.sleep(1)
-            except Exception as e:
-                print(f"Exception during certificate request: {e} (attempt {retries + 1}/{max_retries})")
-                retries += 1
-                await asyncio.sleep(1)
-
-        raise ValueError("Failed to generate certificate after multiple attempts")
-
-    async def create_vless_key(self, session, new_client, private_key, public_key):
-        """
-        Создает VLESS ключ для новой панели 3x-ui с xhttp протоколом.
-
-        Args:
-            session: aiohttp session
-            new_client: данные клиента
-            private_key: приватный ключ Reality
-            public_key: публичный ключ Reality
-
-        Returns:
-            tuple: (response_data, port, selected_short_id, xhttp_path)
-        """
-        create_api_url = f"{self.base_url}/inbound/add"
-        max_retries = 5
-        retries = 0
-
-        while True:
-            cookies = await get_session_cookie(self.server_ip)
-            port = self.generate_port()
-            sub_id = str(uuid.uuid4())
-
-            # Генерируем shortIds и xhttp path
-            generated_short_ids = self.generate_short_ids()
-            xhttp_path = f"/{new_client['id'][:8]}"  # Используем первые 8 символов client ID
-
-            new_vless_key_data = {
-                "up": 0,
-                "down": 0,
-                "total": 0,
-                "remark": new_client["remark"],
-                "enable": True,
-                "expiryTime": 0,
-                "listen": "",
-                "port": port,
-                "protocol": "vless",
-                "settings": json.dumps({
-                    "clients": [
-                        {
-                            "id": new_client["id"],
-                            "flow": "",  # ❗ Убираем flow для xhttp
-                            "email": new_client.get("email", ""),
-                            "limitIp": LIMIT,
-                            "totalGB": 0,
-                            "expiryTime": 0,
-                            "enable": True,
-                            "tgId": new_client.get("tgId", ""),
-                            "subId": sub_id,
-                            "comment": "",
-                            "reset": 0
-                        }
-                    ],
-                    "decryption": "none",
-                    "fallbacks": []
-                }),
-                "streamSettings": json.dumps({
-                    "network": "xhttp",  # ❗ Изменено с tcp на xhttp
-                    "security": "reality",
-                    "externalProxy": [],
-                    "realitySettings": {
-                        "show": False,
-                        "xver": 0,
-                        "dest": "github.com:443",
-                        "serverNames": ["github.com", "www.github.com"],
-                        "privateKey": private_key,
-                        "minClientVer": "",  # ❗ Обновлено название поля
-                        "maxClientVer": "",  # ❗ Обновлено название поля
-                        "maxTimediff": 0,
-                        "shortIds": generated_short_ids,
-                        "mldsa65Seed": "",  # ❗ Новое поле
-                        "settings": {
-                            "publicKey": public_key,
-                            "fingerprint": "chrome",
-                            "serverName": "",
-                            "spiderX": "",
-                            "mldsa65Verify": ""  # ❗ Новое поле
-                        }
-                    },
-                    # ❗ Новые настройки xhttp вместо tcpSettings
-                    "xhttpSettings": {
-                        "path": xhttp_path,
-                        "host": "",
-                        "headers": {},
-                        "scMaxBufferedPosts": 30,
-                        "scMaxEachPostBytes": "1000000",
-                        "scStreamUpServerSecs": "20-80",
-                        "noSSEHeader": False,
-                        "xPaddingBytes": "100-1000",
-                        "mode": "auto"
-                    }
-                }),
-                "sniffing": json.dumps({
-                    "enabled": False,  # ❗ Изменено на False
-                    "destOverride": ["http", "tls", "quic", "fakedns"],
-                    "metadataOnly": False,
-                    "routeOnly": False
-                }),
-                "allocate": json.dumps({
-                    "strategy": "always",
-                    "refresh": 5,
-                    "concurrency": 3
-                })
-            }
-
-            try:
-                async with session.post(
-                        create_api_url,
-                        cookies=cookies,
-                        json=new_vless_key_data,
-                        ssl=False
-                ) as response:
+                async with session.post(add_client_url, cookies=cookies, json=payload, ssl=False) as response:
                     if response.status == 200:
                         response_data = await response.json()
-                        selected_short_id = random.choice(generated_short_ids)
-                        return response_data, port, selected_short_id, xhttp_path
+                        if response_data.get("success"):
+                            url_config = self.generate_vless_link_for_client(client_uuid, server_name, main_inbound)
+                            print(f"Client {email} successfully added to inbound {inbound_id}")
+                            return client_uuid, email, url_config
+                        else:
+                            print(f"API Error: {response_data.get('msg', 'Unknown error')}")
+                            return None, None, False
 
-                    elif response.status == 400 and "port already in use" in (await response.text()).lower():
-                        print(f"Port {port} is already in use, trying a new port...")
-                        continue
+                    elif response.status == 401:
+                        cookies = await get_session_cookie(self.server_ip)
+                        async with session.post(add_client_url, cookies=cookies, json=payload,
+                                                ssl=False) as retry_response:
+                            if retry_response.status == 200:
+                                response_data = await retry_response.json()
+                                return client_uuid, email, response_data.get("success", False)
+                            return None, None, False
                     else:
-                        retries += 1
-                        if retries >= max_retries:
-                            raise aiohttp.ClientResponseError(
-                                response.request_info, response.history,
-                                status=response.status, message=await response.text()
-                            )
-                        print(f"Error creating VLESS key: {response.status} (attempt {retries}/{max_retries})")
-                        await asyncio.sleep(1)
-            except aiohttp.ClientError as e:
-                retries += 1
-                if retries >= max_retries:
-                    print(f"An error occurred during the request: {e}")
-                    raise
-                print(f"Client error: {e} (attempt {retries}/{max_retries})")
-                await asyncio.sleep(1)
+                        error_text = await response.text()
+                        print(f"Error adding client: {response.status}, {error_text}")
+                        return None, None, False
 
-    async def manage_vless_key(self, tg_id, username, server_name):
+            except Exception as e:
+                print(f"Exception during add client request: {e}")
+                return None, None, False
+
+    async def update_client_status(self, client_uuid: str, email: str, user_id: int, enable: bool):
         """
-        Управляет созданием VLESS ключа для обновленной панели 3x-ui.
-
-        Args:
-            tg_id: Telegram ID пользователя
-            username: имя пользователя
-            server_name: название сервера
+        Включает или выключает клиента в инбаунде.
 
         Returns:
-            tuple: (vless_link, key_id, email)
+            bool: успешность операции
         """
-        max_retries = 3
-        retries = 0
+        update_client_url = f"{self.base_url}/inbound/updateClient/{client_uuid}"
 
-        while retries < max_retries:
-            try:
-                async with aiohttp.ClientSession() as session:
-                    client_id = self.generate_uuid()
-                    email = self.generate_short_id()  # Используем короткий ID как email
+        try:
+            main_inbound = await self.get_or_create_port_443_inbound()
+            inbound_id = main_inbound["id"]
 
-                    new_client = {
-                        "id": client_id,
+            payload = {
+                "id": inbound_id,
+                "settings": json.dumps({
+                    "clients": [{
+                        "id": client_uuid,
+                        "flow": "",
                         "email": email,
                         "limitIp": LIMIT,
                         "totalGB": 0,
                         "expiryTime": 0,
-                        "enable": True,
-                        "tgId": tg_id,
-                        "remark": f"Пользователь: {username}, TgID: {tg_id}"
-                    }
+                        "enable": enable,
+                        "tgId": str(user_id),
+                        "subId": str(user_id),
+                        "comment": f"TgID: {user_id}",
+                        "reset": 0
+                    }]
+                })
+            }
 
-                    cert_data = await self.get_certificate(session)
-                    response, port, short_id, xhttp_path = await self.create_vless_key(
-                        session,
-                        new_client,
-                        cert_data["privateKey"],
-                        cert_data["publicKey"],
-                    )
+            async with aiohttp.ClientSession() as session:
+                cookies = await get_session_cookie(self.server_ip)
+                async with session.post(update_client_url, cookies=cookies, json=payload, ssl=False) as response:
+                    if response.status == 200:
+                        response_data = await response.json()
+                        if response_data.get("success"):
+                            status = "enabled" if enable else "disabled"
+                            print(f"Client {client_uuid} successfully {status}")
+                            return True
+                        else:
+                            print(f"API Error: {response_data.get('msg', 'Unknown error')}")
+                            return False
 
-                    if not response or 'obj' not in response or 'id' not in response['obj']:
-                        print(f"Invalid response format: {response}")
-                        retries += 1
-                        await asyncio.sleep(1)
-                        continue
+                    elif response.status == 401:
+                        cookies = await get_session_cookie(self.server_ip)
+                        async with session.post(update_client_url, cookies=cookies, json=payload,
+                                                ssl=False) as retry_response:
+                            if retry_response.status == 200:
+                                response_data = await retry_response.json()
+                                return response_data.get("success", False)
+                            return False
+                    else:
+                        error_text = await response.text()
+                        print(f"Error updating client: {response.status}, {error_text}")
+                        return False
 
-                    key_id = response['obj']['id']
+        except Exception as e:
+            print(f"Exception during client update: {e}")
+            return False
 
-                    # Извлекаем публичный ключ из ответа
-                    stream_settings = json.loads(response['obj']['streamSettings'])
-                    actual_public_key = stream_settings['realitySettings']['settings']['publicKey']
-
-                    vless_link = self.generate_vless_link(
-                        client_id=client_id,
-                        port=port,
-                        short_id=short_id,
-                        public_key=actual_public_key,
-                        server_name=server_name,
-                        xhttp_path=xhttp_path,
-                        email=email
-                    )
-                    return vless_link, key_id, email
-
-            except Exception as e:
-                print(f"Error creating VLESS key (attempt {retries + 1}/{max_retries}): {e}")
-                retries += 1
-                await asyncio.sleep(2)
-
-        raise Exception(f"Failed to create VLESS key after {max_retries} attempts")
-
-    def generate_vless_link(self, client_id, port, short_id, public_key, server_name, xhttp_path, email):
+    def generate_vless_link_for_client(self, client_uuid: str, server_name: str, inbound_data: dict):
         """
-        Генерирует VLESS ссылку для нового формата 3x-ui с xhttp протоколом.
+        Генерирует VLESS ссылку для клиента в инбаунде.
 
         Args:
-            client_id: UUID клиента
-            port: порт подключения
-            short_id: короткий ID для Reality
-            public_key: публичный ключ Reality
+            client_uuid: UUID клиента
             server_name: название сервера
-            xhttp_path: путь для xhttp соединения
-            email: идентификатор клиента
+            inbound_data: данные инбаунда
 
         Returns:
             str: готовая VLESS ссылка
         """
-        return (f"vless://{client_id}@{self.server_ip}:{port}"
-                f"?type=xhttp&path={xhttp_path}&host=&mode=auto"
-                f"&security=reality&pbk={public_key}"
-                f"&fp=chrome&pqv=&sni=github.com&sid={short_id}"
-                f"#{server_name}-VLESS")
+        try:
+            stream_settings = json.loads(inbound_data["streamSettings"])
+            reality_settings = stream_settings["realitySettings"]
+            xhttp_settings = stream_settings["xhttpSettings"]
 
-    def generate_short_id(self, length=8):
-        """Генерирует короткий идентификатор из букв и цифр для email."""
-        characters = string.ascii_lowercase + string.digits
-        return ''.join(random.choice(characters) for _ in range(length))
+            public_key = reality_settings["settings"]["publicKey"]
+            short_ids = reality_settings["shortIds"]
+            xhttp_path = xhttp_settings["path"]
+            port = inbound_data["port"]
 
+            selected_short_id = random.choice(short_ids)
 
-class ShadowsocksKeyManager(BaseKeyManager):
-    async def create_shadowsocks_key(self, session, new_client, new_password, new_port, tg_id, username):
-        create_api_url = f"{self.base_url}/inbound/add"
-        max_retries = 5
-        retries = 0
+            return (f"vless://{client_uuid}@{self.server_ip}:{port}"
+                    f"?type=xhttp&path={xhttp_path}&host=&mode=auto"
+                    f"&security=reality&pbk={public_key}"
+                    f"&fp=chrome&pqv=&sni=github.com&sid={selected_short_id}"
+                    f"#{server_name}-VLESS")
 
-        while True:
-            cookies = await get_session_cookie(self.server_ip)
-
-            new_ss_key_data = {
-                "up": 0,
-                "down": 0,
-                "total": 0,
-                "remark": f"Пользователь: {username}, TgId: {tg_id}",
-                "enable": True,
-                "expiryTime": 0,
-                "listen": "",
-                "port": new_port,
-                "protocol": "shadowsocks",
-                "settings": json.dumps({
-                    "method": "chacha20-ietf-poly1305",
-                    "password": new_password,
-                    "network": "tcp,udp",
-                    "clients": [new_client],
-                    "ivCheck": False
-                }),
-                "streamSettings": json.dumps({
-                    "network": "tcp",
-                    "security": "none",
-                    "tcpSettings": {
-                        "acceptProxyProtocol": False,
-                        "header": {"type": "none"}
-                    },
-                    "externalProxy": []
-                }),
-                "sniffing": json.dumps({
-                    "enabled": True,
-                    "destOverride": ["http", "tls", "quic", "fakedns"],
-                    "metadataOnly": False,
-                    "routeOnly": False
-                }),
-                "allocate": json.dumps({
-                    "strategy": "always",
-                    "refresh": 5,
-                    "concurrency": 3
-                })
-            }
-
-            try:
-                async with session.post(
-                        create_api_url,
-                        cookies=cookies,
-                        json=new_ss_key_data,
-                        ssl=False
-                ) as response:
-                    if response.status == 200:
-                        response_data = await response.json()
-                        response_data['password'] = new_password
-                        return response_data
-                    elif response.status == 401:
-                        # Если ошибка авторизации, перезапрашиваем куки
-                        print("Cookies expired, re-authenticating...")
-                        cookies = await get_session_cookie(self.server_ip)
-                        if not cookies:
-                            raise Exception("Re-authentication failed.")
-                    elif response.status == 400 and "port already in use" in (await response.text()).lower():
-                        print(f"Port {new_port} is already in use, trying a new port...")
-                        new_port = self.generate_port()
-                        continue
-                    else:
-                        retries += 1
-                        if retries >= max_retries:
-                            raise aiohttp.ClientResponseError(
-                                response.request_info, response.history,
-                                status=response.status, message=await response.text()
-                            )
-                        print(f"Error creating Shadowsocks key: {response.status} (attempt {retries}/{max_retries})")
-                        await asyncio.sleep(1)
-            except aiohttp.ClientError as e:
-                retries += 1
-                if retries >= max_retries:
-                    print(f"An error occurred during the request: {e}")
-                    raise
-                print(f"Client error: {e} (attempt {retries}/{max_retries})")
-                await asyncio.sleep(1)
-
-    async def manage_shadowsocks_key(self, tg_id, username, server_name):
-        max_retries = 3
-        retries = 0
-
-        while retries < max_retries:
-            try:
-                async with aiohttp.ClientSession() as session:
-                    new_port = self.generate_port()
-                    new_password = base64.b64encode(os.urandom(32)).decode('utf-8')
-                    email = self.generate_short_id()
-                    method = "chacha20-ietf-poly1305"
-
-                    new_client = {
-                        "method": method,
-                        "password": new_password,
-                        "email": email,
-                        "limitIp": LIMIT,
-                        "totalGB": 0,
-                        "expiryTime": 0,
-                        "enable": True,
-                        "tgId": tg_id,
-                        "subId": self.generate_subid(),
-                        "comment": "",
-                        "reset": 0
-                    }
-
-                    response = await self.create_shadowsocks_key(session, new_client, new_password, new_port, tg_id,
-                                                                 username)
-
-                    if not response or 'obj' not in response or 'id' not in response['obj']:
-                        print(f"Invalid response format: {response}")
-                        retries += 1
-                        await asyncio.sleep(1)
-                        continue
-
-                    key_id = response['obj']['id']
-                    ss_link = self.generate_ss_link(new_port, new_password, method, key_id, server_name)
-                    return ss_link, key_id, email
-
-            except Exception as e:
-                print(f"Error creating Shadowsocks key (attempt {retries + 1}/{max_retries}): {e}")
-                retries += 1
-                await asyncio.sleep(2)
-
-        # Если после всех попыток ключ не создан
-        raise Exception(f"Failed to create Shadowsocks key after {max_retries} attempts")
-
-    def generate_ss_link(self, port, password, method, key_id, server_name):
-        user_info = f"{method}:{password}".encode()
-        user_info_base64 = base64.b64encode(user_info).decode()
-        return f"ss://{user_info_base64}@{self.server_ip}:{port}?prefix=POST%20&type=tcp#{server_name} - Shadowsocks"
-
-    def generate_short_id(self, length=8):
-        """Генерирует короткий идентификатор из букв и цифр."""
-        characters = string.ascii_lowercase + string.digits
-        return ''.join(random.choice(characters) for _ in range(length))
-
-    def generate_subid(self, length=16):
-        """Генерирует ID подписки из букв и цифр."""
-        characters = string.ascii_lowercase + string.digits
-        return ''.join(random.choice(characters) for _ in range(length))
+        except Exception as e:
+            print(f"Error generating VLESS link: {e}")
+            raise

@@ -6,7 +6,6 @@ from aiogram import Bot
 from database.context_manager import DatabaseContextManager
 from handlers.services.extend_latest_subscription import extend_user_subscription
 from logger.logging_config import logger
-from models.models import Gifts
 
 
 async def gift_checker(bot: Bot):

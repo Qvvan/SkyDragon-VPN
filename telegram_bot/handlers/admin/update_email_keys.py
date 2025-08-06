@@ -1,8 +1,8 @@
-from aiogram import Router, types, F
-from aiogram.filters import Command
-from aiogram.fsm.context import FSMContext
 import asyncio
 import time
+
+from aiogram import Router, types
+from aiogram.filters import Command
 
 from config_data.config import ADMIN_IDS
 from database.context_manager import DatabaseContextManager
