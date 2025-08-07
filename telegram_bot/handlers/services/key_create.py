@@ -1,16 +1,20 @@
+# ssh_key_create.py
 import asyncio
 import json
 import random
 import secrets
 import string
 import uuid
+from typing import Optional, Tuple
 
 import aiohttp
 
-from config_data.config import MY_SECRET_URL, PORT_X_UI
-from handlers.services.get_session_cookies import get_session_cookie
+from config_data.config import MY_SECRET_URL, LOGIN_X_UI_PANEL, PASSWORD_X_UI_PANEL
+from logger.logging_config import logger
+from .ssh_tunnel_manager import SSHTunnelManager
 
 LIMIT = 2
+cookies_store = {}
 
 
 class ServerUnavailableError(Exception):
@@ -19,34 +23,93 @@ class ServerUnavailableError(Exception):
 
 
 class BaseKeyManager:
+    """SSH версия BaseKeyManager - только нужные методы"""
+
     def __init__(self, server_ip):
         self.server_ip = server_ip
-        self.base_url = f"https://{server_ip}:{PORT_X_UI}/{MY_SECRET_URL}/panel"
-        self.get_cert_api_url = f"https://{server_ip}:{PORT_X_UI}/{MY_SECRET_URL}/server/getNewX25519Cert"
+        self.tunnel_manager = SSHTunnelManager()
+
+    async def _get_ssh_session_cookie(self):
+        """
+        Адаптирует get_session_cookie для работы через SSH туннель
+        """
+
+        ssh_key = f"ssh_{self.server_ip}"
+        if ssh_key in cookies_store:
+            if await self._make_ssh_request_with_cookies():
+                return cookies_store[ssh_key]
+
+        tunnel_port = await self.tunnel_manager.get_tunnel_port(self.server_ip)
+        if not tunnel_port:
+            return None
+
+        # Логинимся через туннель
+        url = f"https://localhost:{tunnel_port}/{MY_SECRET_URL}/login"
+        payload = {
+            "username": LOGIN_X_UI_PANEL,
+            "password": PASSWORD_X_UI_PANEL
+        }
+        timeout = aiohttp.ClientTimeout(connect=2, total=5)
+
+        for attempt in range(2):  # RETRIES = 2
+            try:
+                connector = aiohttp.TCPConnector(ssl=False)
+                async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+                    async with session.post(url, data=payload, ssl=False) as response:
+                        if response.status == 200:
+                            cookies = response.cookies
+                            cookies_store[ssh_key] = cookies  # Сохраняем с SSH префиксом
+                            await logger.info(f"SSH cookies получены для {self.server_ip}")
+                            return cookies
+            except asyncio.TimeoutError:
+                await logger.info(f"SSH timeout для {self.server_ip}. Повтор...")
+            except aiohttp.ClientError as e:
+                await logger.info(f"SSH ошибка запроса для {self.server_ip}: {e}")
+
+            if attempt < 1:  # RETRIES - 1
+                await asyncio.sleep(1)  # DELAY = 1
+
+        await logger.log_error(f"SSH ошибка получения cookies для {self.server_ip}", None)
+        return None
+
+    async def _make_ssh_request_with_cookies(self):
+        """
+        Адаптирует make_request_with_cookies для работы через SSH туннель
+        """
+        ssh_key = f"ssh_{self.server_ip}"
+        cookies = cookies_store.get(ssh_key)
+        if not cookies:
+            return False
+
+        tunnel_port = await self.tunnel_manager.get_tunnel_port(self.server_ip)
+        if not tunnel_port:
+            return False
+
+        url = f"https://localhost:{tunnel_port}/{MY_SECRET_URL}/panel/"
+        timeout = aiohttp.ClientTimeout(connect=2, total=5)
+
+        try:
+            connector = aiohttp.TCPConnector(ssl=False)
+            async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+                async with session.get(url, cookies=cookies, ssl=False) as response:
+                    return response.status == 200
+        except Exception as e:
+            await logger.info(f"SSH ошибка проверки cookies для {self.server_ip}: {e}")
+            return False
 
     @staticmethod
     def generate_uuid():
         """Генерирует UUID для клиентов."""
         return str(uuid.uuid4())
 
-    @staticmethod
-    def generate_port():
-        """Генерирует случайный порт в диапазоне 10000-65535."""
-        return random.randint(10000, 65535)
-
     def generate_short_ids(self, count=8):
-        """
-        Генерирует массив shortIds в hex формате разной длины.
-        Формат: от 2 до 16 символов hex для Reality протокола.
-        """
+        """Генерирует массив shortIds в hex формате разной длины."""
         short_ids = []
         possible_lengths = [2, 4, 6, 8, 10, 12, 14, 16]
-
         for _ in range(count):
             length = random.choice(possible_lengths)
             short_id = secrets.token_hex(length // 2)
             short_ids.append(short_id)
-
         return short_ids
 
     def generate_short_id(self, length=8):
@@ -54,16 +117,56 @@ class BaseKeyManager:
         characters = string.ascii_lowercase + string.digits
         return ''.join(random.choice(characters) for _ in range(length))
 
-    def generate_subid(self, length=16):
-        """Генерирует ID подписки из букв и цифр."""
-        characters = string.ascii_lowercase + string.digits
-        return ''.join(random.choice(characters) for _ in range(length))
+    async def get_certificate(self):
+        """Получает X25519 сертификат для Reality протокола через SSH туннель."""
+        tunnel_port = await self.tunnel_manager.get_tunnel_port(self.server_ip)
+        if not tunnel_port:
+            raise ServerUnavailableError(f"SSH туннель недоступен для {self.server_ip}")
+
+        get_cert_api_url = f"https://localhost:{tunnel_port}/{MY_SECRET_URL}/server/getNewX25519Cert"
+        max_retries = 3
+
+        for attempt in range(max_retries):
+            try:
+                cookies = await self._get_ssh_session_cookie()
+                if not cookies:
+                    await asyncio.sleep(1)
+                    continue
+
+                connector = aiohttp.TCPConnector(ssl=False)
+                async with aiohttp.ClientSession(connector=connector) as session:
+                    async with session.post(get_cert_api_url, cookies=cookies, ssl=False) as response:
+                        if response.status == 200:
+                            cert_data = await response.json()
+                            if cert_data.get("success"):
+                                await logger.info(f"SSH сертификат получен для {self.server_ip}")
+                                return cert_data["obj"]
+
+                await logger.warning(
+                    f"SSH попытка получения сертификата {attempt + 1}/{max_retries} для {self.server_ip}")
+                await asyncio.sleep(1)
+
+            except Exception as e:
+                await logger.log_error(
+                    f"SSH ошибка получения сертификата (попытка {attempt + 1}/{max_retries}) для {self.server_ip}", e)
+                await asyncio.sleep(1)
+
+        raise ServerUnavailableError(
+            f"SSH не удалось получить сертификат после {max_retries} попыток для {self.server_ip}")
 
     async def get_inbounds(self):
-        """Получает список всех инбаундов."""
-        list_api_url = f"{self.base_url}/inbound/list"
-        cookies = await get_session_cookie(self.server_ip)
-        async with aiohttp.ClientSession() as session:
+        """Получает список всех инбаундов через SSH туннель."""
+        tunnel_port = await self.tunnel_manager.get_tunnel_port(self.server_ip)
+        if not tunnel_port:
+            raise ServerUnavailableError(f"SSH туннель недоступен для {self.server_ip}")
+
+        list_api_url = f"https://localhost:{tunnel_port}/{MY_SECRET_URL}/panel/inbound/list"
+        cookies = await self._get_ssh_session_cookie()
+        if not cookies:
+            raise ServerUnavailableError(f"SSH cookies недоступны для {self.server_ip}")
+
+        connector = aiohttp.TCPConnector(ssl=False)
+        async with aiohttp.ClientSession(connector=connector) as session:
             async with session.post(list_api_url, cookies=cookies, ssl=False) as response:
                 if response.status == 200:
                     return await response.json()
@@ -74,10 +177,18 @@ class BaseKeyManager:
                     )
 
     async def get_inbound_by_id(self, inbound_id):
-        """Получает данные инбаунда по ID."""
-        get_inbound_api_url = f"{self.base_url}/api/inbounds/get/{inbound_id}"
-        cookies = await get_session_cookie(self.server_ip)
-        async with aiohttp.ClientSession() as session:
+        """Получает данные инбаунда по ID через SSH туннель."""
+        tunnel_port = await self.tunnel_manager.get_tunnel_port(self.server_ip)
+        if not tunnel_port:
+            raise ServerUnavailableError(f"SSH туннель недоступен для {self.server_ip}")
+
+        get_inbound_api_url = f"https://localhost:{tunnel_port}/{MY_SECRET_URL}/panel/api/inbounds/get/{inbound_id}"
+        cookies = await self._get_ssh_session_cookie()
+        if not cookies:
+            raise ServerUnavailableError(f"SSH cookies недоступны для {self.server_ip}")
+
+        connector = aiohttp.TCPConnector(ssl=False)
+        async with aiohttp.ClientSession(connector=connector) as session:
             async with session.get(get_inbound_api_url, cookies=cookies, ssl=False) as response:
                 if response.status == 200:
                     return await response.json()
@@ -88,10 +199,18 @@ class BaseKeyManager:
                     )
 
     async def get_online_users(self):
-        """Получает список онлайн пользователей."""
-        url = f"{self.base_url}/inbound/onlines"
-        cookies = await get_session_cookie(self.server_ip)
-        async with aiohttp.ClientSession() as session:
+        """Получает список онлайн пользователей через SSH туннель."""
+        tunnel_port = await self.tunnel_manager.get_tunnel_port(self.server_ip)
+        if not tunnel_port:
+            raise ServerUnavailableError(f"SSH туннель недоступен для {self.server_ip}")
+
+        url = f"https://localhost:{tunnel_port}/{MY_SECRET_URL}/panel/inbound/onlines"
+        cookies = await self._get_ssh_session_cookie()
+        if not cookies:
+            raise ServerUnavailableError(f"SSH cookies недоступны для {self.server_ip}")
+
+        connector = aiohttp.TCPConnector(ssl=False)
+        async with aiohttp.ClientSession(connector=connector) as session:
             async with session.post(url, cookies=cookies, ssl=False) as response:
                 if response.status == 200:
                     return await response.json()
@@ -101,50 +220,22 @@ class BaseKeyManager:
                         status=response.status, message=await response.text()
                     )
 
-    async def get_certificate(self):
-        """Получает X25519 сертификат для Reality протокола."""
-        max_retries = 3
-        retries = 0
-
-        async with aiohttp.ClientSession() as session:
-            while retries < max_retries:
-                try:
-                    cookies = await get_session_cookie(self.server_ip)
-                    async with session.post(self.get_cert_api_url, cookies=cookies, ssl=False) as response:
-                        if response.status == 200:
-                            cert_data = await response.json()
-                            if cert_data.get("success"):
-                                return cert_data["obj"]
-                        print(f"Certificate generation failed (attempt {retries + 1}/{max_retries})")
-                        retries += 1
-                        await asyncio.sleep(1)
-                except Exception as e:
-                    print(f"Certificate request failed (attempt {retries + 1}/{max_retries}): {e}")
-                    retries += 1
-                    await asyncio.sleep(1)
-
-            raise ValueError("Failed to generate certificate after multiple attempts")
-
     async def get_or_create_port_443_inbound(self):
-        """
-        Получает инбаунд с портом 443, создает если не существует.
-
-        Returns:
-            dict: данные инбаунда с портом 443
-        """
+        """Получает инбаунд с портом 443, создает если не существует через SSH туннель."""
         # Ищем существующий инбаунд с портом 443
         try:
             inbounds_data = await self.get_inbounds()
             if inbounds_data and inbounds_data.get("success"):
                 for inbound in inbounds_data.get("obj", []):
                     if inbound.get("port") == 443:
-                        print(f"Found existing inbound with port 443, ID: {inbound['id']}")
+                        await logger.info(
+                            f"SSH найден существующий inbound с портом 443 для {self.server_ip}, ID: {inbound['id']}")
                         return inbound
         except Exception as e:
-            print(f"Error checking existing inbounds: {e}")
+            await logger.log_error(f"SSH ошибка проверки существующих inbounds для {self.server_ip}", e)
 
         # Создаем новый инбаунд с портом 443
-        print("Creating new inbound with port 443...")
+        await logger.info(f"SSH создание нового inbound с портом 443 для {self.server_ip}")
 
         cert_data = await self.get_certificate()
         generated_short_ids = self.generate_short_ids()
@@ -212,18 +303,26 @@ class BaseKeyManager:
             })
         }
 
-        create_api_url = f"{self.base_url}/inbound/add"
-        cookies = await get_session_cookie(self.server_ip)
+        tunnel_port = await self.tunnel_manager.get_tunnel_port(self.server_ip)
+        if not tunnel_port:
+            raise ServerUnavailableError(f"SSH туннель недоступен для {self.server_ip}")
 
-        async with aiohttp.ClientSession() as session:
+        create_api_url = f"https://localhost:{tunnel_port}/{MY_SECRET_URL}/panel/inbound/add"
+        cookies = await self._get_ssh_session_cookie()
+        if not cookies:
+            raise ServerUnavailableError(f"SSH cookies недоступны для {self.server_ip}")
+
+        connector = aiohttp.TCPConnector(ssl=False)
+        async with aiohttp.ClientSession(connector=connector) as session:
             async with session.post(create_api_url, cookies=cookies, json=inbound_data, ssl=False) as response:
                 if response.status == 200:
                     response_data = await response.json()
                     if response_data.get("success"):
-                        print(f"Successfully created inbound with port 443, ID: {response_data['obj']['id']}")
+                        await logger.info(
+                            f"SSH успешно создан inbound с портом 443 для {self.server_ip}, ID: {response_data['obj']['id']}")
                         return response_data["obj"]
                     else:
-                        raise Exception(f"API Error: {response_data.get('msg', 'Unknown error')}")
+                        raise Exception(f"SSH API Error: {response_data.get('msg', 'Unknown error')}")
                 elif response.status == 400:
                     error_text = await response.text()
                     if "port already in use" in error_text.lower():
@@ -234,34 +333,17 @@ class BaseKeyManager:
                             for inbound in inbounds_data.get("obj", []):
                                 if inbound.get("port") == 443:
                                     return inbound
-                        raise Exception("Port 443 is occupied but inbound not found")
+                        raise Exception("SSH порт 443 занят но inbound не найден")
                     else:
-                        raise Exception(f"Bad request: {error_text}")
-                elif response.status == 401:
-                    # Повторяем с новыми cookies
-                    cookies = await get_session_cookie(self.server_ip)
-                    async with session.post(create_api_url, cookies=cookies, json=inbound_data,
-                                            ssl=False) as retry_response:
-                        if retry_response.status == 200:
-                            response_data = await retry_response.json()
-                            if response_data.get("success"):
-                                return response_data["obj"]
-                    raise Exception("Failed to create inbound after session refresh")
+                        raise Exception(f"SSH Bad request: {error_text}")
                 else:
                     error_text = await response.text()
-                    raise Exception(f"HTTP Error {response.status}: {error_text}")
+                    raise Exception(f"SSH HTTP Error {response.status}: {error_text}")
 
     async def add_client_to_inbound(self, tg_id: str, server_name: str):
-        """
-        Добавляет нового клиента в существующий инбаунд.
-        Returns:
-            tuple: (client_uuid, email, success)
-        """
-        add_client_url = f"{self.base_url}/inbound/addClient"
-
+        """Добавляет нового клиента в существующий инбаунд через SSH туннель."""
         client_uuid = self.generate_uuid()
         email = self.generate_short_id()
-        sub_id = self.generate_subid()
 
         new_client = {
             "id": client_uuid,
@@ -287,111 +369,37 @@ class BaseKeyManager:
             })
         }
 
-        async with aiohttp.ClientSession() as session:
-            try:
-                cookies = await get_session_cookie(self.server_ip)
-                async with session.post(add_client_url, cookies=cookies, json=payload, ssl=False) as response:
-                    if response.status == 200:
-                        response_data = await response.json()
-                        if response_data.get("success"):
-                            url_config = self.generate_vless_link_for_client(client_uuid, server_name, main_inbound)
-                            print(f"Client {email} successfully added to inbound {inbound_id}")
-                            return client_uuid, email, url_config
-                        else:
-                            print(f"API Error: {response_data.get('msg', 'Unknown error')}")
-                            return None, None, False
+        tunnel_port = await self.tunnel_manager.get_tunnel_port(self.server_ip)
+        if not tunnel_port:
+            return None, None, False
 
-                    elif response.status == 401:
-                        cookies = await get_session_cookie(self.server_ip)
-                        async with session.post(add_client_url, cookies=cookies, json=payload,
-                                                ssl=False) as retry_response:
-                            if retry_response.status == 200:
-                                response_data = await retry_response.json()
-                                return client_uuid, email, response_data.get("success", False)
-                            return None, None, False
+        add_client_url = f"https://localhost:{tunnel_port}/{MY_SECRET_URL}/panel/inbound/addClient"
+        cookies = await self._get_ssh_session_cookie()
+        if not cookies:
+            return None, None, False
+
+        connector = aiohttp.TCPConnector(ssl=False)
+        async with aiohttp.ClientSession(connector=connector) as session:
+            async with session.post(add_client_url, cookies=cookies, json=payload, ssl=False) as response:
+                if response.status == 200:
+                    response_data = await response.json()
+                    if response_data.get("success"):
+                        url_config = self.generate_vless_link_for_client(client_uuid, server_name, main_inbound)
+                        await logger.info(
+                            f"SSH клиент {email} успешно добавлен в inbound {inbound_id} на {self.server_ip}")
+                        return client_uuid, email, url_config
                     else:
-                        error_text = await response.text()
-                        print(f"Error adding client: {response.status}, {error_text}")
+                        await logger.log_error(f"SSH API Error при добавлении клиента на {self.server_ip}",
+                                               response_data.get('msg', 'Unknown error'))
                         return None, None, False
-
-            except Exception as e:
-                print(f"Exception during add client request: {e}")
-                return None, None, False
-
-    async def update_client_status(self, client_uuid: str, email: str, user_id: int, enable: bool):
-        """
-        Включает или выключает клиента в инбаунде.
-
-        Returns:
-            bool: успешность операции
-        """
-        update_client_url = f"{self.base_url}/inbound/updateClient/{client_uuid}"
-
-        try:
-            main_inbound = await self.get_or_create_port_443_inbound()
-            inbound_id = main_inbound["id"]
-
-            payload = {
-                "id": inbound_id,
-                "settings": json.dumps({
-                    "clients": [{
-                        "id": client_uuid,
-                        "flow": "",
-                        "email": email,
-                        "limitIp": LIMIT,
-                        "totalGB": 0,
-                        "expiryTime": 0,
-                        "enable": enable,
-                        "tgId": str(user_id),
-                        "subId": str(user_id),
-                        "comment": f"TgID: {user_id}",
-                        "reset": 0
-                    }]
-                })
-            }
-
-            async with aiohttp.ClientSession() as session:
-                cookies = await get_session_cookie(self.server_ip)
-                async with session.post(update_client_url, cookies=cookies, json=payload, ssl=False) as response:
-                    if response.status == 200:
-                        response_data = await response.json()
-                        if response_data.get("success"):
-                            status = "enabled" if enable else "disabled"
-                            print(f"Client {client_uuid} successfully {status}")
-                            return True
-                        else:
-                            print(f"API Error: {response_data.get('msg', 'Unknown error')}")
-                            return False
-
-                    elif response.status == 401:
-                        cookies = await get_session_cookie(self.server_ip)
-                        async with session.post(update_client_url, cookies=cookies, json=payload,
-                                                ssl=False) as retry_response:
-                            if retry_response.status == 200:
-                                response_data = await retry_response.json()
-                                return response_data.get("success", False)
-                            return False
-                    else:
-                        error_text = await response.text()
-                        print(f"Error updating client: {response.status}, {error_text}")
-                        return False
-
-        except Exception as e:
-            print(f"Exception during client update: {e}")
-            return False
+                else:
+                    error_text = await response.text()
+                    await logger.log_error(f"SSH ошибка добавления клиента на {self.server_ip}: {response.status}",
+                                           error_text)
+                    return None, None, False
 
     def generate_vless_link_for_client(self, client_uuid: str, server_name: str, inbound_data: dict):
-        """
-        Генерирует VLESS ссылку для клиента в инбаунде.
-
-        Args:
-            client_uuid: UUID клиента
-            server_name: название сервера
-            inbound_data: данные инбаунда
-
-        Returns:
-            str: готовая VLESS ссылка
-        """
+        """Генерирует VLESS ссылку для клиента в инбаунде."""
         try:
             stream_settings = json.loads(inbound_data["streamSettings"])
             reality_settings = stream_settings["realitySettings"]
@@ -411,5 +419,19 @@ class BaseKeyManager:
                     f"#{server_name}-VLESS")
 
         except Exception as e:
-            print(f"Error generating VLESS link: {e}")
-            raise
+            raise Exception(f"SSH ошибка генерации VLESS ссылки: {e}")
+
+    # Основной метод для совместимости с твоим кодом
+    async def manage_vless_key(self, tg_id: str, username: str, server_name: str) -> Tuple[
+        Optional[str], Optional[str], Optional[str]]:
+        """Главный метод для создания VLESS ключа через SSH"""
+        try:
+            client_uuid, email, vless_url = await self.add_client_to_inbound(tg_id, server_name)
+            if vless_url:
+                await logger.info(f"SSH VLESS ключ создан для {username} на {self.server_ip}")
+                return vless_url, client_uuid, email
+            else:
+                return None, None, None
+        except Exception as e:
+            await logger.log_error(f"SSH ошибка создания VLESS ключа для {username} на {self.server_ip}", e)
+            return None, None, None

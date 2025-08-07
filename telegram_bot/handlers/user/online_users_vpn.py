@@ -5,7 +5,7 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 
 from config_data.config import PORT_X_UI
 from database.context_manager import DatabaseContextManager
-from handlers.services.get_session_cookies import get_session_cookie
+from handlers.services.key_create import BaseKeyManager
 from logger.logging_config import logger
 
 router = Router()
@@ -22,7 +22,8 @@ async def get_online_users(message: Message):
                 for server in servers:
                     try:
                         url = f"https://{server.server_ip}:{PORT_X_UI}/0PkmGmepRhDqrFJ/panel/inbound/onlines"
-                        cookies = await get_session_cookie(server.server_ip)
+                        base = BaseKeyManager(server.server_ip)
+                        cookies = await base._get_ssh_session_cookie()
 
                         if not cookies:
                             answer += f"\n{server.name}: Не удалось получить данные авторизации"
@@ -72,7 +73,8 @@ async def callback_get_support(callback: CallbackQuery):
                 for server in servers:
                     try:
                         url = f"https://{server.server_ip}:{PORT_X_UI}/0PkmGmepRhDqrFJ/panel/inbound/onlines"
-                        cookies = await get_session_cookie(server.server_ip)
+                        base = BaseKeyManager(server.server_ip)
+                        cookies = await base._get_ssh_session_cookie()
 
                         if not cookies:
                             answer += f"\n{server.name}: Не удалось получить данные авторизации"

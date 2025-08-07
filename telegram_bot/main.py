@@ -11,6 +11,7 @@ from handlers.admin import add_server, user_info, cancel, pushes, show_servers, 
     add_gift, message_for_user, update_email_keys, update_key_in_profile, update_key_profile
 from handlers.services import guide_install, trial_subscription
 from handlers.services.card_service import payment_status_checker
+from handlers.services.ssh_tunnel_manager import SSHTunnelManager
 from handlers.user import start, support, createorder, online_users_vpn
 from handlers.user import subs, referrer, menu, just_message, gift_sub, \
     send_stikers, history_payments
@@ -24,7 +25,11 @@ from utils.check_servers import ping_servers
 from utils.gift_checker import run_gift_checker
 from utils.subscription_checker import run_checker
 from utils.trial_checker import run_trial_checker
+import atexit
 
+def cleanup_tunnels():
+    tunnel_manager = SSHTunnelManager()
+    tunnel_manager.cleanup()
 
 async def on_startup(bot: Bot):
     """Оповещение администраторов о запуске бота."""
@@ -106,6 +111,8 @@ async def main():
     asyncio.create_task(run_gift_checker(bot))
     asyncio.create_task(run_checker_connect(bot))
     asyncio.create_task(run_multiple_connections_checker(bot))
+
+    atexit.register(cleanup_tunnels)
 
     await bot.delete_webhook(drop_pending_updates=True)
     try:
