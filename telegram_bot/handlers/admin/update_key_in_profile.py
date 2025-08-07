@@ -1,214 +1,157 @@
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
+from collections import defaultdict
 
 from config_data.config import ADMIN_IDS
 from database.context_manager import DatabaseContextManager
 from filters.admin import IsAdmin
-from handlers.services.key_create import VlessKeyManager, ShadowsocksKeyManager
+from handlers.services.key_create import BaseKeyManager
 from logger.logging_config import logger
 from models.models import Keys, NameApp
 
 router = Router()
 
-NEW_SERVER_IP = "212.69.85.16"
-SERVER_NAME = "🇳🇱 Нидерланды"
-
 
 @router.message(Command(commands="update_profile"), IsAdmin(ADMIN_IDS))
 async def update_profile(message: Message):
-    """Обновляет профили пользователей, добавляя ключи для нового сервера."""
+    """
+    Создает недостающие ключи для всех пользователей на всех серверах.
+    Оптимизированная версия для обработки больших объемов данных.
+    """
 
-    processed_count = 0
+    processed_users = 0
+    created_keys = 0
     error_count = 0
 
     async with DatabaseContextManager() as session_methods:
         try:
-            # Получаем существующие ключи (исключая новый сервер)
-            existing_keys = await session_methods.keys.get_all_keys()
-            existing_key_ids = {
-                key.id for key in existing_keys
-                if key.server_ip != NEW_SERVER_IP
-            }
+            # ✅ Загружаем все данные одним запросом
+            servers = await session_methods.servers.get_all_servers()
+            active_servers = [s for s in servers if s.hidden != 1]
 
-            # Получаем подписки из БД
-            subscriptions = await session_methods.subscription.get_subs()
-            await logger.info(f"Найдено {len(subscriptions)} подписок для обработки")
+            all_keys = await session_methods.keys.get_all_keys()
+            all_subscriptions = await session_methods.subscription.get_subs()
 
-            # ✅ КРИТИЧНО: Извлекаем ВСЕ данные из SQLAlchemy объектов ДО цикла
-            subscription_data = []
-            for sub in subscriptions:
-                subscription_data.append({
-                    'subscription_id': sub.subscription_id,
-                    'user_id': sub.user_id,
-                    'key_ids': list(sub.key_ids) if sub.key_ids else []
-                })
+            await logger.info(f"Обрабатываем {len(active_servers)} серверов и {len(all_subscriptions)} подписок")
 
-            # Обрабатываем каждую подписку, используя извлечённые данные
-            for sub_data in subscription_data:
+            # ✅ Группируем ключи по пользователям и серверам для быстрого поиска
+            user_keys_by_server = defaultdict(lambda: defaultdict(list))
+            for key in all_keys:
+                # Получаем user_id из подписок (так как в Keys его нет напрямую)
+                for sub in all_subscriptions:
+                    if key.id in (sub.key_ids or []):
+                        user_keys_by_server[sub.user_id][key.server_ip].append(key)
+                        break
+
+            # ✅ Обрабатываем каждую подписку
+            for subscription in all_subscriptions:
                 try:
-                    result = await _process_subscription(session_methods, sub_data, existing_key_ids)
-                    if result:
-                        processed_count += 1
+                    user_id = subscription.user_id
+
+                    # Получаем пользователя для username
+                    user = await session_methods.users.get_user(user_id=user_id)
+                    if not user:
+                        continue
+
+                    new_key_ids = []
+                    user_servers = user_keys_by_server[user_id]
+
+                    # ✅ Проверяем каждый сервер
+                    for server in active_servers:
+                        server_ip = server.server_ip
+
+                        # Проверяем есть ли у пользователя ключи на этом сервере
+                        if server_ip not in user_servers or not user_servers[server_ip]:
+                            await logger.info(f"Создаем ключ для пользователя {user_id} на сервере {server_ip}")
+
+                            # ✅ Создаем ключ на этом сервере
+                            key_id = await _create_key_for_server(
+                                session_methods, user_id, server
+                            )
+
+                            if key_id:
+                                new_key_ids.append(key_id)
+                                created_keys += 1
+
+                    # ✅ Обновляем подписку если были созданы новые ключи
+                    if new_key_ids:
+                        current_key_ids = list(subscription.key_ids) if subscription.key_ids else []
+                        updated_key_ids = current_key_ids + new_key_ids
+
+                        await session_methods.subscription.update_sub(
+                            subscription_id=subscription.subscription_id,
+                            key_ids=updated_key_ids
+                        )
+
+                        processed_users += 1
+                        await logger.info(
+                            f"✅ Обновлена подписка для пользователя {user_id}, добавлено {len(new_key_ids)} ключей")
+
                 except Exception as e:
                     error_count += 1
-                    # ✅ Безопасно используем данные из dict
-                    await logger.log_error(
-                        f"Ошибка обработки подписки {sub_data['subscription_id']}",
-                        e
-                    )
+                    await logger.log_error(f"Ошибка обработки пользователя {subscription.user_id}", e)
 
-            # Отправляем отчёт админу
+            # ✅ Коммитим все изменения одной транзакцией
+            await session_methods.session.commit()
+
             await message.answer(
-                f"✅ Обработка завершена:\n"
-                f"• Обработано: {processed_count}\n"
+                f"✅ Обновление профилей завершено:\n"
+                f"• Обработано пользователей: {processed_users}\n"
+                f"• Создано ключей: {created_keys}\n"
                 f"• Ошибок: {error_count}\n"
-                f"• Всего подписок: {len(subscription_data)}"
+                f"• Всего подписок: {len(all_subscriptions)}"
             )
 
         except Exception as e:
+            await session_methods.session.rollback()
             await logger.log_error("Критическая ошибка в update_profile", e)
             await message.answer(f"❌ Критическая ошибка: {str(e)}")
 
 
-async def _process_subscription(session_methods, sub_data: dict, existing_key_ids) -> bool:
+async def _create_key_for_server(session_methods, user_id: int, server) -> int:
     """
-    Обрабатывает одну подписку, используя данные из dict вместо SQLAlchemy объекта.
+    Создает ключ для пользователя на конкретном сервере.
 
     Args:
-        sub_data: dict с полями subscription_id, user_id, key_ids
+        session_methods: методы для работы с БД
+        user_id: ID пользователя
+        server: объект сервера
 
     Returns:
-        bool: True если подписка была обновлена
+        int: ID созданного ключа в БД или None при ошибке
     """
-    # ✅ Используем данные из dict - никаких обращений к SQLAlchemy объектам
-    user_id = sub_data['user_id']
-    subscription_id = sub_data['subscription_id']
-    current_key_ids = sub_data['key_ids']
-
     try:
-        # Проверяем, есть ли у пользователя ключи от нового сервера
-        user_has_new_server_keys = any(
-            key_id not in existing_key_ids
-            for key_id in current_key_ids
-        )
+        # ✅ Создаем ключ через BaseKeyManager
+        key_manager = BaseKeyManager(server.server_ip)
 
-        if user_has_new_server_keys:
-            await logger.info(f"Пользователь {user_id} уже имеет ключи нового сервера")
-            return False
-
-        # Получаем данные пользователя СВЕЖИМ запросом
-        user = await session_methods.users.get_user(user_id=user_id)
-        if not user:
-            await logger.log_error(f"Пользователь {user_id} не найден", None)
-            return False
-
-        # Создаём ключи для нового сервера
-        new_key_ids = await _create_server_keys(
-            session_methods,
-            user_id=user_id,
-            username=user.username
-        )
-
-        if not new_key_ids:
-            await logger.warning(f"Не удалось создать ключи для пользователя {user_id}")
-            return False
-
-        # Обновляем подписку
-        updated_key_ids = current_key_ids + new_key_ids
-
-        await session_methods.subscription.update_sub(
-            subscription_id=subscription_id,
-            key_ids=updated_key_ids
-        )
-
-        # ✅ Коммитим изменения для этой подписки
-        await session_methods.session.commit()
-        await logger.info(f"✅ Обновлена подписка {subscription_id} для пользователя {user_id}")
-        return True
-
-    except Exception as e:
-        # Откатываем изменения
-        await session_methods.session.rollback()
-        await logger.log_error(
-            f"Ошибка обработки подписки {subscription_id} пользователя {user_id}",
-            e
-        )
-        return False
-
-
-async def _create_server_keys(session_methods, user_id: int, username: str) -> list[int]:
-    """Создаёт VLESS и Shadowsocks ключи для указанного пользователя."""
-    created_key_ids = []
-
-    try:
-        # Создаём VLESS ключ
-        vless_key_id = await _create_vless_key(session_methods, user_id, username)
-        if vless_key_id:
-            created_key_ids.append(vless_key_id)
-
-        # Создаём Shadowsocks ключ
-        shadowsocks_key_id = await _create_shadowsocks_key(session_methods, user_id, username)
-        if shadowsocks_key_id:
-            created_key_ids.append(shadowsocks_key_id)
-
-        await logger.info(f"Создано {len(created_key_ids)} ключей для пользователя {user_id}")
-
-    except Exception as e:
-        await logger.log_error(f"Ошибка создания ключей для пользователя {user_id}", e)
-
-    return created_key_ids
-
-
-async def _create_vless_key(session_methods, user_id: int, username: str) -> int | None:
-    """Создаёт VLESS ключ для пользователя."""
-    try:
-        vless_manager = VlessKeyManager(NEW_SERVER_IP)
-        key, key_id, email = await vless_manager.manage_vless_key(
+        client_uuid, email, vless_link = await key_manager.add_client_to_inbound(
             tg_id=str(user_id),
-            username=username,
-            server_name=SERVER_NAME
+            server_name=server.name
         )
 
-        vless_key_record = await session_methods.keys.add_key(
+        if client_uuid is None or vless_link is False:
+            await logger.log_error(f"Не удалось создать клиента на сервере {server.server_ip}", None)
+            return 0
+
+        # ✅ Сохраняем в БД
+        key = await session_methods.keys.add_key(
             Keys(
-                key_id=key_id,
-                key=key,
+                key_id=client_uuid,  # UUID клиента от X-UI
+                key=vless_link,  # VLESS ссылка
+                server_ip=server.server_ip,
                 email=email,
-                server_ip=NEW_SERVER_IP,
-                name_app=NameApp.VLESS
+                name_app=NameApp.VLESS,
+                status='active'
             )
         )
 
-        return vless_key_record.id
+        if key and hasattr(key, 'id'):
+            await logger.info(f"✅ Создан ключ ID {key.id} для пользователя {user_id} на {server.server_ip}")
+            return key.id  # Возвращаем INTEGER ID из БД
+
+        return 0
 
     except Exception as e:
-        await logger.log_error(f"Ошибка создания VLESS ключа для пользователя {user_id}", e)
-        return None
-
-
-async def _create_shadowsocks_key(session_methods, user_id: int, username: str) -> int | None:
-    """Создаёт Shadowsocks ключ для пользователя."""
-    try:
-        shadowsocks_manager = ShadowsocksKeyManager(NEW_SERVER_IP)
-        key, key_id, email = await shadowsocks_manager.manage_shadowsocks_key(
-            tg_id=user_id,
-            username=username,
-            server_name=SERVER_NAME
-        )
-
-        shadowsocks_key_record = await session_methods.keys.add_key(
-            Keys(
-                key_id=key_id,
-                key=key,
-                email=email,
-                server_ip=NEW_SERVER_IP,
-                name_app=NameApp.OUTLINE
-            )
-        )
-
-        return shadowsocks_key_record.id
-
-    except Exception as e:
-        await logger.log_error(f"Ошибка создания Shadowsocks ключа для пользователя {user_id}", e)
-        return None
+        await logger.log_error(f"Ошибка создания ключа для пользователя {user_id} на сервере {server.server_ip}", e)
+        return 0

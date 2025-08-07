@@ -2,7 +2,6 @@ from aiogram import Router, types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from config_data.config import ADMIN_IDS
 from filters.admin import IsAdmin

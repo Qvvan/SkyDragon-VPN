@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 from config_data.config import PORT_X_UI, MY_SECRET_URL, ADMIN_IDS
 from database.context_manager import DatabaseContextManager
 from filters.admin import IsAdmin
-from handlers.services.get_session_cookies import get_session_cookie
+from handlers.services.key_create import BaseKeyManager
 from keyboards.kb_inline import InlineKeyboards, ServerCallbackData
 from logger.logging_config import logger
 from state.state import ServerManagementStates
@@ -13,7 +13,7 @@ from state.state import ServerManagementStates
 router = Router()
 
 
-@router.message(Command(commands="show_servers"),  IsAdmin(ADMIN_IDS))
+@router.message(Command(commands="show_servers"), IsAdmin(ADMIN_IDS))
 async def show_servers_handler(message: types.Message):
     async with DatabaseContextManager() as session_methods:
         try:
@@ -24,7 +24,8 @@ async def show_servers_handler(message: types.Message):
             return
 
     for server in servers:
-        reachable = await get_session_cookie(server.server_ip)
+        base = BaseKeyManager(server.server_ip)
+        reachable = await base._get_ssh_session_cookie()
         status = "✅ Доступен" if reachable else "❌ Недоступен"
         hidden_status = "🟢 Включен" if server.hidden == 0 else "🔴 Выключен"
 

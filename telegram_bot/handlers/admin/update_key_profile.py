@@ -10,7 +10,6 @@ from database.context_manager import DatabaseContextManager
 from filters.admin import IsAdmin
 from handlers.services.key_create import BaseKeyManager
 from logger.logging_config import logger
-from models.models import NameApp
 
 router = Router()
 

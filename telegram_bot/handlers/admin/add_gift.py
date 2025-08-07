@@ -1,7 +1,6 @@
 from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from config_data.config import ADMIN_IDS
@@ -16,8 +15,6 @@ from state.state import GiveSub
 router = Router()
 
 
-
-# Команда для добавления подписки
 @router.message(Command(commands='add_gift'), IsAdmin(ADMIN_IDS))
 async def show_commands(message: types.Message, state: FSMContext):
     await message.answer(
@@ -61,7 +58,8 @@ async def process_duration_days(message: types.Message, state: FSMContext):
                     end_date=subscription.end_date,
                     status="gift"
                 )
-                await message.bot.send_message(chat_id=user_id, text=LEXICON_RU['add_gift_success'].format(duration_days=duration_days),
+                await message.bot.send_message(chat_id=user_id,
+                                               text=LEXICON_RU['add_gift_success'].format(duration_days=duration_days),
                                                reply_markup=InlineKeyboardMarkup(
                                                    inline_keyboard=[
                                                        [

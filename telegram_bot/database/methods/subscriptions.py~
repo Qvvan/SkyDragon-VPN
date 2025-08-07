@@ -123,7 +123,6 @@ class SubscriptionMethods:
         try:
             query = (
                 select(
-                    Subscriptions.user_id,
                     Subscriptions.start_date,
                     Subscriptions.end_date,
                     Subscriptions.config_link,

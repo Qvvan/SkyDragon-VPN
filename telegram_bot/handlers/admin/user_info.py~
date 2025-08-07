@@ -6,6 +6,7 @@ from aiogram.types import CallbackQuery
 from config_data.config import ADMIN_IDS
 from database.context_manager import DatabaseContextManager
 from filters.admin import IsAdmin
+from handlers.services.delete_keys import delete_keys
 from handlers.services.extend_latest_subscription import extend_user_subscription
 from handlers.services.key_create import BaseKeyManager
 from keyboards.kb_inline import InlineKeyboards, UserInfoCallbackFactory, UserSelectCallback, ChangeUserSubCallback
@@ -201,9 +202,50 @@ async def process_duration_days(message: types.Message, state: FSMContext):
     await state.clear()
 
 
+@router.callback_query(ChangeUserSubCallback.filter(F.action == "delete_sub"))
+async def handle_user_trial(callback_query: CallbackQuery, callback_data: ChangeUserSubCallback):
+    async with DatabaseContextManager() as session_methods:
+        try:
+            await delete_keys(callback_data.subscription_id)
+            sub = await session_methods.subscription.get_subscription_by_id(callback_data.subscription_id)
+
+            result = await session_methods.subscription.delete_sub(subscription_id=sub.subscription_id)
+            if not result:
+                await logger.log_error('Не удалось удалить подписку при ее истечении\n'
+                                       f'Пользователь:\nID: {sub.user_id}\n', Exception)
+                return
+
+            await session_methods.session.commit()
+        except Exception as e:
+            await session_methods.session.rollback()
+            await logger.log_error(
+                f'Пользователь:\nID: {sub.user_id}\nОшибка при удалении подписки', e)
+
+        await callback_query.message.answer("Подписка успешно удалена")
+
+
 @router.callback_query(ChangeUserSubCallback.filter(F.action == "change_expire_sub"))
 async def handle_user_trial(callback_query: CallbackQuery, callback_data: ChangeUserSubCallback):
     await callback_query.message.answer("Вы нажали кнопку изменения автопродления подписки")
+
+
+@router.callback_query(ChangeUserSubCallback.filter(F.action == "change_status_key"))
+async def handle_user_trial(callback_query: CallbackQuery, callback_data: ChangeUserSubCallback):
+    async with DatabaseContextManager() as session_methods:
+        try:
+            sub = await session_methods.subscription.get_subscription_by_id(callback_data.subscription_id)
+            key_info = await BaseKeyManager(server_ip=sub.server_ip).get_inbound_by_id(sub.key_id)
+            status_key = key_info.get('obj').get('enable')
+            await BaseKeyManager(server_ip=sub.server_ip).update_key_enable(sub.key_id, not status_key)
+            await callback_query.message.edit_reply_markup()
+            await callback_query.answer(
+                text=f"Ключ успешно: {'Выключен' if status_key else 'Включен'}",
+                show_alert=True,
+                cache_time=3
+            )
+        except Exception as e:
+            await logger.error("Произошла ошибка при обновление ключа:", e)
+            await callback_query.message.answer("Произошла ошибка при обновление ключа")
 
 
 async def keys_info(key_ids: list):

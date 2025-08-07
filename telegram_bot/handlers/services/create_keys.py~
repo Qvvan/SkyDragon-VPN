@@ -17,6 +17,7 @@ async def create_keys(user_id: int, username: str):
                     base = BaseKeyManager(server.server_ip)
                     client_uuid, email, url_config = await base.add_client_to_inbound(
                         tg_id=str(user_id),
+                        username=username,
                         server_name=server.name
                     )
                     if client_uuid is None:

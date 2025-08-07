@@ -7,12 +7,13 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from config_data import config
 from database.init_db import DataBase
-from handlers.admin import add_server, user_info, cancel, refund, help_info, pushes, show_servers, get_user_id, \
+from handlers.admin import add_server, user_info, cancel, pushes, show_servers, get_user_id, \
     add_gift, message_for_user, update_email_keys, update_key_in_profile, update_key_profile
-from handlers.services import payments_service, guide_install, trial_subscription
+from handlers.services import guide_install, trial_subscription
 from handlers.services.card_service import payment_status_checker
+from handlers.services.ssh_tunnel_manager import SSHTunnelManager
 from handlers.user import start, support, createorder, online_users_vpn
-from handlers.user import subs, replace_server, replace_app, referrer, menu, just_message, stars, gift_sub, \
+from handlers.user import subs, referrer, menu, just_message, gift_sub, \
     send_stikers, history_payments
 from logger.logging_config import logger
 from middleware.logging_middleware import CallbackLoggingMiddleware, MessageLoggingMiddleware
@@ -24,7 +25,11 @@ from utils.check_servers import ping_servers
 from utils.gift_checker import run_gift_checker
 from utils.subscription_checker import run_checker
 from utils.trial_checker import run_trial_checker
+import atexit
 
+def cleanup_tunnels():
+    tunnel_manager = SSHTunnelManager()
+    tunnel_manager.cleanup()
 
 async def on_startup(bot: Bot):
     """Оповещение администраторов о запуске бота."""
@@ -78,13 +83,9 @@ async def main():
     dp.include_router(subs.router)
     dp.include_router(start.router)
     dp.include_router(support.router)
-    dp.include_router(payments_service.router)
-    dp.include_router(replace_server.router)
-    dp.include_router(replace_app.router)
     dp.include_router(guide_install.router)
     dp.include_router(referrer.router)
     dp.include_router(trial_subscription.router)
-    dp.include_router(stars.router)
     dp.include_router(gift_sub.router)
 
     # admin-handlers
@@ -94,8 +95,6 @@ async def main():
     dp.include_router(check_double_connect.router)
     dp.include_router(online_users_vpn.router)
     dp.include_router(add_server.router)
-    dp.include_router(help_info.router)
-    dp.include_router(refund.router)
     dp.include_router(pushes.router)
     dp.include_router(check_servers.router)
     dp.include_router(show_servers.router)
@@ -112,6 +111,8 @@ async def main():
     asyncio.create_task(run_gift_checker(bot))
     asyncio.create_task(run_checker_connect(bot))
     asyncio.create_task(run_multiple_connections_checker(bot))
+
+    atexit.register(cleanup_tunnels)
 
     await bot.delete_webhook(drop_pending_updates=True)
     try:

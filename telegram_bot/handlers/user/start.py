@@ -148,6 +148,7 @@ async def log_new_user(message: Message):
             f"ID: {message.from_user.id}",
         )
 
+
 @router.callback_query(lambda c: c.data == 'back_to_start')
 async def handle_know_more(callback: CallbackQuery):
     """Обработчик кнопки 'Узнать больше'."""
