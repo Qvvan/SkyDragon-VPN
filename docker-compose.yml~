@@ -10,6 +10,8 @@ services:
     depends_on:
       - db
     command: python main.py
+    volumes:
+      - C:/Users/${USERNAME}/.ssh:/host_ssh:ro
     networks:
       - bot-network
 
