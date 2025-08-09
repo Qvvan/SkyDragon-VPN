@@ -60,46 +60,18 @@ class Services(Base):
     price = Column(Integer, nullable=False)
 
 
-class Keys(Base):
-    __tablename__ = 'keys'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)  # айди в нашей базе
-    key_id = Column(String, nullable=False)  # Сам ключ с панели
-    key = Column(String, nullable=False)  # ключ конфиг
-    server_ip = Column(String, nullable=False)
-    email = Column(String, nullable=True)
-    name_app = Column(String, nullable=False)
-    status = Column(String, default='active', nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-
-
 class Subscriptions(Base):
     __tablename__ = 'subscriptions'
 
     subscription_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(BigInteger, nullable=False)  # ID пользователя
     service_id = Column(Integer, nullable=True)  # ID сервиса
-    config_link = Column(String, nullable=True)  # Ссылка на конфиг
-    key_ids = Column(ARRAY(Integer), default=[], nullable=True)  # ID ключей
     start_date = Column(DateTime, nullable=True)  # Дата начала
     end_date = Column(DateTime, nullable=True)  # Дата окончания
     status = Column(String, default=SubscriptionStatusEnum.ACTIVE)  # Статус активная подписка или истекла
     reminder_sent = Column(Integer, default=0)  # Было ли отправлено напоминание
     auto_renewal = Column(Boolean, default=True)  # Включено ли автопродление по данной подписке
     card_details_id = Column(String, nullable=True)  # Данные карты, для автопродления
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-
-class FamilyMembers(Base):
-    __tablename__ = "family_members"
-
-    family_id = Column(Integer, primary_key=True, autoincrement=True)
-    subscription_id = Column(Integer, nullable=False)
-    user_id = Column(BigInteger, nullable=True)
-    role = Column(String, default="member")  # owner / member
-    is_free = Column(Boolean, default=True)  # True, если место свободно
-    joined_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

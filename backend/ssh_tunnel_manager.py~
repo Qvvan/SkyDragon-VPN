@@ -1,11 +1,10 @@
-# ssh_tunnel_manager.py
 import asyncio
-import subprocess
 import os
 import shutil
+import subprocess
 from typing import Dict, Optional
 
-from config_data.config import PORT_X_UI
+from cfg.config import PORT_X_UI
 
 
 class SSHTunnelManager:
@@ -49,12 +48,10 @@ class SSHTunnelManager:
         return True
 
     async def get_tunnel_port(self, server_ip: str) -> Optional[int]:
-        """Получает локальный порт для туннеля к серверу"""
-        from logger.logging_config import logger
 
         if server_ip in self._local_ports:
             process = self._tunnels[server_ip]
-            if process.poll() is None:
+            if process.poll() is None:  # Процесс работает
                 return self._local_ports[server_ip]
             else:
                 # Процесс умер, удаляем из кэша
@@ -63,16 +60,15 @@ class SSHTunnelManager:
 
         # Проверяем что SSH ключ существует
         if not os.path.exists('/root/.ssh/id_ed25519'):
-            await logger.log_error(f"SSH ключ не найден: /root/.ssh/id_ed25519", None)
+            print(f"SSH ключ не найден: /root/.ssh/id_ed25519", None)
             return None
 
         # Создаем новый туннель
         local_port = self._start_port + len(self._local_ports)
 
+        # ✅ ИСПОЛЬЗУЕМ ТОЧНО ТУ ЖЕ КОМАНДУ КАК В РАБОЧЕМ ПРИМЕРЕ
         cmd = [
             'ssh', '-N',
-            '-o', 'ServerAliveInterval=30',
-            '-o', 'ServerAliveCountMax=3',
             '-i', '/root/.ssh/id_ed25519',
             '-L', f'{local_port}:localhost:{PORT_X_UI}',
             '-p', '10022',
@@ -88,19 +84,19 @@ class SSHTunnelManager:
                 stderr=subprocess.DEVNULL
             )
 
-            await asyncio.sleep(3)
+            await asyncio.sleep(3)  # Ждем установки туннеля
 
             if process.poll() is None:
                 self._tunnels[server_ip] = process
                 self._local_ports[server_ip] = local_port
-                await logger.info(f"✅ SSH туннель создан: {server_ip} -> localhost:{local_port}")
+                print(f"✅ SSH туннель создан: {server_ip} -> localhost:{local_port}")
                 return local_port
             else:
-                await logger.log_error(f"❌ SSH процесс завершился для {server_ip}", None)
+                print(f"❌ SSH процесс завершился для {server_ip}", None)
                 return None
 
         except Exception as e:
-            await logger.log_error(f"Ошибка создания SSH туннеля для {server_ip}", e)
+            print(f"Ошибка создания SSH туннеля для {server_ip}", e)
             return None
 
     def cleanup(self):

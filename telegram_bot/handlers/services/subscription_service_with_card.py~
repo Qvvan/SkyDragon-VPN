@@ -101,7 +101,7 @@ class SubscriptionsServiceCard:
                                 end_date=new_end_date,
                                 status=StatusSubscriptionHistory.EXTENSION
                             )
-                            await update_keys(user_id, subscription_id, True)
+                            await update_keys(subscription_id, True)
                             await logger.info(f"Успешно создана подписка {subscription_id}")
                             await session_methods.session.commit()
                             await bot.send_message(chat_id=user_id, text=LEXICON_RU['subscription_renewed'])

@@ -4,10 +4,9 @@ from typing import List
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
 
 from logger.logging_config import logger
-from models.models import Subscriptions, Services, SubscriptionStatusEnum, Servers
+from models.models import Subscriptions, Services, SubscriptionStatusEnum
 
 
 class SubscriptionMethods:
@@ -21,8 +20,7 @@ class SubscriptionMethods:
                 select(
                     Subscriptions.start_date,
                     Subscriptions.end_date,
-                    Subscriptions.config_link,
-                    Subscriptions.key_ids,
+                    Subscriptions.user_id,
                     Services.name,
                     Subscriptions.status,
                     Subscriptions.subscription_id,
@@ -40,9 +38,6 @@ class SubscriptionMethods:
 
             result = await self.session.execute(query)
             subscription = result.mappings().all()
-
-            if not subscription:
-                return None
 
             return subscription
         except SQLAlchemyError as e:
@@ -126,8 +121,6 @@ class SubscriptionMethods:
                     Subscriptions.user_id,
                     Subscriptions.start_date,
                     Subscriptions.end_date,
-                    Subscriptions.config_link,
-                    Subscriptions.key_ids,
                     Services.name,
                     Subscriptions.status,
                     Subscriptions.subscription_id,

@@ -7,7 +7,6 @@ from handlers.services.create_config_link import create_config_link
 from keyboards.kb_inline import InlineKeyboards, SubscriptionCallbackFactory, InstallProfileCallbackFactory
 from lexicon.lexicon_ru import guide_install, LEXICON_RU, app_link
 from logger.logging_config import logger
-from utils.encode_link import encrypt_part
 
 router = Router()
 
@@ -99,7 +98,7 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Inst
                 )
                 return
 
-            part_link = encrypt_part(str(sub.user_id) + "|" + str(subscription_id))
+            part_link = await create_config_link(user_id=sub.user_id, sub_id=sub.subscription_id)
             url = f"skydragonvpn.ru/import/{name_device.lower()}/{part_link }"
         except Exception as e:
             await logger.log_error(f"При получении подписки что-то пошло не так: {e}")

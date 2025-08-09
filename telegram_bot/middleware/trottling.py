@@ -44,7 +44,6 @@ class ThrottlingMiddleware(BaseMiddleware):
         try:
             await self.on_process_event(event, data)
         except CancelHandler:
-            # Cancel current handler
             return
 
         try:

@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 
-from handlers.services.create_config_link import create_config_link
 from handlers.services.create_keys import create_keys
 from handlers.services.create_subscription_service import SubscriptionService
 from handlers.services.update_keys import update_keys
@@ -17,12 +16,9 @@ async def extend_user_subscription(user_id: int, username: str, days: int, sessi
         subscriptions = await session_methods.subscription.get_subscription(user_id)
 
         if not subscriptions:
-            keys = await create_keys(user_id, username)
-
             subscription = Subscriptions(
                 user_id=user_id,
                 service_id=0,
-                key_ids=keys,
                 start_date=datetime.now(),
                 end_date=datetime.now() + timedelta(days=days)
             )
@@ -31,14 +27,11 @@ async def extend_user_subscription(user_id: int, username: str, days: int, sessi
                 session_methods
             )
 
-            config_link = await create_config_link(user_id, subscription_created.subscription_id)
-
-            await session_methods.subscription.update_sub(
-                subscription_id=subscription_created.subscription_id,
-                config_link=config_link
-            )
             if not subscription_created:
                 raise Exception("Ошибка создания подписки")
+
+            await create_keys(user_id, username, sub_id=subscription_created.subscription_id)
+
             return subscription
 
         latest_subscription = max(subscriptions, key=lambda sub: sub.end_date or datetime.min)
@@ -56,7 +49,7 @@ async def extend_user_subscription(user_id: int, username: str, days: int, sessi
             status=SubscriptionStatusEnum.ACTIVE,
             reminder_sent=0
         )
-        await update_keys(subscription_id, True)
+        await update_keys(user_id, subscription_id, True)
         return latest_subscription
 
     except Exception as e:

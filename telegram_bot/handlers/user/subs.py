@@ -7,6 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
 from database.context_manager import DatabaseContextManager
+from handlers.services.create_config_link import create_config_link
 from keyboards.kb_inline import InlineKeyboards, SubscriptionCallbackFactory, StatusPay, AutoRenewalCallbackFactory
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
@@ -200,7 +201,6 @@ async def show_subscription_details(callback: CallbackQuery, state: FSMContext):
                 detailed_info = await format_subscription_details(subscription)
 
                 await state.update_data(back_target=f"view_details_{subscription_id}")
-                # Клавиатура для управления подпиской
                 await callback.message.edit_text(
                     text=detailed_info,
                     parse_mode="HTML",
@@ -232,6 +232,7 @@ async def format_subscription_details(subscription):
             "<b>📆 Подписка истекла</b>\n"
             f"└ <code>{end_date_msk.strftime('%d %B %Y, %H:%M:%S')} MSK</code>\n\n"
         )
+    config_link = await create_config_link(subscription.user_id, subscription.subscription_id)
 
     return (
         "<b>📊 Информация о подписке</b>\n"
@@ -241,7 +242,7 @@ async def format_subscription_details(subscription):
         "<b>🏷 Автопродление</b>\n"
         f"└ {'✅ <code>Включено</code>' if subscription.auto_renewal else '❌ <code>Выключено</code>'}\n\n"
         "<b>🔗 Ссылка активации</b>\n"
-        f"<code>{subscription.config_link if subscription.config_link else '⚠️ Информация недоступна'}</code>"
+        f"<code>{config_link if config_link else '⚠️ Информация недоступна'}</code>"
     )
 
 

@@ -1,19 +1,24 @@
 from database.context_manager import DatabaseContextManager
+from handlers.services.create_keys import encode_numbers, generate_deterministic_uuid
 from handlers.services.key_create import BaseKeyManager
 from logger.logging_config import logger
 
 
-async def update_keys(subscription_id: int, status: bool):
+async def update_keys(user_id, subscription_id: str, status: bool):
     async with DatabaseContextManager() as session:
-        sub = await session.subscription.get_subscription_by_id(subscription_id)
-        keys = sub.key_ids
-        for key_id in keys:
-            try:
-                key_info = await session.keys.get_key_by_id(key_id)
-                if key_info:
-                    base = BaseKeyManager(key_info.server_ip)
-                    print("key_id", key_info.key_id)
-                    await base.update_client_status(key_info.key_id, key_info.email, sub.user_id, status)
-            except Exception as e:
-                await logger.warning(f"При обновлении ключа: {key_id} что-то пошло не так: {e}")
-        await session.session.commit()
+        try:
+            servers = await session.servers.get_all_servers()
+            for server in servers:
+                if server.hidden == 1:
+                    continue
+                try:
+                    base = BaseKeyManager(server.server_ip)
+                    sub_uuid = encode_numbers(user_id, int(subscription_id))
+                    client_id = generate_deterministic_uuid(user_id, int(subscription_id))
+                    await base.update_key_enable(user_id, sub_uuid, status, client_id)
+                except Exception as e:
+                    await logger.log_error(
+                        f"Error updating keys for server {server.server_ip}, subscription ID: {subscription_id}", e)
+        except Exception as e:
+            await logger.log_error(f"Error fetching servers from the database", e)
+

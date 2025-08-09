@@ -1,8 +1,8 @@
-from utils.encode_link import encrypt_part
+from handlers.services.create_keys import encode_numbers
 
 
 async def create_config_link(user_id: int, sub_id: int):
-    sub_uuid = encrypt_part(str(user_id) + "|" + str(sub_id))
+    sub_uuid = encode_numbers(user_id, sub_id)
     url = "https://skydragonvpn.ru/sub/"
 
     return url + sub_uuid

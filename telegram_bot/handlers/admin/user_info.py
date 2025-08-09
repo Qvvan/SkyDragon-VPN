@@ -6,12 +6,13 @@ from aiogram.types import CallbackQuery
 from config_data.config import ADMIN_IDS
 from database.context_manager import DatabaseContextManager
 from filters.admin import IsAdmin
+from handlers.services.create_config_link import create_config_link
 from handlers.services.extend_latest_subscription import extend_user_subscription
-from handlers.services.key_create import BaseKeyManager
 from keyboards.kb_inline import InlineKeyboards, UserInfoCallbackFactory, UserSelectCallback, ChangeUserSubCallback
 from logger.logging_config import logger
 from models.models import SubscriptionStatusEnum
 from state.state import KeyInfo, UserSubInfo
+from utils.encode_link import encrypt_part
 
 router = Router()
 
@@ -99,10 +100,8 @@ async def handle_user_trial(callback_query: CallbackQuery, callback_data: UserIn
             await session_methods.users.update_user(user_id=user_id, trial_used=trial_status)
             await session_methods.session.commit()
 
-            # Получаем текущий текст сообщения
             current_text = callback_query.message.text
 
-            # Обновляем статус в тексте
             updated_text = current_text.replace(
                 "🟢 Использована" if not trial_status else "🔴 Не использована",
                 "🔴 Не использована" if not trial_status else "🟢 Использована"
@@ -145,14 +144,15 @@ async def handle_user_subscriptions(callback_query: CallbackQuery, callback_data
             await callback_query.answer()
 
             for sub in subs:
-                keys_text = await keys_info(sub.key_ids)  # Получаем информацию о ключах
-
-                # Формируем сообщение по подписке
+                config_link = await create_config_link(user_id=user_id, sub_id=sub.subscription_id)
+                part_link = encrypt_part(str(user_id) + "|" + str(sub.subscription_id))
                 response_message = (
                     f"🆔 <b>ID подписки:</b> {sub.subscription_id}\n"
                     f"📶 <b>Статус:</b> {'🟢 <b>Активна</b>' if sub.status == SubscriptionStatusEnum.ACTIVE else '🔴 <b>Истекла</b>'}\n"
                     f"🏷 <b>Автопродление:</b> {'✅ Да' if sub.auto_renewal else '❌ Нет'}\n"
-                    f"🔑 <b>Конфиг:</b> <code>{sub.config_link}</code>\n"
+                    f"🔑 <b>Конфиг:</b> <code>{config_link}</code>\n"
+                    f"📲 <b>Для айфона:</b> <code>https://skydragonvpn.ru/import/iphone/{part_link}</code>\n"
+                    f"📲 <b>Для андроида:</b> <code>https://skydragonvpn.ru/import/android/{part_link}</code>\n"
                     f"📅 <b>Начало:</b> {sub.start_date.strftime('%Y-%m-%d %H:%M')}\n"
                     f"📅 <b>Конец:</b> {sub.end_date.strftime('%Y-%m-%d %H:%M')}\n"
                 )
@@ -163,9 +163,6 @@ async def handle_user_subscriptions(callback_query: CallbackQuery, callback_data
                     parse_mode="HTML",
                     disable_web_page_preview=True
                 )
-                # Отправляем список ключей (если есть)
-                if keys_text:
-                    await callback_query.message.answer(text=keys_text, parse_mode="HTML")
 
         except Exception as e:
             await logger.error(f"Произошла ошибка:", e)
@@ -204,53 +201,6 @@ async def process_duration_days(message: types.Message, state: FSMContext):
 @router.callback_query(ChangeUserSubCallback.filter(F.action == "change_expire_sub"))
 async def handle_user_trial(callback_query: CallbackQuery, callback_data: ChangeUserSubCallback):
     await callback_query.message.answer("Вы нажали кнопку изменения автопродления подписки")
-
-
-async def keys_info(key_ids: list):
-    keys_data = []
-    total_usage = 0
-
-    async with DatabaseContextManager() as session_methods:
-        for key_id in key_ids:
-            try:
-                key = await session_methods.keys.get_key_by_id(key_id)
-                if not key:
-                    continue
-
-                key_info = await BaseKeyManager(server_ip=key.server_ip).get_inbound_by_id(key.key_id)
-                total = key_info.get("obj", {}).get("down", 0)
-                total_usage += total
-
-                key_data = {
-                    "key_id": key.key_id,
-                    "server_ip": key.server_ip,
-                    "total": total,
-                    "protocol": key_info.get("obj", {}).get("protocol", "Неизвестно"),
-                    "enable": "✅ Включен" if key_info.get("obj", {}).get("enable") else "❌ Отключен"
-                }
-
-                keys_data.append(key_data)
-
-            except Exception as e:
-                await logger.log_error(f"Произошла ошибка при получении ключа {key_id}", e)
-                continue
-
-    if not keys_data:
-        return ""
-
-    response_text = "<b>🔑 Информация по ключам:</b>\n\n"
-    for key in keys_data:
-        response_text += (
-            f"🆔 <b>ID ключа:</b> {key['key_id']}\n"
-            f"🌍 <b>Сервер:</b> {key['server_ip']}\n"
-            f"📡 <b>Протокол:</b> {key['protocol']}\n"
-            f"📊 <b>Использовано трафика:</b> {human_readable_size(key['total'])}\n"
-            f"⚙️ <b>Статус:</b> {key['enable']}\n"
-            f"━━━━━━━━━━━━━━━━━━\n"
-        )
-
-    response_text += f"\n<b>📊 Общее потребление трафика по всем ключам:</b> {human_readable_size(total_usage)}"
-    return response_text
 
 
 def human_readable_size(size: int) -> str:

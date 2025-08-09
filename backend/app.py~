@@ -35,6 +35,7 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
         return Response(content="Invalid encryption", status_code=400)
 
     encrypted_part = encode_numbers(user_id, sub_id)
+    print("Иду за подпиской с этим кодом", encrypted_part)
     servers = await methods.get_server(db)
     keys = []
 

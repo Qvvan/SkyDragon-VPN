@@ -1,4 +1,5 @@
 import asyncio
+import atexit
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
@@ -8,7 +9,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from config_data import config
 from database.init_db import DataBase
 from handlers.admin import add_server, user_info, cancel, pushes, show_servers, get_user_id, \
-    add_gift, message_for_user, update_email_keys, update_key_in_profile, update_key_profile
+    add_gift, message_for_user
 from handlers.services import guide_install, trial_subscription
 from handlers.services.card_service import payment_status_checker
 from handlers.services.ssh_tunnel_manager import SSHTunnelManager
@@ -18,18 +19,17 @@ from handlers.user import subs, referrer, menu, just_message, gift_sub, \
 from logger.logging_config import logger
 from middleware.logging_middleware import CallbackLoggingMiddleware, MessageLoggingMiddleware
 from middleware.trottling import ThrottlingMiddleware
-from utils import check_servers, check_double_connect
-from utils.check_connect_to_vpn import run_checker_connect
-from utils.check_double_connect import run_multiple_connections_checker
+from scripts import update_keys
 from utils.check_servers import ping_servers
 from utils.gift_checker import run_gift_checker
 from utils.subscription_checker import run_checker
 from utils.trial_checker import run_trial_checker
-import atexit
+
 
 def cleanup_tunnels():
     tunnel_manager = SSHTunnelManager()
     tunnel_manager.cleanup()
+
 
 async def on_startup(bot: Bot):
     """Оповещение администраторов о запуске бота."""
@@ -89,28 +89,22 @@ async def main():
     dp.include_router(gift_sub.router)
 
     # admin-handlers
-    dp.include_router(update_key_profile.router)
-    dp.include_router(update_key_in_profile.router)
-    dp.include_router(update_email_keys.router)
-    dp.include_router(check_double_connect.router)
+    dp.include_router(update_keys.router)
     dp.include_router(online_users_vpn.router)
     dp.include_router(add_server.router)
     dp.include_router(pushes.router)
-    dp.include_router(check_servers.router)
     dp.include_router(show_servers.router)
     dp.include_router(get_user_id.router)
     dp.include_router(add_gift.router)
     dp.include_router(message_for_user.router)
-
     dp.include_router(just_message.router)
+
 
     asyncio.create_task(run_checker(bot))
     asyncio.create_task(ping_servers(bot))
     asyncio.create_task(payment_status_checker(bot))
     asyncio.create_task(run_trial_checker(bot))
     asyncio.create_task(run_gift_checker(bot))
-    asyncio.create_task(run_checker_connect(bot))
-    asyncio.create_task(run_multiple_connections_checker(bot))
 
     atexit.register(cleanup_tunnels)
 

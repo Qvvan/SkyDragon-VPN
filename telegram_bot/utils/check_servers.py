@@ -18,10 +18,8 @@ async def ping_servers(bot: Bot):
     while True:
         async with DatabaseContextManager() as session_methods:
             servers = []
-            user_subs = []
             try:
                 servers = await session_methods.servers.get_all_servers()
-                user_subs = await session_methods.subscription.get_subs()
             except Exception as e:
                 await logger.log_error("Не удалось взять список серверов, при проверке работоспособности серверов", e)
 

@@ -11,7 +11,7 @@ class DatabaseContextManager:
         self.session = None
         self.methods = None
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> MethodsManager:
         try:
             self.session = self.db.Session()
             self.methods = MethodsManager(self.session)

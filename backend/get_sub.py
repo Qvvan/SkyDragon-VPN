@@ -1,0 +1,38 @@
+import base64
+
+import aiohttp
+
+from cfg.config import SUB_PORT
+
+
+class BaseKeyManager:
+    """SSH версия BaseKeyManager - только нужные методы"""
+
+    def __init__(self, server_ip):
+        self.server_ip = server_ip
+
+    async def _get_sub_3x_ui(self, sub_id):
+        """Получает и декодирует конфиги подписки"""
+
+        url = f"https://{self.server_ip}:{SUB_PORT}/sub/{sub_id}"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, ssl=False) as response:
+                    if response.status == 200:
+                        base64_response = await response.text()
+
+                        try:
+                            decoded_configs = base64.b64decode(base64_response).decode('utf-8')
+                            return decoded_configs
+                        except Exception as decode_error:
+                            print(f"Ошибка декодирования base64: {decode_error}")
+                            return base64_response
+                    else:
+                        raise aiohttp.ClientResponseError(
+                            response.request_info, response.history,
+                            status=response.status, message=await response.text()
+                        )
+        except Exception as e:
+            print(f"Error getting subscription: {e}")
+
+        return None

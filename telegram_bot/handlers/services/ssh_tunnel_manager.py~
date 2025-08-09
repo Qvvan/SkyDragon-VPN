@@ -72,7 +72,6 @@ class SSHTunnelManager:
         cmd = [
             'ssh', '-N',
             '-o', 'ServerAliveInterval=30',
-            '-o', 'ServerAliveCountMax=3',
             '-i', '/root/.ssh/id_ed25519',
             '-L', f'{local_port}:localhost:{PORT_X_UI}',
             '-p', '10022',

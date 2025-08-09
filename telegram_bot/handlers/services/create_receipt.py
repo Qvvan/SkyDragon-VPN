@@ -18,7 +18,7 @@ async def generate_receipt(service_name, amount, duration_days, quantity=1, paym
     payload = {
         "operationTime": now,
         "requestTime": now,
-        "paymentType": payment_type,  # "CASH" (наличные) или "TRANSFER" (перевод на карту)
+        "paymentType": payment_type,
         "totalAmount": str(amount),
         "services": [
             {

@@ -700,14 +700,6 @@ class InlineKeyboards:
             ],
             [
                 InlineKeyboardButton(
-                    text="Выключить ключ",
-                    callback_data=ChangeUserSubCallback(
-                        action='change_status_key',
-                        subscription_id=sub.subscription_id
-                    ).pack())
-            ],
-            [
-                InlineKeyboardButton(
                     text="Отмена",
                     callback_data='cancel'
                 )
