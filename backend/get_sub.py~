@@ -15,7 +15,6 @@ class BaseKeyManager:
         """Получает и декодирует конфиги подписки"""
 
         url = f"https://{self.server_ip}:{SUB_PORT}/sub/{sub_id}"
-        print("Буду идти сюда:", url)
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, ssl=False) as response:

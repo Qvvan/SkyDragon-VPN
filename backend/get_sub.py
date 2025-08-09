@@ -16,7 +16,8 @@ class BaseKeyManager:
 
         url = f"https://{self.server_ip}:{SUB_PORT}/sub/{sub_id}"
         try:
-            async with aiohttp.ClientSession() as session:
+            connector = aiohttp.TCPConnector(ssl=False)
+            async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(url, ssl=False) as response:
                     if response.status == 200:
                         base64_response = await response.text()
