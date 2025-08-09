@@ -1,5 +1,7 @@
+import asyncio
 import base64
 import hashlib
+from typing import Optional
 
 from cryptography.fernet import Fernet
 from fastapi import FastAPI, Response, Depends
@@ -36,19 +38,28 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
 
     encrypted_part = encode_numbers(user_id, sub_id)
     servers = await methods.get_server(db)
-    keys = []
 
+    # Параллельное выполнение запросов
+    tasks = []
     for server in servers:
-        try:
-            base = BaseKeyManager(server.server_ip)
-            sub = await base._get_sub_3x_ui(encrypted_part)
-            if sub is None:
-                continue
-            sub = sub.replace("localhost", server.server_ip)
-            sub = sub.replace(sub[sub.find("#") + 1:], server.name + " - VLESS")
-            keys.append(sub)
-        except Exception as e:
-            print(f"Error getting subscription for server {server.server_ip}: {e}")
+        task = get_server_config(server, encrypted_part)
+        tasks.append(task)
+
+    # Ждем все задачи с общим таймаутом
+    try:
+        results = await asyncio.wait_for(
+            asyncio.gather(*tasks, return_exceptions=True),
+            timeout=30  # Общий таймаут для всех запросов
+        )
+    except asyncio.TimeoutError:
+        print("Общий таймаут для всех серверов")
+        results = []
+
+    # Фильтруем успешные результаты
+    keys = [result for result in results if isinstance(result, str)]
+
+    if not keys:
+        return Response(content="No available servers", status_code=503)
 
     encoded_subscription = base64.b64encode("\n".join(keys).encode()).decode()
 
@@ -62,6 +73,22 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
 
     return Response(content=encoded_subscription, headers=headers)
 
+
+async def get_server_config(server, encrypted_part: str) -> Optional[str]:
+    """Получение конфигурации с одного сервера"""
+    try:
+        base = BaseKeyManager(server.server_ip)
+        sub = await base._get_sub_3x_ui(encrypted_part)
+        if sub is None:
+            return None
+
+        sub = sub.replace("localhost", server.server_ip)
+        sub = sub.replace(sub[sub.find("#") + 1:], server.name + " - VLESS")
+        return sub
+
+    except Exception as e:
+        print(f"Error getting subscription for server {server.server_ip}: {e}")
+        return None
 
 @app.get("/import/iphone/{encrypted_part}")
 async def get_subscription(encrypted_part: str):

@@ -1,5 +1,6 @@
 import base64
 import hashlib
+from typing import Optional
 
 from cryptography.fernet import Fernet
 from fastapi import FastAPI, Response, Depends
@@ -35,7 +36,6 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
         return Response(content="Invalid encryption", status_code=400)
 
     encrypted_part = encode_numbers(user_id, sub_id)
-    print("Иду за подпиской с этим кодом", encrypted_part)
     servers = await methods.get_server(db)
     keys = []
 
@@ -63,6 +63,22 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
 
     return Response(content=encoded_subscription, headers=headers)
 
+
+async def get_server_config(server, encrypted_part: str) -> Optional[str]:
+    """Получение конфигурации с одного сервера"""
+    try:
+        base = BaseKeyManager(server.server_ip)
+        sub = await base._get_sub_3x_ui(encrypted_part)
+        if sub is None:
+            return None
+
+        sub = sub.replace("localhost", server.server_ip)
+        sub = sub.replace(sub[sub.find("#") + 1:], server.name + " - VLESS")
+        return sub
+
+    except Exception as e:
+        print(f"Error getting subscription for server {server.server_ip}: {e}")
+        return None
 
 @app.get("/import/iphone/{encrypted_part}")
 async def get_subscription(encrypted_part: str):

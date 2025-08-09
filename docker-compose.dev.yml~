@@ -10,6 +10,8 @@ services:
     depends_on:
       - db
     command: python main.py
+    volumes:
+      - C:/Users/${USERNAME}/.ssh:/host_ssh:ro
     networks:
       - bot-network
 
@@ -40,8 +42,6 @@ services:
     ports:
       - "12345:12345"
     command: [ "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "12345", "--reload" ]
-    volumes:
-      - C:/Users/${USERNAME}/.ssh:/host_ssh:ro
     networks:
       - bot-network
 
