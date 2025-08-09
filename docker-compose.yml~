@@ -54,7 +54,16 @@ services:
       - .env
     ports:
       - "12345:12345"
-    command: [ "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "12345", "--reload" ]
+    command: [
+      "uvicorn", "app:app",
+      "--host", "0.0.0.0",
+      "--port", "12345",
+      "--workers", "1",  # Один worker для async
+      "--loop", "uvloop",  # Быстрый event loop
+      "--http", "httptools",  # Быстрый HTTP парсер
+      "--access-log",  # Логирование для отладки
+      "--timeout-keep-alive", "5"
+    ]
     networks:
       - bot-network
 
