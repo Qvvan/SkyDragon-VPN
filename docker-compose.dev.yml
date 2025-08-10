@@ -41,6 +41,8 @@ services:
       - .env
     ports:
       - "12345:12345"
+    volumes:
+      - C:/Users/${USERNAME}/.ssh:/host_ssh:ro
     command: [
       "uvicorn", "app:app",
       "--host", "0.0.0.0",

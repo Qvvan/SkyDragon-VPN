@@ -49,8 +49,6 @@ class SSHTunnelManager:
 
     async def get_tunnel_port(self, server_ip: str) -> Optional[int]:
         """Получает локальный порт для туннеля к серверу"""
-        from logger.logging_config import logger
-
         if server_ip in self._local_ports:
             process = self._tunnels[server_ip]
             if process.poll() is None:
@@ -62,7 +60,7 @@ class SSHTunnelManager:
 
         # Проверяем что SSH ключ существует
         if not os.path.exists('/root/.ssh/id_ed25519'):
-            await logger.log_error(f"SSH ключ не найден: /root/.ssh/id_ed25519", None)
+            print(f"SSH ключ не найден: /root/.ssh/id_ed25519", None)
             return None
 
         # Создаем новый туннель
@@ -92,14 +90,14 @@ class SSHTunnelManager:
             if process.poll() is None:
                 self._tunnels[server_ip] = process
                 self._local_ports[server_ip] = local_port
-                await logger.info(f"✅ SSH туннель создан: {server_ip} -> localhost:{local_port}")
+                print(f"✅ SSH туннель создан: {server_ip} -> localhost:{local_port}")
                 return local_port
             else:
-                await logger.log_error(f"❌ SSH процесс завершился для {server_ip}", None)
+                print(f"❌ SSH процесс завершился для {server_ip}", None)
                 return None
 
         except Exception as e:
-            await logger.log_error(f"Ошибка создания SSH туннеля для {server_ip}", e)
+            print(f"Ошибка создания SSH туннеля для {server_ip}", e)
             return None
 
     def cleanup(self):
