@@ -19,6 +19,8 @@ async def callback_get_support(callback: CallbackQuery):
             answer = "Сейчас онлайн на серверах\n"
 
             for server in servers:
+                if server.hidden == 1:
+                    continue
                 try:
                     base = BaseKeyManager(server.server_ip)
                     data = await base.get_online_users()
@@ -31,7 +33,7 @@ async def callback_get_support(callback: CallbackQuery):
 
                 except Exception as e:
                     answer += f"\n{server.name}: Ошибка соединения"
-                    await logger.log_error(f"Ошибка соединения с сервером {server.name}", e)
+                    await logger.log_error(f"Ошибка соединения с сервером {server.name}, {server.server_ip}", e)
 
             await callback.message.answer(
                 text=answer,
@@ -77,10 +79,10 @@ async def callback_get_support(callback: CallbackQuery):
                                 answer += f"\n{server.name}: Ошибка {response.status}"
                     except aiohttp.ClientError as e:
                         answer += f"\n{server.name}: Ошибка соединения"
-                        await logger.log_error(f"Ошибка соединения с сервером {server.name}", e)
+                        await logger.log_error(f"Ошибка соединения с сервером {server.name}, {server.server_ip}", e)
                     except Exception as e:
                         answer += f"\n{server.name}: Неизвестная ошибка"
-                        await logger.log_error(f"Неизвестная ошибка при обработке сервера {server.name}", e)
+                        await logger.log_error(f"Неизвестная ошибка при обработке сервера {server.name}, {server.server_ip}", e)
 
             await callback.message.answer(
                 text=answer,

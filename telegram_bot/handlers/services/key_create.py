@@ -11,7 +11,7 @@ from config_data.config import MY_SECRET_URL, LOGIN_X_UI_PANEL, PASSWORD_X_UI_PA
 from logger.logging_config import logger
 from .ssh_tunnel_manager import SSHTunnelManager
 
-LIMIT = 2
+LIMIT = 1
 PORT = 443
 cookies_store = {}
 

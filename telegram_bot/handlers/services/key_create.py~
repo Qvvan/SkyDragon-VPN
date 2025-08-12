@@ -243,10 +243,10 @@ class BaseKeyManager:
             "up": 0,
             "down": 0,
             "total": 0,
-            "remark": "Main VLESS Inbound - Port 443",
+            "remark": "SkyDragon",
             "enable": True,
             "expiryTime": 0,
-            "listen": "",
+            "listen": self.server_ip,
             "port": PORT,
             "protocol": "vless",
             "settings": json.dumps({
@@ -277,16 +277,11 @@ class BaseKeyManager:
                         "mldsa65Verify": ""
                     }
                 },
-                "xhttpSettings": {
-                    "path": "/main443",
-                    "host": "",
-                    "headers": {},
-                    "scMaxBufferedPosts": 30,
-                    "scMaxEachPostBytes": "1000000",
-                    "scStreamUpServerSecs": "20-80",
-                    "noSSEHeader": False,
-                    "xPaddingBytes": "100-1000",
-                    "mode": "auto"
+                "tcpSettings": {
+                    "acceptProxyProtocol": False,
+                    "header": {
+                        "type": "none"
+                    }
                 }
             }),
             "sniffing": json.dumps({
