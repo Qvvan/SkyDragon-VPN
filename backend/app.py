@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import re
 
 from cryptography.fernet import Fernet
 from fastapi import FastAPI, Response, Depends
@@ -46,6 +47,7 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
                 continue
             sub = sub.replace("localhost", server.server_ip)
             sub = sub.replace(sub[sub.find("#") + 1:], server.name + " - VLESS")
+            sub = re.sub(r'&spx=[^&]*', '', sub)
             keys.append(sub)
         except Exception as e:
             print(f"Error getting subscription for server {server.server_ip}: {e}")
