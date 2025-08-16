@@ -1,82 +1,147 @@
-# ssh_tunnel_manager.py
 import asyncio
 import subprocess
 import os
 import shutil
+import threading
 from typing import Dict, Optional
+from dataclasses import dataclass
+from datetime import datetime
 
-from config_data.config import PORT_X_UI
+
+@dataclass
+class TunnelInfo:
+    process: subprocess.Popen
+    local_port: int
+    created_at: datetime
+    health_check_count: int = 0
 
 
 class SSHTunnelManager:
     """
-    Простой менеджер SSH туннелей для всех серверов.
-    Создает один туннель на сервер и переиспользует его.
+    Thread-safe менеджер SSH туннелей с проверкой здоровья
     """
     _instance = None
-    _tunnels: Dict[str, subprocess.Popen] = {}
-    _local_ports: Dict[str, int] = {}
+    _lock = threading.Lock()
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
+            with cls._lock:
+                if cls._instance is None:  # Double-checked locking
+                    cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(self):
         if not hasattr(self, 'initialized'):
-            self.initialized = True
-            self._start_port = 20000  # Начальный порт для туннелей
-            self._setup_ssh_keys()  # ✅ ДОБАВЛЯЕМ НАСТРОЙКУ КЛЮЧЕЙ
+            with self._lock:
+                if not hasattr(self, 'initialized'):
+                    self.initialized = True
+                    self._tunnels: Dict[str, TunnelInfo] = {}
+                    self._start_port = 20000
+                    self._port_lock = asyncio.Lock()
+                    self._setup_ssh_keys()
 
     def _setup_ssh_keys(self):
-        """Копирует SSH ключи из смонтированной папки - КАК В РАБОЧЕМ ПРИМЕРЕ"""
+        """Настройка SSH ключей с проверкой безопасности"""
         if not os.path.exists('/host_ssh'):
             print("❌ /host_ssh не найден")
             return False
 
-        os.makedirs('/root/.ssh', exist_ok=True)
-        os.chmod('/root/.ssh', 0o700)
+        ssh_dir = '/root/.ssh'
+        os.makedirs(ssh_dir, exist_ok=True)
+        os.chmod(ssh_dir, 0o700)
 
-        for filename in os.listdir('/host_ssh'):
-            if os.path.isfile(f'/host_ssh/{filename}'):
-                shutil.copy2(f'/host_ssh/{filename}', f'/root/.ssh/{filename}')
-                if filename.endswith('.pub'):
-                    os.chmod(f'/root/.ssh/{filename}', 0o644)
-                else:
-                    os.chmod(f'/root/.ssh/{filename}', 0o600)
+        try:
+            for filename in os.listdir('/host_ssh'):
+                src_path = f'/host_ssh/{filename}'
+                if os.path.isfile(src_path):
+                    dst_path = f'{ssh_dir}/{filename}'
+                    shutil.copy2(src_path, dst_path)
 
-        print("✅ SSH ключи настроены")
-        return True
+                    # Правильные права доступа
+                    if filename.endswith('.pub'):
+                        os.chmod(dst_path, 0o644)
+                    else:
+                        os.chmod(dst_path, 0o600)
+
+            print("✅ SSH ключи настроены")
+            return True
+        except Exception as e:
+            print(f"❌ Ошибка настройки SSH ключей: {e}")
+            return False
+
+    async def _check_tunnel_health(self, server_ip: str, tunnel_info: TunnelInfo) -> bool:
+        """
+        Проверяет здоровье туннеля через реальное соединение
+        """
+        try:
+            # Проверяем что процесс еще жив
+            if tunnel_info.process.poll() is not None:
+                return False
+
+            # Проверяем что порт действительно слушает
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2)
+
+            try:
+                result = sock.connect_ex(('localhost', tunnel_info.local_port))
+                return result == 0
+            finally:
+                sock.close()
+
+        except Exception:
+            return False
 
     async def get_tunnel_port(self, server_ip: str) -> Optional[int]:
-        """Получает локальный порт для туннеля к серверу"""
+        """Thread-safe получение порта туннеля с проверкой здоровья"""
         from logger.logging_config import logger
 
-        if server_ip in self._local_ports:
-            process = self._tunnels[server_ip]
-            if process.poll() is None:
-                return self._local_ports[server_ip]
-            else:
-                # Процесс умер, удаляем из кэша
-                del self._tunnels[server_ip]
-                del self._local_ports[server_ip]
+        # Проверяем существующий туннель
+        if server_ip in self._tunnels:
+            tunnel_info = self._tunnels[server_ip]
 
-        # Проверяем что SSH ключ существует
-        if not os.path.exists('/root/.ssh/id_ed25519'):
-            await logger.log_error(f"SSH ключ не найден: /root/.ssh/id_ed25519", None)
+            # Проверяем здоровье туннеля
+            if await self._check_tunnel_health(server_ip, tunnel_info):
+                tunnel_info.health_check_count += 1
+                await logger.info(f"♻️ Переиспользуем туннель: {server_ip}:{tunnel_info.local_port}")
+                return tunnel_info.local_port
+            else:
+                # Туннель мертв, удаляем
+                await self._cleanup_tunnel(server_ip)
+                await logger.warning(f"🔄 Туннель мертв, пересоздаем: {server_ip}")
+
+        # Создаем новый туннель (thread-safe)
+        async with self._port_lock:
+            return await self._create_new_tunnel(server_ip)
+
+    async def _create_new_tunnel(self, server_ip: str) -> Optional[int]:
+        """Создает новый SSH туннель"""
+        from logger.logging_config import logger
+
+        # Проверяем SSH ключ
+        ssh_key_path = '/root/.ssh/id_ed25519'
+        if not os.path.exists(ssh_key_path):
+            await logger.log_error(f"SSH ключ не найден: {ssh_key_path}", None)
             return None
 
-        # Создаем новый туннель
-        local_port = self._start_port + len(self._local_ports)
+        # Выбираем свободный порт
+        local_port = await self._get_free_port()
+        if not local_port:
+            await logger.log_error("Не удалось найти свободный порт", None)
+            return None
 
+        # Команда SSH с улучшенными параметрами
         cmd = [
             'ssh', '-N',
             '-o', 'ServerAliveInterval=30',
-            '-i', '/root/.ssh/id_ed25519',
-            '-L', f'{local_port}:localhost:{PORT_X_UI}',
-            '-p', '10022',
+            '-o', 'ServerAliveCountMax=3',
+            '-o', 'ConnectTimeout=10',
             '-o', 'StrictHostKeyChecking=no',
             '-o', 'UserKnownHostsFile=/dev/null',
+            '-o', 'LogLevel=ERROR',  # Убираем лишние логи
+            '-i', ssh_key_path,
+            '-L', f'{local_port}:localhost:{PORT_X_UI}',
+            '-p', '10022',
             f'root@{server_ip}'
         ]
 
@@ -84,31 +149,120 @@ class SSHTunnelManager:
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                stderr=subprocess.PIPE,
+                preexec_fn=os.setsid  # Создаем новую группу процессов
             )
 
-            await asyncio.sleep(3)
+            # Ждем установки соединения
+            for attempt in range(10):  # 5 секунд максимум
+                await asyncio.sleep(0.5)
 
-            if process.poll() is None:
-                self._tunnels[server_ip] = process
-                self._local_ports[server_ip] = local_port
-                await logger.info(f"✅ SSH туннель создан: {server_ip} -> localhost:{local_port}")
-                return local_port
-            else:
-                await logger.log_error(f"❌ SSH процесс завершился для {server_ip}", None)
-                return None
+                if process.poll() is not None:
+                    # Процесс завершился с ошибкой
+                    stderr = process.stderr.read().decode() if process.stderr else ""
+                    await logger.log_error(f"SSH процесс завершился для {server_ip}: {stderr}", None)
+                    return None
+
+                # Проверяем что туннель работает
+                if await self._test_tunnel_connection(local_port):
+                    tunnel_info = TunnelInfo(
+                        process=process,
+                        local_port=local_port,
+                        created_at=datetime.now()
+                    )
+                    self._tunnels[server_ip] = tunnel_info
+                    await logger.info(f"✅ SSH туннель создан: {server_ip} -> localhost:{local_port}")
+                    return local_port
+
+            # Таймаут создания туннеля
+            process.terminate()
+            await logger.log_error(f"Таймаут создания туннеля для {server_ip}", None)
+            return None
 
         except Exception as e:
             await logger.log_error(f"Ошибка создания SSH туннеля для {server_ip}", e)
             return None
 
-    def cleanup(self):
-        """Закрывает все туннели"""
-        for server_ip, process in self._tunnels.items():
+    async def _get_free_port(self) -> Optional[int]:
+        """Находит свободный локальный порт"""
+        import socket
+
+        for port in range(self._start_port, self._start_port + 1000):
+            # Проверяем что порт не используется нашими туннелями
+            if port in [info.local_port for info in self._tunnels.values()]:
+                continue
+
+            # Проверяем что порт свободен в системе
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             try:
-                process.terminate()
+                sock.bind(('localhost', port))
+                sock.close()
+                return port
+            except OSError:
+                continue
+
+        return None
+
+    async def _test_tunnel_connection(self, local_port: int) -> bool:
+        """Тестирует что туннель действительно работает"""
+        import socket
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(1)
+
+        try:
+            result = sock.connect_ex(('localhost', local_port))
+            return result == 0
+        except:
+            return False
+        finally:
+            sock.close()
+
+    async def _cleanup_tunnel(self, server_ip: str):
+        """Безопасно закрывает туннель"""
+        if server_ip not in self._tunnels:
+            return
+
+        tunnel_info = self._tunnels[server_ip]
+        process = tunnel_info.process
+
+        try:
+            # Завершаем группу процессов (включая SSH)
+            os.killpg(os.getpgid(process.pid), 15)  # SIGTERM
+
+            # Даем время на graceful shutdown
+            try:
                 process.wait(timeout=5)
-                print(f"SSH туннель закрыт: {server_ip}")
-            except:
-                process.kill()
-                print(f"SSH туннель принудительно закрыт: {server_ip}")
+            except subprocess.TimeoutExpired:
+                os.killpg(os.getpgid(process.pid), 9)  # SIGKILL
+
+        except (ProcessLookupError, OSError):
+            pass  # Процесс уже мертв
+
+        # Удаляем из кэша
+        del self._tunnels[server_ip]
+        del self._local_ports[server_ip]
+
+    async def cleanup_all(self):
+        """Закрывает все туннели при завершении"""
+        tasks = []
+        for server_ip in list(self._tunnels.keys()):
+            tasks.append(self._cleanup_tunnel(server_ip))
+
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+            print("🧹 Все SSH туннели закрыты")
+
+    async def get_tunnel_stats(self) -> Dict[str, dict]:
+        """Возвращает статистику туннелей для мониторинга"""
+        stats = {}
+        for server_ip, tunnel_info in self._tunnels.items():
+            is_alive = await self._check_tunnel_health(server_ip, tunnel_info)
+            stats[server_ip] = {
+                'local_port': tunnel_info.local_port,
+                'created_at': tunnel_info.created_at.isoformat(),
+                'health_checks': tunnel_info.health_check_count,
+                'is_alive': is_alive,
+                'pid': tunnel_info.process.pid
+            }
+        return stats
