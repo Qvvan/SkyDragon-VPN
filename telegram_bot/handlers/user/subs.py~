@@ -17,6 +17,7 @@ router = Router()
 moscow_tz = pytz.timezone("Europe/Moscow")
 
 
+# Обработчик callback для показа подписок
 @router.callback_query(lambda callback: callback.data == "view_subs")
 async def get_user_subs_callback(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
