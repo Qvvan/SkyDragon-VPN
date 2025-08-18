@@ -31,7 +31,7 @@ class BaseKeyManager:
             print(f"❌ Туннель недоступен для {self.server_ip}")
             return None
 
-        url = f"https://localhost:{tunnel_port}/sub/{sub_id}"
+        url = f"http://localhost:{tunnel_port}/sub/{sub_id}"
 
         try:
             # Используем HTTP вместо HTTPS для localhost туннеля

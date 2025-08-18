@@ -42,7 +42,7 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
     for server in servers:
         try:
             base = BaseKeyManager(server.server_ip)
-            sub = base._get_sub_3x_ui(encrypted_part)
+            sub = await base._get_sub_3x_ui(encrypted_part)
             if sub is None:
                 continue
             sub = sub.replace("localhost", server.server_ip)

@@ -1,7 +1,8 @@
-import asyncio
 import os
 import shutil
 import subprocess
+import socket
+import time
 from typing import Dict, Optional
 
 from cfg.config import SUB_PORT
@@ -9,8 +10,7 @@ from cfg.config import SUB_PORT
 
 class SSHTunnelManager:
     """
-    Простой менеджер SSH туннелей для всех серверов.
-    Создает один туннель на сервер и переиспользует его.
+    Простой и надежный менеджер SSH туннелей
     """
     _instance = None
     _tunnels: Dict[str, subprocess.Popen] = {}
@@ -24,11 +24,11 @@ class SSHTunnelManager:
     def __init__(self):
         if not hasattr(self, 'initialized'):
             self.initialized = True
-            self._start_port = 20000  # Начальный порт для туннелей
-            self._setup_ssh_keys()  # ✅ ДОБАВЛЯЕМ НАСТРОЙКУ КЛЮЧЕЙ
+            self._start_port = 20000
+            self._setup_ssh_keys()
 
     def _setup_ssh_keys(self):
-        """Копирует SSH ключи из смонтированной папки - КАК В РАБОЧЕМ ПРИМЕРЕ"""
+        """Копирует SSH ключи из смонтированной папки"""
         if not os.path.exists('/host_ssh'):
             print("❌ /host_ssh не найден")
             return False
@@ -37,39 +37,61 @@ class SSHTunnelManager:
         os.chmod('/root/.ssh', 0o700)
 
         for filename in os.listdir('/host_ssh'):
-            if os.path.isfile(f'/host_ssh/{filename}'):
-                shutil.copy2(f'/host_ssh/{filename}', f'/root/.ssh/{filename}')
+            source_path = f'/host_ssh/{filename}'
+            if os.path.isfile(source_path):
+                shutil.copy2(source_path, f'/root/.ssh/{filename}')
+                target_path = f'/root/.ssh/{filename}'
                 if filename.endswith('.pub'):
-                    os.chmod(f'/root/.ssh/{filename}', 0o644)
+                    os.chmod(target_path, 0o644)
                 else:
-                    os.chmod(f'/root/.ssh/{filename}', 0o600)
+                    os.chmod(target_path, 0o600)
 
         print("✅ SSH ключи настроены")
         return True
 
-    async def get_tunnel_port(self, server_ip: str) -> Optional[int]:
-        """Получает локальный порт для туннеля к серверу"""
+    def get_tunnel_port(self, server_ip: str) -> Optional[int]:
+        """Получает порт для туннеля, создает если нужно"""
+        # Если туннель уже есть и процесс жив - возвращаем порт
         if server_ip in self._local_ports:
             process = self._tunnels[server_ip]
-            if process.poll() is None:
+            if process.poll() is None:  # Процесс жив
                 return self._local_ports[server_ip]
             else:
-                # Процесс умер, удаляем из кэша
+                # Процесс умер - удаляем из кэша
                 del self._tunnels[server_ip]
                 del self._local_ports[server_ip]
 
-        # Проверяем что SSH ключ существует
+        # Проверяем SSH ключ
         if not os.path.exists('/root/.ssh/id_ed25519'):
-            print(f"SSH ключ не найден: /root/.ssh/id_ed25519", None)
+            print(f"❌ SSH ключ не найден")
             return None
 
-        # Создаем новый туннель
+        # Находим свободный порт (простой способ)
         local_port = self._start_port + len(self._local_ports)
 
+        # Если порт занят - ищем следующий
+        while self._is_port_busy(local_port):
+            local_port += 1
+
+        return self._create_tunnel(server_ip, local_port)
+
+    def _is_port_busy(self, port: int) -> bool:
+        """Простая проверка занятости порта"""
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.bind(('localhost', port))
+                return False
+        except OSError:
+            return True
+
+    def _create_tunnel(self, server_ip: str, local_port: int) -> Optional[int]:
+        """Создает SSH туннель"""
         cmd = [
-            'ssh', '-N',
-            '-o', 'ServerAliveInterval=30',
+            'ssh', '-N', '-q',  # -q для тишины
+            '-o', 'ServerAliveInterval=60',
             '-o', 'ServerAliveCountMax=3',
+            '-o', 'ConnectTimeout=10',
+            '-o', 'ExitOnForwardFailure=yes',  # Выходить если туннель не создался
             '-i', '/root/.ssh/id_ed25519',
             '-L', f'{local_port}:localhost:{SUB_PORT}',
             '-p', '10022',
@@ -79,25 +101,23 @@ class SSHTunnelManager:
         ]
 
         try:
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
+            process = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-            await asyncio.sleep(3)
+            # Даем время на установку туннеля
+            time.sleep(3)
 
+            # Проверяем что процесс еще жив
             if process.poll() is None:
                 self._tunnels[server_ip] = process
                 self._local_ports[server_ip] = local_port
-                print(f"✅ SSH туннель создан: {server_ip} -> localhost:{local_port}")
+                print(f"✅ SSH туннель: {server_ip} -> localhost:{local_port}")
                 return local_port
             else:
-                print(f"❌ SSH процесс завершился для {server_ip}", None)
+                print(f"❌ SSH туннель не создался для {server_ip}")
                 return None
 
         except Exception as e:
-            print(f"Ошибка создания SSH туннеля для {server_ip}", e)
+            print(f"❌ Ошибка SSH туннеля для {server_ip}: {e}")
             return None
 
     def cleanup(self):
@@ -105,8 +125,11 @@ class SSHTunnelManager:
         for server_ip, process in self._tunnels.items():
             try:
                 process.terminate()
-                process.wait(timeout=5)
-                print(f"SSH туннель закрыт: {server_ip}")
+                process.wait(timeout=3)
+                print(f"✅ Туннель {server_ip} закрыт")
             except:
                 process.kill()
-                print(f"SSH туннель принудительно закрыт: {server_ip}")
+                print(f"⚠️ Туннель {server_ip} принудительно закрыт")
+
+        self._tunnels.clear()
+        self._local_ports.clear()
