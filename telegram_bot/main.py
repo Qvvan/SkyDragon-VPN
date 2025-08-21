@@ -13,7 +13,7 @@ from handlers.admin import add_server, user_info, cancel, pushes, show_servers, 
 from handlers.services import guide_install, trial_subscription
 from handlers.services.card_service import payment_status_checker
 from handlers.services.ssh_tunnel_manager import SSHTunnelManager
-from handlers.user import start, support, createorder, online_users_vpn
+from handlers.user import start, support, createorder, online_users_vpn, legend
 from handlers.user import subs, referrer, menu, just_message, gift_sub, \
     send_stikers, history_payments
 from logger.logging_config import logger
@@ -74,6 +74,7 @@ async def main():
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
     dp.include_router(user_info.router)
+    dp.include_router(legend.router)
     # user-handlers
     dp.include_router(send_stikers.router)
     dp.include_router(history_payments.router)
