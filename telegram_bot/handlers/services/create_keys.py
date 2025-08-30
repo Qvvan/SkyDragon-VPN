@@ -20,7 +20,6 @@ async def create_keys(user_id: int, username: str, sub_id):
                     base = BaseKeyManager(server.server_ip)
                     client_uuid, email, url_config = await base.add_client_to_inbound(
                         tg_id=str(user_id),
-                        server_name=server.name,
                         sub_id=sub_uuid,
                         client_id=client_id
                     )

@@ -333,7 +333,7 @@ class BaseKeyManager:
                     error_text = await response.text()
                     raise Exception(f"SSH HTTP Error {response.status}: {error_text}")
 
-    async def add_client_to_inbound(self, tg_id: str, server_name: str, sub_id: str, client_id: str):
+    async def add_client_to_inbound(self, tg_id: str, sub_id: str, client_id: str):
         """Добавляет нового клиента в существующий инбаунд через SSH туннель."""
 
         new_client = {
@@ -429,14 +429,10 @@ class BaseKeyManager:
                     if response.status == 200:
                         response_data = await response.json()
                         if response_data.get("success"):
-                            status_text = "включен" if status else "выключен"
-                            await logger.info(f"SSH ключ {client_id} успешно {status_text} на {self.server_ip}")
                             return True
                         else:
-                            await logger.log_error(
-                                f"SSH API Error при обновлении ключа {client_id} на {self.server_ip}",
-                                response_data.get('msg', 'Unknown error'))
-                            return False
+                            await self.add_client_to_inbound(user_id, sub_id, client_id)
+                            return True
                     else:
                         error_text = await response.text()
                         await logger.log_error(
