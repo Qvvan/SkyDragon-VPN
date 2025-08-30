@@ -22,7 +22,7 @@ async def process_trial_subscription_callback(callback: CallbackQuery, state: FS
         try:
             user = await session_methods.users.get_user(user_id=callback.from_user.id)
             if not user.trial_used:
-                await callback.message.answer(
+                await callback.answer(
                     text="Активируем пробную подписку...",
                 )
                 subscription = await extend_user_subscription(
@@ -30,9 +30,6 @@ async def process_trial_subscription_callback(callback: CallbackQuery, state: FS
                     username=callback.from_user.username,
                     days=5,
                     session_methods=session_methods,
-                )
-                await callback.message.edit_text(
-                    text=LEXICON_RU['trial_activated']
                 )
                 if subscription:
                     await back_to_device_selection(

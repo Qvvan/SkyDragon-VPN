@@ -33,6 +33,9 @@ async def back_to_device_selection(
 
     subscription_id = callback_data.subscription_id
     await callback_query.message.edit_text(
+        text=LEXICON_RU["trial_activated"]
+    )
+    await callback_query.message.answer(
         text="Выбери своё устройство",
         reply_markup=await InlineKeyboards.get_menu_install_app(subscription_id)
     )
