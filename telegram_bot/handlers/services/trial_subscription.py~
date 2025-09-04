@@ -14,7 +14,6 @@ router = Router()
 
 @router.callback_query(lambda callback: callback.data == "activate_trial")
 async def process_trial_subscription_callback(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
     await callback.message.edit_text(
         text=callback.message.text,
         reply_markup=None
