@@ -1,5 +1,7 @@
 import asyncio
 import atexit
+import signal
+import sys
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
@@ -25,106 +27,245 @@ from utils.gift_checker import run_gift_checker
 from utils.subscription_checker import run_checker
 from utils.trial_checker import run_trial_checker
 
+# Глобальные переменные для контроля
+bot_instance = None
+dp_instance = None
+background_tasks = []
+is_shutting_down = False
+
 
 def cleanup_tunnels():
+    """Очистка SSH туннелей при завершении работы."""
     tunnel_manager = SSHTunnelManager()
     tunnel_manager.cleanup()
+
+
+async def cleanup_bot_resources():
+    """Очистка ресурсов бота."""
+    global bot_instance, dp_instance, background_tasks, is_shutting_down
+
+    is_shutting_down = True
+
+    # Отменяем фоновые задачи
+    for task in background_tasks:
+        if not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+    background_tasks.clear()
+
+    # Закрываем сессию бота
+    if bot_instance and bot_instance.session:
+        await bot_instance.session.close()
+
+    cleanup_tunnels()
+
+
+def signal_handler(signum, frame):
+    """Обработчик сигналов для корректного завершения."""
+    print(f"\nПолучен сигнал {signum}. Завершение работы...")
+    sys.exit(0)
 
 
 async def on_startup(bot: Bot):
     """Оповещение администраторов о запуске бота."""
     for admin_id in config.ADMIN_IDS:
         try:
-            await bot.send_message(admin_id, "Бот запущен.")
+            await bot.send_message(admin_id, "🟢 Бот запущен.")
         except Exception as e:
             await logger.log_error(f"Ошибка отправки сообщения администратору {admin_id}", e)
 
 
 async def on_shutdown(bot: Bot):
     """Оповещение администраторов о завершении работы бота."""
-    for admin_id in config.ADMIN_IDS:
-        try:
-            await bot.send_message(admin_id, "Бот завершает работу.")
-        except Exception as e:
-            await logger.log_error(f"Ошибка отправки сообщения администратору {admin_id}", e)
+    if not is_shutting_down:
+        for admin_id in config.ADMIN_IDS:
+            try:
+                await bot.send_message(admin_id, "🔴 Бот завершает работу.")
+            except Exception as e:
+                await logger.log_error(f"Ошибка отправки сообщения администратору {admin_id}", e)
 
 
-async def main():
-    await logger.info('Starting bot')
+def setup_routers(dp: Dispatcher):
+    """Настройка роутеров для диспетчера."""
+    # Проверяем, не подключены ли уже роутеры
+    routers_to_include = [
+        user_info.router,
+        legend.router,
+        send_stikers.router,
+        history_payments.router,
+        cancel.router,
+        menu.router,
+        createorder.router,
+        subs.router,
+        start.router,
+        support.router,
+        guide_install.router,
+        referrer.router,
+        trial_subscription.router,
+        gift_sub.router,
+        update_keys.router,
+        online_users_vpn.router,
+        add_server.router,
+        pushes.router,
+        show_servers.router,
+        get_user_id.router,
+        add_gift.router,
+        message_for_user.router,
+        just_message.router
+    ]
 
+    for router in routers_to_include:
+        # Отключаем роутер от предыдущего диспетчера если нужно
+        if router.parent_router is not None:
+            router.parent_router = None
+
+        dp.include_router(router)
+
+
+async def setup_background_tasks(bot: Bot):
+    """Запуск фоновых задач."""
+    global background_tasks
+
+    # Отменяем старые задачи если есть
+    for task in background_tasks:
+        if not task.done():
+            task.cancel()
+
+    background_tasks.clear()
+
+    # Создаем новые задачи
+    background_tasks.extend([
+        asyncio.create_task(run_checker(bot)),
+        asyncio.create_task(ping_servers(bot)),
+        asyncio.create_task(payment_status_checker(bot)),
+        asyncio.create_task(run_trial_checker(bot)),
+        asyncio.create_task(run_gift_checker(bot))
+    ])
+
+
+async def create_bot_instance():
+    """Создание нового экземпляра бота и диспетчера."""
+    global bot_instance, dp_instance
+
+    # Очищаем предыдущие экземпляры
+    if bot_instance and bot_instance.session:
+        await bot_instance.session.close()
+
+    # Создаем базу данных
     db = DataBase()
     await db.create_db()
 
+    # Создаем новые экземпляры
     storage = MemoryStorage()
 
-    bot = Bot(
+    bot_instance = Bot(
         token=config.BOT_TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
 
-    dp = Dispatcher(storage=storage)
+    dp_instance = Dispatcher(storage=storage)
 
-    dp.message.outer_middleware(MessageLoggingMiddleware())
-    dp.callback_query.outer_middleware(CallbackLoggingMiddleware())
+    # Настраиваем middleware
+    dp_instance.message.outer_middleware(MessageLoggingMiddleware())
+    dp_instance.callback_query.outer_middleware(CallbackLoggingMiddleware())
 
     throttling_middleware = ThrottlingMiddleware(limit=0.3)
-    dp.message.outer_middleware(throttling_middleware)
-    dp.callback_query.outer_middleware(throttling_middleware)
+    dp_instance.message.outer_middleware(throttling_middleware)
+    dp_instance.callback_query.outer_middleware(throttling_middleware)
 
-    dp.startup.register(on_startup)
-    dp.shutdown.register(on_shutdown)
-    dp.include_router(user_info.router)
-    dp.include_router(legend.router)
-    # user-handlers
-    dp.include_router(send_stikers.router)
-    dp.include_router(history_payments.router)
-    dp.include_router(cancel.router)
-    dp.include_router(menu.router)
-    dp.include_router(createorder.router)
-    dp.include_router(subs.router)
-    dp.include_router(start.router)
-    dp.include_router(support.router)
-    dp.include_router(guide_install.router)
-    dp.include_router(referrer.router)
-    dp.include_router(trial_subscription.router)
-    dp.include_router(gift_sub.router)
+    # Регистрируем события
+    dp_instance.startup.register(on_startup)
+    dp_instance.shutdown.register(on_shutdown)
 
-    # admin-handlers
-    dp.include_router(update_keys.router)
-    dp.include_router(online_users_vpn.router)
-    dp.include_router(add_server.router)
-    dp.include_router(pushes.router)
-    dp.include_router(show_servers.router)
-    dp.include_router(get_user_id.router)
-    dp.include_router(add_gift.router)
-    dp.include_router(message_for_user.router)
-    dp.include_router(just_message.router)
+    # Настраиваем роутеры
+    setup_routers(dp_instance)
+
+    return bot_instance, dp_instance
 
 
-    asyncio.create_task(run_checker(bot))
-    asyncio.create_task(ping_servers(bot))
-    asyncio.create_task(payment_status_checker(bot))
-    asyncio.create_task(run_trial_checker(bot))
-    asyncio.create_task(run_gift_checker(bot))
+async def main():
+    """Основная функция бота."""
+    global bot_instance, dp_instance, is_shutting_down
 
-    atexit.register(cleanup_tunnels)
+    await logger.info('🚀 Starting bot')
 
-    await bot.delete_webhook(drop_pending_updates=True)
     try:
-        await dp.start_polling(bot)
+        # Создаем экземпляры бота и диспетчера
+        bot, dp = await create_bot_instance()
+
+        # Запускаем фоновые задачи
+        await setup_background_tasks(bot)
+
+        # Регистрируем cleanup при выходе
+        atexit.register(cleanup_tunnels)
+
+        # Удаляем webhook с увеличенным таймаутом
+        try:
+            await bot.delete_webhook(drop_pending_updates=True, request_timeout=30)
+        except Exception as e:
+            await logger.error("Ошибка при удалении webhook", e)
+            # Продолжаем работу даже если не удалось удалить webhook
+
+        # Запускаем polling
+        await logger.info('✅ Bot started successfully')
+        await dp.start_polling(bot, handle_signals=False)
+
+    except Exception as e:
+        await logger.error("Критическая ошибка в main()", e)
+        raise
     finally:
-        await bot.session.close()
+        if not is_shutting_down:
+            await cleanup_bot_resources()
 
 
 async def run_bot():
-    while True:
+    """Функция для запуска бота с автоматическим перезапуском."""
+    restart_count = 0
+    max_restarts = 10  # Максимальное количество перезапусков подряд
+    base_delay = 5
+
+    # Устанавливаем обработчики сигналов
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    while restart_count < max_restarts:
         try:
             await main()
+            # Если добрались сюда без ошибок, сбрасываем счетчик
+            restart_count = 0
+
+        except KeyboardInterrupt:
+            await logger.info("🛑 Получен сигнал прерывания. Завершение работы...")
+            break
+
         except Exception as e:
-            await logger.error(f"Бот завершил работу с ошибкой", e)
-            await logger.info("Перезапуск бота через 5 секунд...")
-            await asyncio.sleep(5)
+            restart_count += 1
+            delay = min(base_delay * restart_count, 60)  # Максимум 60 секунд
+
+            await logger.error(f"💥 Бот завершил работу с ошибкой (попытка {restart_count}/{max_restarts})", e)
+
+            if restart_count >= max_restarts:
+                await logger.error("❌ Превышено максимальное количество перезапусков. Завершение работы.")
+                break
+
+            await logger.info(f"🔄 Перезапуск бота через {delay} секунд...")
+            await asyncio.sleep(delay)
+
+    # Финальная очистка
+    await cleanup_bot_resources()
+    await logger.info("🏁 Бот полностью завершил работу")
 
 
 if __name__ == "__main__":
-    asyncio.run(run_bot())
+    try:
+        asyncio.run(run_bot())
+    except KeyboardInterrupt:
+        print("Программа прервана пользователем")
+    except Exception as e:
+        print(f"Критическая ошибка: {e}")
+    finally:
+        cleanup_tunnels()
