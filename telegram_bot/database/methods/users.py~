@@ -39,7 +39,7 @@ class UserMethods:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_user(self, user_id: int) -> Users | bool:
+    async def get_user(self, user_id: int):
         try:
             result = await self.session.execute(select(Users).filter_by(user_id=user_id))
             user = result.scalars().first()
