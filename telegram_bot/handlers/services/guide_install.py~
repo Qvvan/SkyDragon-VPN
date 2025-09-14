@@ -39,7 +39,6 @@ async def back_to_device_selection(
         text="Выбери своё устройство",
         reply_markup=await InlineKeyboards.get_menu_install_app(subscription_id)
     )
-    await callback_query.answer()
 
 
 @router.callback_query(SubscriptionCallbackFactory.filter(F.action.in_({"Android", "iPhone", "Windows", "MacOS"})))
