@@ -33,9 +33,12 @@ async def process_trial_subscription_callback(callback: CallbackQuery, state: FS
                     session_methods=session_methods,
                 )
                 if subscription:
-                    await callback.message.edit_text(
-                        text=LEXICON_RU["trial_activated"]
-                    )
+                    try:
+                        await callback.answer(
+                            text=LEXICON_RU["trial_activated"]
+                        )
+                    except:
+                        await callback.message.answer(text=LEXICON_RU["trial_activated"])
                     await back_to_device_selection(
                         callback_query=callback,
                         state=state,
