@@ -32,7 +32,7 @@ async def back_to_device_selection(
         await state.update_data(text_dragons_overview_id=None)
 
     subscription_id = callback_data.subscription_id
-    await callback_query.message.answer(
+    await callback_query.message.edit_text(
         text="Выбери своё устройство",
         reply_markup=await InlineKeyboards.get_menu_install_app(subscription_id)
     )
