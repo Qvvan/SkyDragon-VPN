@@ -23,11 +23,12 @@ class MessageLoggingMiddleware(BaseMiddleware):
             await logger.info(f"Пользователь {username} (ID: {user_id}) отправил сообщение: {event.text}")
             await last_visit(user_id, username)
             ban_user = await check_ban(user_id)
-            support_user_id = "SkyDragonSupport"
-            support_link = f"t.me/{support_user_id}"
-            if ban_user.ban:
-                return await event.answer("К сожалению, вы забанены. Пожалуйста, свяжитесь с технической поддержкой\n"
-                                          f"{support_link}")
+            if ban_user is not None:
+                support_user_id = "SkyDragonSupport"
+                support_link = f"t.me/{support_user_id}"
+                if ban_user.ban:
+                    return await event.answer("К сожалению, вы забанены. Пожалуйста, свяжитесь с технической поддержкой\n"
+                                              f"{support_link}")
 
         return await handler(event, data)
 
