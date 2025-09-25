@@ -112,6 +112,8 @@ class InlineKeyboards:
                 for service in services:
                     service_id = str(service.service_id)
                     service_name = service.name
+                    if service.duration_days > 30:
+                        continue
 
                     callback_data = ServiceCallbackFactory(
                         service_id=service_id,
