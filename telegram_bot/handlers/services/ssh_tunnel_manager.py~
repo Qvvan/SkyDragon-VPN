@@ -7,6 +7,8 @@ from typing import Dict, Optional
 from dataclasses import dataclass
 from datetime import datetime
 
+from config_data.config import PORT_X_UI
+
 
 @dataclass
 class TunnelInfo:
@@ -103,12 +105,10 @@ class SSHTunnelManager:
             # Проверяем здоровье туннеля
             if await self._check_tunnel_health(server_ip, tunnel_info):
                 tunnel_info.health_check_count += 1
-                await logger.info(f"♻️ Переиспользуем туннель: {server_ip}:{tunnel_info.local_port}")
                 return tunnel_info.local_port
             else:
                 # Туннель мертв, удаляем
                 await self._cleanup_tunnel(server_ip)
-                await logger.warning(f"🔄 Туннель мертв, пересоздаем: {server_ip}")
 
         # Создаем новый туннель (thread-safe)
         async with self._port_lock:

@@ -109,7 +109,6 @@ class Gifts(Base):
 
     gift_id = Column(Integer, primary_key=True, autoincrement=True)
     giver_id = Column(BigInteger, nullable=False)
-    recipient_user_id = Column(BigInteger, nullable=False)
     service_id = Column(Integer, nullable=True)
     status = Column(String, nullable=False, default='pending')
     activated_at = Column(DateTime, nullable=True)

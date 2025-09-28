@@ -46,7 +46,7 @@ class SubscriptionsServiceCard:
 
                 config_link = await create_config_link(user_id, subscription.subscription_id)
 
-                await SubscriptionsServiceCard.send_success_response(bot, user_id, config_link, subscription)
+                await SubscriptionsServiceCard.send_success_response(bot, user_id, subscription)
                 await session_methods.session.commit()
                 await logger.log_info(f"Пользователь: @{username}\n"
                                       f"ID: {user_id}\n"
@@ -126,9 +126,8 @@ class SubscriptionsServiceCard:
                     text="Ваша старая подписка больше не актуальна, поэтому мы создали новую. \n\n"
                          "Чтобы продолжить пользоваться сервисом, нужно заново установить профиль. Это займет всего пару кликов! 🚀"
                 )
-                config_link = await create_config_link(user_id, subscription.subscription_id)
-                await SubscriptionsServiceCard.send_success_response(bot, user_id, config_link,
-                                                                     subscription)
+                await create_config_link(user_id, subscription.subscription_id)
+                await SubscriptionsServiceCard.send_success_response(bot, user_id, subscription)
                 await session_methods.session.commit()
                 await logger.log_info(
                     f"Пользователь: @{username}\n"
@@ -150,12 +149,7 @@ class SubscriptionsServiceCard:
                 return
 
     @staticmethod
-    async def send_success_response(bot: Bot, user_id: int, vpn_key: str, subscription):
-        await bot.send_message(chat_id=user_id,
-                               text=LEXICON_RU[
-                                        'purchase_thank_you'] + f'\nКлюч доступа VPN:\n<pre>{vpn_key}</pre>',
-                               parse_mode="HTML",
-                               )
+    async def send_success_response(bot: Bot, user_id: int, subscription):
         await bot.send_message(chat_id=user_id,
                                text=LEXICON_RU["choose_device"],
                                reply_markup=await InlineKeyboards.get_menu_install_app(subscription.subscription_id)
@@ -182,51 +176,15 @@ class SubscriptionsServiceCard:
         return True
 
     @staticmethod
-    async def gift_for_friend(bot, user_id, username, receiver_username, service_id):
+    async def gift_for_friend(user_id, username, recipient_user_id, service_id):
         async with DatabaseContextManager() as session_methods:
             try:
-                service = await session_methods.services.get_service_by_id(service_id)
-                user = await session_methods.users.get_user_by_username(receiver_username)
-                if not user:
-                    await session_methods.gifts.add_gift(Gifts(
-                        giver_id=user_id,
-                        receiver_username=receiver_username,
-                        service_id=service_id
-                    ))
-                    await bot.send_message(
-                        user_id,
-                        "🎁 Возможно, данный пользователь уже зарегистрирован в нашем боте, но его username был обновлён.\n\n"
-                        f"Как только @{receiver_username} зайдет в бота, подарок автоматически станет доступным! ✨\n\n"
-                        "Спасибо за то, что делитесь радостью! 😊"
-                    )
-                    await logger.log_info(
-                        f"Пользователь: @{receiver_username}\n"
-                        f"Получил подарок от пользователя: @{username}\n"
-                        f"Подарок: {service.name} на {service.duration_days} дней\n\n"
-                        f"❕Но пока пользователь не зарегистрирован в нашем боте❗"
-                    )
-                else:
-                    await session_methods.gifts.add_gift(Gifts(
-                        giver_id=user_id,
-                        receiver_username=receiver_username,
-                        service_id=service_id,
-                        status="used",
-                        activated_at=datetime.utcnow()
-                    ))
-                    await extend_user_subscription(user.user_id, receiver_username, service.duration_days,
-                                                   session_methods)
-                    await bot.send_message(user.user_id,
-                                           f"🎁 Вам подарок! 🎉\n\n"
-                                           f"Ваш друг {'@' + username if username else 'Неизвестный пользователь'} решил сделать вам приятный сюрприз! ✨\n\n"
-                                           f"💪 Защита {service.name}а на {service.duration_days} дней 🛡️\n\n"
-                                           f"🌐 Подписка уже активирована, для большей информации зайдите в /profile 🔒"
-                                           )
-                    await logger.log_info(
-                        f"Пользователь: @{receiver_username}\n"
-                        f"Получил подарок от пользователя: @{username}\n"
-                        f"Подарок: {service.name} на {service.duration_days} дней"
-                    )
-
+                await session_methods.gifts.add_gift(Gifts(
+                    giver_id=user_id,
+                    recipient_user_id=recipient_user_id,
+                    service_id=service_id,
+                    status="pending",
+                ))
                 await session_methods.session.commit()
 
             except Exception as e:
@@ -234,5 +192,5 @@ class SubscriptionsServiceCard:
                 await logger.log_error(
                     f"Пользователь: @{username}\n"
                     f"ID: {user_id}\n"
-                    f"Error during transaction processing", e
+                    f"Error during transaction processing with gift", e
                 )

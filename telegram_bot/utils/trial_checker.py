@@ -16,15 +16,20 @@ async def trial_checker(bot: Bot):
             if not users:
                 return
 
+            # Время "день назад" от текущего момента
             one_day_ago = datetime.utcnow() - timedelta(days=1)
 
             for user in users:
                 try:
-                    # Проверяем, что пользователь зарегистрировался недавно и не использовал пробную подписку
+                    # Проверяем, что:
+                    # 1. Пользователь НЕ использовал пробную подписку
+                    # 2. У пользователя есть дата регистрации
+                    # 3. Пользователь зарегистрировался БОЛЬШЕ дня назад (created_at < one_day_ago)
+                    # 4. Ему еще НЕ отправляли напоминание
                     if (
                             not user.trial_used
                             and user.created_at
-                            and user.created_at <= one_day_ago
+                            and user.created_at < one_day_ago
                             and not user.reminder_trial_sub
                     ):
                         # Отправляем сообщение пользователю
@@ -48,19 +53,31 @@ async def trial_checker(bot: Bot):
                                     ]
                                 )
                             )
-                        except:
-                            pass
-                        await logger.info("Отправлено уведомление пользователю о активации пробного периода\n"
-                                          f"ID: {user.user_id}\nUsername: @{user.username}")
+
+                            await logger.log_info(
+                                f"Отправлено уведомление пользователю о активации пробного периода\n"
+                                f"ID: {user.user_id}\n"
+                                f"Username: @{user.username}\n"
+                                f"Зарегистрирован: {user.created_at}\n"
+                                f"Прошло времени: {datetime.utcnow() - user.created_at}"
+                            )
+                        except Exception as send_error:
+                            # Если не удалось отправить сообщение (например, пользователь заблокировал бота)
+                            await logger.log_info(
+                                f"Не удалось отправить уведомление пользователю {user.user_id}: {send_error}")
+                            # Все равно помечаем, что пытались отправить, чтобы не спамить
+                            await session_methods.users.update_user(user.user_id, reminder_trial_sub=True)
+
                 except Exception as e:
-                    await logger.error("Ошибка отправки уведомления пользователю о активации пробного периода:", e)
-                    await logger.log_error(f"Ошибка отправки уведомления пользователю {user.user_id}:", e)
+                    await logger.log_error(f"Ошибка обработки пользователя {user.user_id}:", e)
 
             await session_methods.session.commit()
         except Exception as e:
-            await session_methods.session.commit()
-            await logger.error("Ошибка в функции trial_checker:", e)
             await logger.log_error("Ошибка в функции trial_checker", e)
+            try:
+                await session_methods.session.rollback()
+            except:
+                pass
 
 
 async def run_trial_checker(bot: Bot):
@@ -68,6 +85,7 @@ async def run_trial_checker(bot: Bot):
         try:
             await trial_checker(bot)
         except Exception as e:
-            await logger.log_error("Ошибка в цикле run_checker", e)
+            await logger.log_error("Ошибка в цикле run_trial_checker", e)
 
+        # Спим 24 часа (86400 секунд)
         await asyncio.sleep(86400)

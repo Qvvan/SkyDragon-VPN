@@ -2,110 +2,116 @@ from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton, \
+    KeyboardButtonRequestUsers, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from database.context_manager import DatabaseContextManager
 from handlers.services.card_service import create_payment
-from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 from models.models import Payments
-from state.state import Gift
+from utils.gift_checker import activate_gift_handler
 
 router = Router()
+
+activation_locks = {}
 
 
 class GiftCallback(CallbackData, prefix="gift"):
     action: str
     service_id: str
-    receiver_username: str
+    sender_user_id: int
+    recipient_user_id: int
 
 
 @router.message(Command(commands="gift_sub"))
 async def process_start_command(message: Message, state: FSMContext):
-    await message.answer(
-        text=(
-            "🎁 *Введите @username пользователя, которому хотите подарить подписку* ✨\n\n"
-            "🔄 Активная подписка будет продлена, а новая — активируется при входе пользователя! 🕒\n\n"
-            "Сделайте этот день особенным! 😊"
-        ),
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="Отмена",
-                    callback_data="cancel"
-                )
-            ],
-        ])
+    select_user_button = KeyboardButton(
+        text="🎁 Выбрать получателя подарка",
+        request_users=KeyboardButtonRequestUsers(
+            request_id=1,  # Уникальный ID запроса
+            user_is_bot=False,  # Только обычные пользователи, не боты
+            max_quantity=1,  # Максимальное количество пользователей для выбора
+            request_name=True,  # Запрашиваем имя пользователя
+            request_username=True,  # Запрашиваем username
+            request_photo=False  # Не запрашиваем фото профиля
+        )
     )
-    await state.set_state(Gift.waiting_username)
+
+    # Создаем клавиатуру
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[select_user_button]],
+        resize_keyboard=True,
+        one_time_keyboard=False
+    )
+
+    await message.answer(
+        "🎁Нажми на кнопку ниже, чтобы выбрать получателя подарка ✨\n\n"
+        "🔄 Активная подписка будет продлена, а новая — активируется при входе пользователя! 🕒",
+        reply_markup=keyboard
+    )
+
+
+@router.message(F.users_shared)
+async def handle_users_shared(message: Message):
+    users_shared = message.users_shared
+
+    # Проверяем ID запроса
+    if users_shared.request_id == 1:
+        # Получаем информацию о выбранном пользователе
+        selected_user = users_shared.users[0]  # Берем первого (у нас max_quantity=1)
+
+        recipient_user_id = selected_user.user_id
+        sender_user_id = message.from_user.id
+        first_name = selected_user.first_name or "Неизвестно"
+        username = selected_user.username or "Не указан"
+
+        # Отправляем подтверждение И УДАЛЯЕМ КЛАВИАТУРУ
+        await message.answer(
+            f"🎁",
+            reply_markup=ReplyKeyboardRemove()  # УДАЛЯЕМ КЛАВИАТУРУ
+        )
+
+        # Отправляем клавиатуру с услугами отдельным сообщением
+        await message.answer(
+            "✅ Получатель подарка выбран!\n\n"
+            f"👤 Имя: {first_name}\n"
+            f"🔗 Username: @{username if username != 'Не указан' else 'Не указан'}\n\n"
+            f"Теперь выберите подарочную подписку:",
+            reply_markup=await create_order_keyboards(sender_user_id=sender_user_id,
+                                                      recipient_user_id=recipient_user_id)
+        )
 
 
 @router.callback_query(lambda c: c.data == 'gift_sub')
-async def handle_know_more(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
-    await callback.message.edit_text(
-        text=(
-            "🎁Введите @username пользователя, которому хотите подарить подписку ✨\n\n"
-            "🔄 Активная подписка будет продлена, а новая — активируется при входе пользователя! 🕒\n\n"
-            "Сделайте этот день особенным! 😊"
-        ),
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="Отмена",
-                    callback_data="cancel"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🔙 Назад",
-                    callback_data="main_menu"
-                )
-            ],
-        ])
+async def handle_know_more(callback: CallbackQuery):
+    select_user_button = KeyboardButton(
+        text="🎁 Выбрать получателя подарка",
+        request_users=KeyboardButtonRequestUsers(
+            request_id=1,  # Уникальный ID запроса
+            user_is_bot=False,  # Только обычные пользователи, не боты
+            max_quantity=1,  # Максимальное количество пользователей для выбора
+            request_name=True,  # Запрашиваем имя пользователя
+            request_username=True,  # Запрашиваем username
+            request_photo=False  # Не запрашиваем фото профиля
+        )
     )
 
-    await state.set_state(Gift.waiting_username)
-
-
-@router.message(Gift.waiting_username)
-async def handle_know_more(message: Message, state: FSMContext):
-    username = message.text
-    if not username.startswith('@') or len(username) == 1:
-        await message.answer(
-            text="Вы в режиме 'Подарок другу'\n\n"
-                 "Неверный формат @username\n\n"
-                 "Чтобы выйти с него, нажмите кнопку 👇",
-            parse_mode="Markdown",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="Отмена",
-                        callback_data="cancel"
-                    )
-                ],
-            ])
-        )
-        return
-    if username[1:] == message.from_user.username:
-        await message.answer(
-            text="Нельзя подарить подписку самому себе",
-            parse_mode="Markdown"
-        )
-        return
-    username = username[1:]
-    await state.update_data(receiver_username=username)
-    await message.answer(
-        text=LEXICON_RU['gift'],
-        reply_markup=await create_order_keyboards(username, "main_menu"),
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[select_user_button]],
+        resize_keyboard=True,
+        one_time_keyboard=False
     )
-    await state.clear()
+
+    await callback.message.answer(
+        "🎁Нажми на кнопку ниже, чтобы выбрать получателя подарка ✨\n\n"
+        "🔄 Активная подписка будет продлена, а новая — активируется при входе пользователя! 🕒\n\n"
+        "Сделайте этот день особенным! 😊",
+        reply_markup=keyboard
+    )
 
 
-async def create_order_keyboards(receiver_username: str, back_target: str = None) -> InlineKeyboardMarkup:
+async def create_order_keyboards(sender_user_id: int, recipient_user_id: int) -> InlineKeyboardMarkup:
     """Клавиатура для кнопок с услугами."""
     async with DatabaseContextManager() as session_methods:
         try:
@@ -120,20 +126,12 @@ async def create_order_keyboards(receiver_username: str, back_target: str = None
                 callback_data = GiftCallback(
                     action="gift",
                     service_id=service_id,
-                    receiver_username=receiver_username
+                    sender_user_id=sender_user_id,
+                    recipient_user_id=recipient_user_id
                 ).pack()
 
                 buttons.append(InlineKeyboardButton(text=service_name, callback_data=callback_data))
             keyboard.row(*buttons)
-
-            if back_target:
-                keyboard.row(
-                    InlineKeyboardButton(text='🔙 Назад', callback_data=back_target)
-                )
-            else:
-                keyboard.row(
-                    InlineKeyboardButton(text='Отмена', callback_data='cancel')
-                )
 
             return keyboard.as_markup()
         except Exception as e:
@@ -141,26 +139,23 @@ async def create_order_keyboards(receiver_username: str, back_target: str = None
 
 
 @router.callback_query(GiftCallback.filter(F.action == 'gift'))
-async def handle_know_more(callback_query: CallbackQuery, callback_data: GiftCallback):
-    service_list = [
-        "Краткосрочная мощь духа дракона, дарующая защиту на время одного полного круга луны.",
-        "Щит древности, что бережёт вас в течение трёх смен времён года, словно хранитель древних тайн.",
-        "Мистический амулет силы, надёжный на долгие месяцы, когда солнце и тьма сменяют друг друга.",
-        "Легендарный защитник, символ вечной мощи, что оберегает вас весь круговорот времени, от зимы до лета."
-    ]
-    receiver_username = callback_data.receiver_username
+async def handle_gift_payment(callback_query: CallbackQuery, callback_data: GiftCallback):
     service_id = int(callback_data.service_id)
+    sender_user_id = callback_data.sender_user_id
+    recipient_user_id = callback_data.recipient_user_id
+
     async with DatabaseContextManager() as session_methods:
         try:
+            await callback_query.answer()
             service = await session_methods.services.get_service_by_id(service_id)
             payment_data = create_payment(
                 amount=service.price,
-                description=f"Оплата за услугу: {service.name}",
+                description=f"Подарочная подписка: {service.name}",
                 return_url="https://t.me/SkyDragonVPNBot",
                 service_id=service_id,
                 service_type="gift",
-                receiver_username=receiver_username,
-                user_id=callback_query.from_user.id,
+                user_id=sender_user_id,
+                recipient_user_id=recipient_user_id,
                 username=callback_query.from_user.username,
             )
 
@@ -171,7 +166,7 @@ async def handle_know_more(callback_query: CallbackQuery, callback_data: GiftCal
                 inline_keyboard=[
                     [
                         InlineKeyboardButton(
-                            text="Оплатить",
+                            text="💳 Оплатить подарок",
                             url=payment_url
                         )
                     ],
@@ -179,25 +174,65 @@ async def handle_know_more(callback_query: CallbackQuery, callback_data: GiftCal
 
             await callback_query.message.edit_text(
                 text=(
-                    f"<b>Подарок для @{receiver_username}!</b> 🎁\n\n"
-                    f"<b>Вы дарите защиту {service.name}а на {service.duration_days} дней</b> 🕒\n\n"
-                    f"📋 <b>Услуга:</b> {service_list[service_id - 1]}\n"
+                    f"🎁 <b>Подарочная подписка {service.name}</b>\n\n"
+                    f"⏳ <b>Длительность:</b> {service.duration_days} дней\n"
                     f"💰 <b>Цена:</b> {service.price} ₽\n\n"
-                    f"Нажмите на кнопку ниже для оплаты. После оплаты @{receiver_username} сможет активировать подписку!"
                 ),
                 parse_mode="HTML",
                 reply_markup=payment_kb,
             )
+
             await session_methods.payments.create_payments(
                 Payments(
                     payment_id=payment_id,
                     user_id=callback_query.from_user.id,
-                    service_id=service_id
+                    recipient_user_id=recipient_user_id,
+                    service_id=service_id,
+                    payment_type='gift',
                 )
             )
             await session_methods.session.commit()
         except Exception as e:
             await logger.log_error(f'Пользователь: @{callback_query.from_user.username}'
                                    f'ID: {callback_query.from_user.id}\n'
-                                   f'Ошибка при создании платежа', e)
+                                   f'Ошибка при создании платежа для подарка', e)
             await callback_query.message.edit_text(text="Что-то пошло не так, обратитесь в техподдержку.")
+
+
+@router.callback_query(F.data.startswith("activate_gift_"))
+async def handle_gift_activation(callback_query: CallbackQuery):
+    """Обработчик активации подарков с блокировкой"""
+    try:
+        # Извлекаем ID подарка из callback_data
+        gift_id = int(callback_query.data.split("_")[-1])
+        user_id = callback_query.from_user.id
+
+        # Создаем уникальный ключ для блокировки
+        lock_key = f"gift_{gift_id}_{user_id}"
+
+        # Проверяем, не активируется ли уже этот подарок
+        if lock_key in activation_locks:
+            await callback_query.answer("⏳ Подарок уже активируется, подождите...", show_alert=True)
+            return
+
+        # Устанавливаем блокировку
+        activation_locks[lock_key] = True
+
+        try:
+            # Получаем бота из callback_query
+            bot = callback_query.bot
+
+            # Вызываем функцию активации подарка
+            await activate_gift_handler(bot, callback_query, gift_id)
+
+        finally:
+            # Убираем блокировку в любом случае
+            activation_locks.pop(lock_key, None)
+
+    except (ValueError, IndexError) as e:
+        await callback_query.answer("❌ Некорректный формат данных", show_alert=True)
+    except Exception as e:
+        # Убираем блокировку в случае ошибки
+        lock_key = f"gift_{callback_query.data.split('_')[-1]}_{callback_query.from_user.id}"
+        activation_locks.pop(lock_key, None)
+        await callback_query.answer("❌ Произошла ошибка", show_alert=True)

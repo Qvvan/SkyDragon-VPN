@@ -707,8 +707,9 @@ class InlineKeyboards:
         ])
 
     @staticmethod
-    async def main_menu():
-        return InlineKeyboardMarkup(inline_keyboard=[
+    async def main_menu(user_id: int = None):
+        # Базовые кнопки
+        keyboard = [
             [
                 InlineKeyboardButton(
                     text="🐉 Мои подписки",
@@ -732,7 +733,38 @@ class InlineKeyboards:
                     text="🎁 Подарить подписку",
                     callback_data="gift_sub"
                 )
-            ],
+            ]
+        ]
+
+        if user_id:
+            from database.context_manager import DatabaseContextManager
+
+            async with DatabaseContextManager() as session_methods:
+                try:
+                    # Получаем пользователя по ID
+                    user = await session_methods.users.get_user(user_id)
+                    if user:
+                        # Ищем подарки для этого пользователя со статусом "awaiting_activation"
+                        gifts = await session_methods.gifts.get_gifts(user_id=user_id)
+                        awaiting_gifts = [gift for gift in gifts if gift.status == "awaiting_activation"]
+
+                        # Если есть подарки для активации, добавляем кнопку
+                        if awaiting_gifts:
+                            count = len(awaiting_gifts)
+                            gift_text = "🎁 Мои подарки" if count == 1 else f"🎁 Мои подарки ({count})"
+
+                            # Вставляем кнопку подарков перед поддержкой
+                            keyboard.insert(-1 if len(keyboard) > 4 else len(keyboard), [
+                                InlineKeyboardButton(
+                                    text=gift_text,
+                                    callback_data="my_gifts"
+                                )
+                            ])
+                except Exception:
+                    pass
+
+        # Добавляем оставшиеся кнопки
+        keyboard.extend([
             [
                 InlineKeyboardButton(
                     text="🧙‍♂️ Поддержка",
@@ -744,10 +776,10 @@ class InlineKeyboards:
                     text="Правила и условия",
                     url="https://telegra.ph/Oferta-na-predostavlenie-uslug-VPN-01-04"
                 )
-            ],
-        ]
-        )
+            ]
+        ])
 
+        return InlineKeyboardMarkup(inline_keyboard=keyboard)
     @staticmethod
     async def get_user_info(user_id: int):
         try:

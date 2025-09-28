@@ -16,7 +16,7 @@ class GiftsMethods:
             query = select(Gifts).order_by(desc(Gifts.gift_id))
 
             if user_id is not None:
-                query = query.where(Gifts.recipient_user_id == user_id)
+                query = query.where(Gifts.giver_id == user_id)
 
             result = await self.session.execute(query)
             gifts = result.scalars().all()

@@ -40,7 +40,7 @@ def auto_renewal_payment(amount, description, payment_method_id, user_id, userna
 
 
 def create_payment(amount, description, return_url, service_id, service_type, user_id, username,
-                   subscription_id: int = None, receiver_username: str = None):
+                   subscription_id: int = None, recipient_user_id: int = None):
     payment = Payment.create(
         {
             "amount": {
@@ -59,7 +59,7 @@ def create_payment(amount, description, return_url, service_id, service_type, us
                 "service_type": service_type,
                 "user_id": user_id,
                 "username": username,
-                "receiver_username": receiver_username,
+                "recipient_user_id": recipient_user_id,
                 "subscription_id": subscription_id
             }
         }
@@ -117,7 +117,6 @@ async def successful_payment(bot, payment_response):
     service_type = metadata.get("service_type")
     user_id = int(metadata.get("user_id"))
     username = metadata.get("username", None)
-    receiver_username = metadata.get("receiver_username")
     subscription_id = metadata.get("subscription_id")
 
     if subscription_id is not None:
@@ -130,10 +129,12 @@ async def successful_payment(bot, payment_response):
         await SubscriptionsServiceCard.extend_sub_successful_payment(bot, user_id, username, subscription_id,
                                                                      service_id, payment_response)
     elif service_type == 'gift':
-        await logger.log_info(f"Пользователь: @{username}\nID: {user_id}\nПодарил другу подписку: @{receiver_username}")
+        recipient_user_id = int(metadata.get("recipient_user_id"))
+        await logger.log_info(f"Пользователь: @{username}\nID: {user_id}\n"
+                              f"Подарил другу подписку с ID: {recipient_user_id}")
         async with DatabaseContextManager() as session_methods:
             try:
-                user = await session_methods.users.get_user_by_username(receiver_username)
+                user = await session_methods.users.get_user(recipient_user_id)
                 if not user:
                     await bot.send_message(chat_id=user_id, text=LEXICON_RU['gift_thank_you'].format(gift_days=30))
                     await extend_user_subscription(user_id, username, 30, session_methods)
@@ -145,4 +146,4 @@ async def successful_payment(bot, payment_response):
                 await session_methods.session.rollback()
                 await logger.log_error(f"Пользователь: @{username}\nID: {user_id}\nError during transaction processing",
                                        e)
-        await SubscriptionsServiceCard.gift_for_friend(bot, user_id, username, receiver_username, service_id)
+        await SubscriptionsServiceCard.gift_for_friend(user_id, username, recipient_user_id, service_id)

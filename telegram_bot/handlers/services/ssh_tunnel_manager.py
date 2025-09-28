@@ -105,12 +105,10 @@ class SSHTunnelManager:
             # Проверяем здоровье туннеля
             if await self._check_tunnel_health(server_ip, tunnel_info):
                 tunnel_info.health_check_count += 1
-                await logger.info(f"♻️ Переиспользуем туннель: {server_ip}:{tunnel_info.local_port}")
                 return tunnel_info.local_port
             else:
                 # Туннель мертв, удаляем
                 await self._cleanup_tunnel(server_ip)
-                await logger.warning(f"🔄 Туннель мертв, пересоздаем: {server_ip}")
 
         # Создаем новый туннель (thread-safe)
         async with self._port_lock:
@@ -173,7 +171,6 @@ class SSHTunnelManager:
                         created_at=datetime.now()
                     )
                     self._tunnels[server_ip] = tunnel_info
-                    await logger.info(f"✅ SSH туннель создан: {server_ip} -> localhost:{local_port}")
                     return local_port
 
             # Таймаут создания туннеля

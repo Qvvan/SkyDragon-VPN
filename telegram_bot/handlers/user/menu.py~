@@ -65,7 +65,7 @@ async def handle_my_gifts(callback: CallbackQuery):
                 return
 
             # Формируем сообщение с подарками
-            message_text = f"🎁 **Ваши подарки:**\n\n"
+            message_text = f"🎁 **Ваши подарки ({len(user_gifts)}):**\n\n"
 
             keyboard = []
             for i, gift in enumerate(user_gifts, 1):
