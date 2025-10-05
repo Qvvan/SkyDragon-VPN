@@ -117,7 +117,6 @@ async def activate_gift_handler(bot: Bot, callback_query: CallbackQuery, gift_id
                 )
 
             await session_methods.session.commit()
-            await callback_query.answer("🎁 Подарок успешно активирован!")
 
             await logger.log_info(
                 f"Пользователь @{receiver_username}, ID {recipient_user_id} активировал подарок от @{giver_username if giver else 'Unknown'}, ID {giver_user_id}: {service_name} на {service_duration} дней"
