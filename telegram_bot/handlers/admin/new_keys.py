@@ -79,8 +79,8 @@ async def create_keys(server_ip: str):
         try:
             subs = await session_methods.subscription.get_subs()
             for sub in subs:
-                sub_uuid = encode_numbers(sub.user_id, sub.sub_id)
-                client_id = generate_deterministic_uuid(sub.user_id, sub.sub_id)
+                sub_uuid = encode_numbers(sub.user_id, sub.subscription_id)
+                client_id = generate_deterministic_uuid(sub.user_id, sub.subscription_id)
                 try:
                     base = BaseKeyManager(server_ip)
                     client_uuid, email, url_config = await base.add_client_to_inbound(
