@@ -46,7 +46,7 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
             if sub is None:
                 continue
             sub = sub.replace("localhost", server.server_ip)
-            sub = sub.replace(sub[sub.find("#") + 1:], server.name + " - VLESS")
+            sub = sub.replace(sub[sub.find("#") + 1:], server.name)
             sub = re.sub(r'&spx=[^&]*', '', sub)
             keys.append(sub)
         except Exception as e:
