@@ -77,7 +77,7 @@ def is_valid_ip(ip: str) -> bool:
 async def create_keys(server_ip: str):
     async with DatabaseContextManager() as session_methods:
         try:
-            subs = await session_methods.subscription.get_subs()
+            subs = await session_methods.subscription.get_active_subscribed()
             for sub in subs:
                 sub_uuid = encode_numbers(sub.user_id, sub.subscription_id)
                 client_id = generate_deterministic_uuid(sub.user_id, sub.subscription_id)

@@ -114,6 +114,17 @@ class SubscriptionMethods:
             await logger.log_error("Error fetching active subscribed users", e)
             return []
 
+    async def get_active_subscribed(self):
+        try:
+            result = await self.session.execute(
+                select(Subscriptions)
+                .where(Subscriptions.status == SubscriptionStatusEnum.ACTIVE)
+            )
+            return result.scalars().all()
+        except SQLAlchemyError as e:
+            await logger.log_error("Error fetching active subscribed users", e)
+            return []
+
     async def get_subscription_by_id(self, subscription_id: int):
         try:
             query = (
