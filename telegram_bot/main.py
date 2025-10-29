@@ -11,7 +11,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from config_data import config
 from database.init_db import DataBase
 from handlers.admin import add_server, user_info, cancel, pushes, show_servers, get_user_id, \
-    add_gift, message_for_user
+    add_gift, message_for_user, new_keys
 from handlers.services import guide_install, trial_subscription
 from handlers.services.card_service import payment_status_checker
 from handlers.services.ssh_tunnel_manager import SSHTunnelManager
@@ -109,6 +109,7 @@ def setup_routers(dp: Dispatcher):
         gift_sub.router,
         update_keys.router,
         online_users_vpn.router,
+        new_keys.router,
         add_server.router,
         pushes.router,
         show_servers.router,
