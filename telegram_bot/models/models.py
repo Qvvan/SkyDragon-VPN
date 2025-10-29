@@ -72,7 +72,6 @@ class Subscriptions(Base):
     reminder_sent = Column(Integer, default=0)  # Было ли отправлено напоминание
     auto_renewal = Column(Boolean, default=True)  # Включено ли автопродление по данной подписке
     card_details_id = Column(String, nullable=True)  # Данные карты, для автопродления
-    hidden = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
