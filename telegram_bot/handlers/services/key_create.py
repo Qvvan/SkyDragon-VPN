@@ -6,6 +6,7 @@ import string
 import uuid
 
 import aiohttp
+from aiohttp.client_exceptions import ContentTypeError
 
 from config_data.config import MY_SECRET_URL, LOGIN_X_UI_PANEL, PASSWORD_X_UI_PANEL
 from logger.logging_config import logger
@@ -27,6 +28,24 @@ class BaseKeyManager:
     def __init__(self, server_ip):
         self.server_ip = server_ip
         self.tunnel_manager = SSHTunnelManager()
+
+    async def _safe_json_parse(self, response):
+        """
+        Безопасно парсит JSON из ответа, обрабатывая случаи когда сервер
+        возвращает text/plain вместо application/json.
+        """
+        try:
+            return await response.json()
+        except ContentTypeError:
+            # Если Content-Type не JSON, пытаемся парсить текст как JSON
+            text = await response.text()
+            try:
+                return json.loads(text)
+            except json.JSONDecodeError:
+                await logger.log_error(
+                    f"SSH ошибка парсинга JSON для {self.server_ip}. Ответ: {text[:200]}", None
+                )
+                raise
 
     async def _get_ssh_session_cookie(self):
         """
@@ -136,7 +155,7 @@ class BaseKeyManager:
                 async with aiohttp.ClientSession(connector=connector) as session:
                     async with session.post(get_cert_api_url, cookies=cookies, ssl=False) as response:
                         if response.status == 200:
-                            cert_data = await response.json()
+                            cert_data = await self._safe_json_parse(response)
                             if cert_data.get("success"):
                                 await logger.info(f"SSH сертификат получен для {self.server_ip}")
                                 return cert_data["obj"]
@@ -168,7 +187,7 @@ class BaseKeyManager:
         async with aiohttp.ClientSession(connector=connector) as session:
             async with session.post(list_api_url, cookies=cookies, ssl=False) as response:
                 if response.status == 200:
-                    return await response.json()
+                    return await self._safe_json_parse(response)
                 else:
                     raise aiohttp.ClientResponseError(
                         response.request_info, response.history,
@@ -190,7 +209,7 @@ class BaseKeyManager:
         async with aiohttp.ClientSession(connector=connector) as session:
             async with session.get(get_inbound_api_url, cookies=cookies, ssl=False) as response:
                 if response.status == 200:
-                    return await response.json()
+                    return await self._safe_json_parse(response)
                 else:
                     raise aiohttp.ClientResponseError(
                         response.request_info, response.history,
@@ -212,7 +231,7 @@ class BaseKeyManager:
         async with aiohttp.ClientSession(connector=connector) as session:
             async with session.post(url, cookies=cookies, ssl=False) as response:
                 if response.status == 200:
-                    return await response.json()
+                    return await self._safe_json_parse(response)
                 else:
                     raise aiohttp.ClientResponseError(
                         response.request_info, response.history,
@@ -310,7 +329,7 @@ class BaseKeyManager:
         async with aiohttp.ClientSession(connector=connector) as session:
             async with session.post(create_api_url, cookies=cookies, json=inbound_data, ssl=False) as response:
                 if response.status == 200:
-                    response_data = await response.json()
+                    response_data = await self._safe_json_parse(response)
                     if response_data.get("success"):
                         await logger.info(
                             f"SSH успешно создан inbound с портом 443 для {self.server_ip}, ID: {response_data['obj']['id']}")
@@ -373,7 +392,7 @@ class BaseKeyManager:
         async with aiohttp.ClientSession(connector=connector) as session:
             async with session.post(add_client_url, cookies=cookies, json=payload, ssl=False) as response:
                 if response.status == 200:
-                    response_data = await response.json()
+                    response_data = await self._safe_json_parse(response)
                     if response_data.get("success"):
                         await logger.info(
                             f"SSH клиент {client_id} успешно добавлен в inbound {inbound_id} на {self.server_ip}")
@@ -427,7 +446,7 @@ class BaseKeyManager:
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.post(update_url, cookies=cookies, json=payload, ssl=False) as response:
                     if response.status == 200:
-                        response_data = await response.json()
+                        response_data = await self._safe_json_parse(response)
                         if response_data.get("success"):
                             return True
                         else:
