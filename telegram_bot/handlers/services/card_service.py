@@ -74,39 +74,41 @@ async def check_payment_status(payment_id):
 
 async def payment_status_checker(bot):
     while True:
-        async with DatabaseContextManager() as session_methods:
-            try:
-                unpaid_payments = await session_methods.payments.get_unpaid_payments()
+        try:
+            async with DatabaseContextManager() as session_methods:
+                try:
+                    unpaid_payments = await session_methods.payments.get_unpaid_payments()
 
-                for payment in unpaid_payments:
-                    try:
+                    for payment in unpaid_payments:
+                        try:
+                            payment_response = await check_payment_status(payment.payment_id)
+                            if payment_response.status == 'succeeded':
+                                user_id = payment.user_id
+                                try:
+                                    service = await session_methods.services.get_service_by_id(payment.service_id)
+                                    receipt_link = await create_receipt(service.name, service.price, service.duration_days)
+                                except Exception as e:
+                                    receipt_link = None
+                                await session_methods.payments.update_payment_status(
+                                    payment_id=payment.payment_id,
+                                    status='succeeded',
+                                    receipt_link=receipt_link
+                                )
+                                await bot.send_message(chat_id=user_id, text="Платеж успешно прошел!")
 
-                        payment_response = await check_payment_status(payment.payment_id)
-                        if payment_response.status == 'succeeded':
-                            user_id = payment.user_id
-                            try:
-                                service = await session_methods.services.get_service_by_id(payment.service_id)
-                                receipt_link = await create_receipt(service.name, service.price, service.duration_days)
-                            except Exception as e:
-                                receipt_link = None
-                            await session_methods.payments.update_payment_status(
-                                payment_id=payment.payment_id,
-                                status='succeeded',
-                                receipt_link=receipt_link
-                            )
-                            await bot.send_message(chat_id=user_id, text="Платеж успешно прошел!")
+                                await successful_payment(bot, payment_response)
 
-                            await successful_payment(bot, payment_response)
-
-                        payment_time_limit = payment.created_at + timedelta(hours=1)
-                        if datetime.utcnow() > payment_time_limit:
-                            await session_methods.payments.delete_payment(payment.payment_id)
-                            continue
-                    except Exception as e:
-                        await logger.log_error("Ошибка проверки статуса платежа", e)
-                await session_methods.session.commit()
-            except Exception as e:
-                await logger.log_error(f"Ошибка проверки статуса платежа", e)
+                            payment_time_limit = payment.created_at + timedelta(hours=1)
+                            if datetime.utcnow() > payment_time_limit:
+                                await session_methods.payments.delete_payment(payment.payment_id)
+                                continue
+                        except Exception as e:
+                            await logger.log_error("Ошибка проверки статуса платежа", e)
+                    await session_methods.session.commit()
+                except Exception as e:
+                    await logger.log_error(f"Ошибка проверки статуса платежа", e)
+        except Exception as e:
+            await logger.log_error(f"Критическая ошибка в payment_status_checker", e)
 
         await asyncio.sleep(3)
 

@@ -9,7 +9,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from config_data import config
-from database.init_db import DataBase
+from database.init_db import get_database
 from handlers.admin import add_server, user_info, cancel, pushes, show_servers, get_user_id, \
     add_gift, message_for_user, new_keys
 from handlers.services import guide_install, trial_subscription
@@ -156,8 +156,8 @@ async def create_bot_instance():
     if bot_instance and bot_instance.session:
         await bot_instance.session.close()
 
-    # Создаем базу данных
-    db = DataBase()
+    # Создаем базу данных (используем singleton)
+    db = get_database()
     await db.create_db()
 
     # Создаем новые экземпляры

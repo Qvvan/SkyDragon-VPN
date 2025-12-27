@@ -16,6 +16,7 @@ from models.models import SubscriptionStatusEnum, Payments
 
 
 async def check_subscriptions(bot: Bot):
+    subs = []
     async with DatabaseContextManager() as session_methods:
         try:
             subs = await session_methods.subscription.get_subs()
@@ -28,7 +29,10 @@ async def check_subscriptions(bot: Bot):
     current_date = datetime.utcnow() + timedelta(hours=3)
     for sub in subs:
         async with DatabaseContextManager() as session_methods:
-            await process_subscription(bot, sub, current_date, session_methods)
+            try:
+                await process_subscription(bot, sub, current_date, session_methods)
+            except Exception as e:
+                await logger.log_error(f'Ошибка обработки подписки {sub.subscription_id}', e)
 
 
 async def process_subscription(bot: Bot, sub, current_date, session_methods):

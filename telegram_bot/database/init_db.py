@@ -8,6 +8,17 @@ from models.models import Base
 
 env = Env()
 
+# Глобальный singleton экземпляр базы данных
+_db_instance = None
+
+
+def get_database():
+    """Получить singleton экземпляр базы данных."""
+    global _db_instance
+    if _db_instance is None:
+        _db_instance = DataBase()
+    return _db_instance
+
 
 class DataBase:
     def __init__(self):
@@ -17,9 +28,16 @@ class DataBase:
                 self.connect,
                 pool_size=10,
                 max_overflow=20,
-                pool_timeout=30
+                pool_timeout=30,
+                pool_recycle=3600,  # Переиспользование соединений через час
+                pool_pre_ping=True,  # Проверка соединений перед использованием
+                echo=False
             )
-            self.Session = async_sessionmaker(bind=self.async_engine, class_=AsyncSession)
+            self.Session = async_sessionmaker(
+                bind=self.async_engine,
+                class_=AsyncSession,
+                expire_on_commit=False
+            )
         except ArgumentError as e:
             logger.error(f"Invalid DSN configuration", e)
             raise
