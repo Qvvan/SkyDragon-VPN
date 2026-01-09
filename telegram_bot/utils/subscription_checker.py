@@ -104,7 +104,7 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
     try:
         if sub.auto_renewal and sub.card_details_id:
             service = await session_methods.services.get_service_by_id(sub.service_id)
-            res = auto_renewal_payment(
+            res = await auto_renewal_payment(
                 amount=service.price,
                 description=f"Оплата за услугу: {service.name}",
                 payment_method_id=sub.card_details_id,

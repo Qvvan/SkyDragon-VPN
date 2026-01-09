@@ -148,7 +148,7 @@ async def handle_gift_payment(callback_query: CallbackQuery, callback_data: Gift
         try:
             await callback_query.answer()
             service = await session_methods.services.get_service_by_id(service_id)
-            payment_data = create_payment(
+            payment_data = await create_payment(
                 amount=service.price,
                 description=f"Подарочная подписка: {service.name}",
                 return_url="https://t.me/SkyDragonVPNBot",

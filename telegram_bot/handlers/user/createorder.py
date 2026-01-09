@@ -161,7 +161,7 @@ async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallba
                 )
                 return
             service = await session_methods.services.get_service_by_id(service_id)
-            payment_data = create_payment(
+            payment_data = await create_payment(
                 amount=service.price,
                 description=f"Оплата за услугу: {service.name}",
                 return_url="https://t.me/SkyDragonVPNBot",

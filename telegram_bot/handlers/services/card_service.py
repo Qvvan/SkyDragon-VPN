@@ -16,7 +16,7 @@ Configuration.account_id = SHOP_ID
 Configuration.secret_key = SHOP_API_TOKEN
 
 
-def auto_renewal_payment(amount, description, payment_method_id, user_id, username, subscription_id, service_id):
+async def auto_renewal_payment(amount, description, payment_method_id, user_id, username, subscription_id, service_id):
     try:
         payment = Payment.create({
             "amount": {
@@ -39,7 +39,7 @@ def auto_renewal_payment(amount, description, payment_method_id, user_id, userna
         return None
 
 
-def create_payment(amount, description, return_url, service_id, service_type, user_id, username,
+async def create_payment(amount, description, return_url, service_id, service_type, user_id, username,
                    subscription_id: int = None, recipient_user_id: int = None):
     payment = Payment.create(
         {
