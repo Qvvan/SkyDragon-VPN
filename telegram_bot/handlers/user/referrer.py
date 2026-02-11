@@ -60,7 +60,7 @@ async def show_referrals(callback: CallbackQuery):
                 invited_username = referral.invited_username or "Неизвестно"
                 comparison_date = date(2024, 12, 13)
                 if referral.bonus_issued == ReferralStatus.INVITED:
-                    days = 5 if referral.created_at.date() > comparison_date else 7
+                    days = 0
                 elif referral.bonus_issued == ReferralStatus.SUBSCRIBED:
                     days = 20 if referral.created_at.date() > comparison_date else 30
                 referral_details.append(f"👤 @{invited_username} - Бонус: {days} дней")
