@@ -1,3 +1,5 @@
+import asyncio
+
 from aiogram import Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
@@ -5,6 +7,7 @@ from aiogram.types import CallbackQuery
 from database.context_manager import DatabaseContextManager
 from handlers.services.extend_latest_subscription import extend_user_subscription
 from handlers.services.guide_install import back_to_device_selection
+from handlers.services.key_operations_background import create_keys_background
 from keyboards.kb_inline import InlineKeyboards, SubscriptionCallbackFactory
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
@@ -23,9 +26,6 @@ async def process_trial_subscription_callback(callback: CallbackQuery, state: FS
         try:
             user = await session_methods.users.get_user(user_id=callback.from_user.id)
             if not user.trial_used:
-                await callback.message.edit_text(
-                    text="Активируем пробную подписку...",
-                )
                 subscription = await extend_user_subscription(
                     user_id=user.user_id,
                     username=callback.from_user.username,
@@ -33,12 +33,14 @@ async def process_trial_subscription_callback(callback: CallbackQuery, state: FS
                     session_methods=session_methods,
                 )
                 if subscription:
+                    # Сразу показываем пользователю успех и инструкции
                     try:
                         await callback.answer(
                             text=LEXICON_RU["trial_activated"]
                         )
                     except:
                         await callback.message.answer(text=LEXICON_RU["trial_activated"])
+                    
                     await back_to_device_selection(
                         callback_query=callback,
                         state=state,
@@ -47,12 +49,25 @@ async def process_trial_subscription_callback(callback: CallbackQuery, state: FS
                             subscription_id=subscription.subscription_id,
                         )
                     )
+                    
+                    await session_methods.users.update_user(user_id=callback.from_user.id, trial_used=True)
+                    await session_methods.session.commit()
+                    
                     await logger.log_info(
                         f"Пользователь @{callback.from_user.username}\n"
                         f"ID: {callback.from_user.id}\n"
-                        f"Активировал(а) пробную подписку")
-                    await session_methods.users.update_user(user_id=callback.from_user.id, trial_used=True)
-                    await session_methods.session.commit()
+                        f"Активировал(а) пробную подписку"
+                    )
+                    
+                    # Запускаем создание ключей в фоне (не блокируем ответ пользователю)
+                    asyncio.create_task(
+                        create_keys_background(
+                            user_id=user.user_id,
+                            username=callback.from_user.username or "",
+                            subscription_id=subscription.subscription_id,
+                            expiry_days=5,
+                        )
+                    )
             else:
                 await callback.message.edit_text(
                     text=LEXICON_RU['trial_subscription_used'],

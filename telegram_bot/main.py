@@ -1,5 +1,4 @@
 import asyncio
-import atexit
 import signal
 import sys
 
@@ -11,10 +10,9 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from config_data import config
 from database.init_db import get_database
 from handlers.admin import add_server, user_info, cancel, pushes, show_servers, get_user_id, \
-    add_gift, message_for_user, new_keys
+    add_gift, message_for_user, new_keys, online_abuse_test
 from handlers.services import guide_install, trial_subscription
 from handlers.services.card_service import payment_status_checker
-from handlers.services.ssh_tunnel_manager import SSHTunnelManager
 from handlers.user import start, support, createorder, online_users_vpn, legend
 from handlers.user import subs, referrer, menu, just_message, gift_sub, \
     send_stikers, history_payments
@@ -24,6 +22,7 @@ from middleware.trottling import ThrottlingMiddleware
 from scripts import update_keys
 from utils.check_servers import ping_servers
 from utils.gift_checker import run_gift_checker
+from utils.online_abuse_checker import run_online_abuse_check
 from utils.subscription_checker import run_checker
 from utils.trial_checker import run_trial_checker
 
@@ -34,19 +33,12 @@ background_tasks = []
 is_shutting_down = False
 
 
-def cleanup_tunnels():
-    """Очистка SSH туннелей при завершении работы."""
-    tunnel_manager = SSHTunnelManager()
-    tunnel_manager.cleanup()
-
-
 async def cleanup_bot_resources():
     """Очистка ресурсов бота."""
     global bot_instance, dp_instance, background_tasks, is_shutting_down
 
     is_shutting_down = True
 
-    # Отменяем фоновые задачи
     for task in background_tasks:
         if not task.done():
             task.cancel()
@@ -60,8 +52,6 @@ async def cleanup_bot_resources():
     # Закрываем сессию бота
     if bot_instance and bot_instance.session:
         await bot_instance.session.close()
-
-    cleanup_tunnels()
 
 
 def signal_handler(signum, frame):
@@ -113,6 +103,7 @@ def setup_routers(dp: Dispatcher):
         add_server.router,
         pushes.router,
         show_servers.router,
+        online_abuse_test.router,
         get_user_id.router,
         add_gift.router,
         message_for_user.router,
@@ -144,7 +135,8 @@ async def setup_background_tasks(bot: Bot):
         asyncio.create_task(ping_servers(bot)),
         asyncio.create_task(payment_status_checker(bot)),
         asyncio.create_task(run_trial_checker(bot)),
-        asyncio.create_task(run_gift_checker(bot))
+        asyncio.create_task(run_gift_checker(bot)),
+        asyncio.create_task(run_online_abuse_check(bot)),
     ])
 
 
@@ -201,9 +193,6 @@ async def main():
         # Запускаем фоновые задачи
         await setup_background_tasks(bot)
 
-        # Регистрируем cleanup при выходе
-        atexit.register(cleanup_tunnels)
-
         # Удаляем webhook с увеличенным таймаутом
         try:
             await bot.delete_webhook(drop_pending_updates=True, request_timeout=30)
@@ -250,7 +239,7 @@ async def run_bot():
             await logger.error(f"💥 Бот завершил работу с ошибкой (попытка {restart_count}/{max_restarts})", e)
 
             if restart_count >= max_restarts:
-                await logger.error("❌ Превышено максимальное количество перезапусков. Завершение работы.")
+                await logger.error("❌ Превышено максимальное количество перезапусков. Завершение работы.", None)
                 break
 
             await logger.info(f"🔄 Перезапуск бота через {delay} секунд...")
@@ -268,5 +257,3 @@ if __name__ == "__main__":
         print("Программа прервана пользователем")
     except Exception as e:
         print(f"Критическая ошибка: {e}")
-    finally:
-        cleanup_tunnels()

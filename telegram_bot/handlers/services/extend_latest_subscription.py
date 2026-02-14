@@ -1,8 +1,6 @@
 from datetime import datetime, timedelta
 
-from handlers.services.create_keys import create_keys
 from handlers.services.create_subscription_service import SubscriptionService
-from handlers.services.update_keys import update_keys
 from logger.logging_config import logger
 from models.models import Subscriptions, SubscriptionStatusEnum
 
@@ -30,9 +28,8 @@ async def extend_user_subscription(user_id: int, username: str, days: int, sessi
             if not subscription_created:
                 raise Exception("Ошибка создания подписки")
 
-            await create_keys(user_id, username, sub_id=subscription_created.subscription_id)
-
-            return subscription
+            # Возвращаем созданную подписку, создание ключей будет в фоне в вызывающем коде
+            return subscription_created
 
         latest_subscription = max(subscriptions, key=lambda sub: sub.end_date or datetime.min)
         subscription_id = latest_subscription.subscription_id
@@ -49,7 +46,7 @@ async def extend_user_subscription(user_id: int, username: str, days: int, sessi
             status=SubscriptionStatusEnum.ACTIVE,
             reminder_sent=0
         )
-        await update_keys(user_id, subscription_id, True)
+        # Возвращаем обновленную подписку, обновление ключей будет в фоне в вызывающем коде
         return latest_subscription
 
     except Exception as e:
