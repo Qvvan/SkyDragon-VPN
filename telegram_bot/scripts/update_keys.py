@@ -8,8 +8,7 @@ from config_data.config import ADMIN_IDS
 from database.context_manager import DatabaseContextManager
 from filters.admin import IsAdmin
 from handlers.services.identifiers import encode_numbers, generate_deterministic_uuid
-from handlers.services.key_create import BaseKeyManager
-
+# Раньше использовался BaseKeyManager (SSH) — сейчас работа только по HTTPS через PanelGateway
 env = Env()
 env.read_env()
 

@@ -24,7 +24,7 @@ async def show_servers_handler(message: types.Message):
             return
 
     for server in servers:
-        # Сначала проверяем по HTTP, только при неудаче — по SSH
+        # Проверяем доступность панели по HTTPS
         gateway = PanelGateway(server)
         reachable = await gateway.check_reachable()
         await gateway.close()

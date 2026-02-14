@@ -10,8 +10,6 @@ services:
     depends_on:
       - db
     command: python main.py
-    volumes:
-      - C:/Users/${USERNAME}/.ssh:/host_ssh:ro
     networks:
       - bot-network
 
@@ -41,16 +39,13 @@ services:
       - .env
     ports:
       - "12345:12345"
-    volumes:
-      - C:/Users/${USERNAME}/.ssh:/host_ssh:ro
+    # В dev — один worker и --reload, доступ на localhost:12345 для теста ручек
     command: [
       "uvicorn", "app:app",
       "--host", "0.0.0.0",
       "--port", "12345",
-      "--workers", "3",  # Один worker для async
-      "--loop", "uvloop",  # Быстрый event loop
-      "--http", "httptools",  # Быстрый HTTP парсер
-      "--access-log",  # Логирование для отладки
+      "--reload",
+      "--access-log",
       "--timeout-keep-alive", "5"
     ]
     networks:

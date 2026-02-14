@@ -114,24 +114,22 @@ class XuiPanelHttpClient:
 
     async def ping(self) -> bool:
         """
-        Лёгкая проверка доступности сервера: GET на корень (не на /login —
-        там может быть только POST). Достаточно убедиться, что хост:порт отвечают.
+        Простая проверка доступности: GET на корень. Любой ответ (в т.ч. 404) — сервер жив.
+        Таймаут 5 сек.
         """
         url = f"{self._server_url}/"
-        timeout = ClientTimeout(connect=2, total=4)
+        timeout = ClientTimeout(connect=5, total=5)
         try:
             connector = aiohttp.TCPConnector(ssl=False)
             async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
                 async with session.get(url, ssl=False) as response:
-                    # Любой ответ — сервер живой
                     await logger.info(
                         f"ping: {self._server_url} ответил статусом {response.status}"
                     )
                     return True
         except asyncio.TimeoutError:
             await logger.info(
-                f"ping: timeout для {self._server_url} "
-                f"(URL: {url}, connect_timeout=2, total_timeout=4)"
+                f"ping: timeout для {self._server_url} (URL: {url}, timeout=5s)"
             )
             return False
         except aiohttp.ClientConnectorError as e:
@@ -160,17 +158,23 @@ class XuiPanelHttpClient:
             return False
 
     async def _get_session(self) -> ClientSession:
-        """Получает или создает HTTP сессию"""
+        """Получает или создает HTTP сессию с заголовками как у браузера (панель может отдавать 404 без них)."""
         if self._session is None or self._session.closed:
             timeout = ClientTimeout(
                 connect=self._connect_timeout,
                 total=self._total_timeout,
             )
             connector = aiohttp.TCPConnector(ssl=False)
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "application/json, text/plain, */*",
+                "Accept-Language": "en-US,en;q=0.9",
+            }
             self._session = ClientSession(
                 timeout=timeout,
                 connector=connector,
                 cookie_jar=aiohttp.CookieJar(unsafe=True),
+                headers=headers,
             )
         return self._session
 
@@ -253,8 +257,10 @@ class XuiPanelHttpClient:
                 async with session.request(method, url, **kwargs) as response:
                     if response.status == 200:
                         return await self._safe_json_parse(response)
-                    elif response.status in (401, 403) and retry_auth:
-                        await logger.warning(f"Получен {response.status}, пытаемся переаутентифицироваться")
+                    if response.status in (401, 403, 404) and retry_auth:
+                        await logger.warning(
+                            f"Получен {response.status} для {url}, переаутентификация и повтор (404 при протухшей сессии)"
+                        )
                         self._is_authenticated = False
                         if await self._authenticate():
                             async with session.request(method, url, **kwargs) as retry_response:
@@ -266,15 +272,14 @@ class XuiPanelHttpClient:
                                     None,
                                 )
                         raise ServerUnavailableError(f"Не удалось аутентифицироваться для запроса {method} {url}")
-                    else:
-                        error_text = await response.text()
-                        await logger.error(
-                            f"Ошибка запроса {method} {url}: статус {response.status}, ответ: {error_text[:200]}",
-                            None,
-                        )
-                        raise ServerUnavailableError(
-                            f"Ошибка запроса: статус {response.status}, ответ: {error_text[:200]}"
-                        )
+                    error_text = await response.text()
+                    await logger.error(
+                        f"Ошибка запроса {method} {url}: статус {response.status}, ответ: {error_text[:200]}",
+                        None,
+                    )
+                    raise ServerUnavailableError(
+                        f"Ошибка запроса: статус {response.status}, ответ: {error_text[:200]}"
+                    )
             except ServerUnavailableError:
                 raise
             except asyncio.TimeoutError:
@@ -299,6 +304,47 @@ class XuiPanelHttpClient:
     ) -> dict[str, Any]:
         """Выполняет POST запрос"""
         return await self._make_request("POST", endpoint, json_data=json_data, data=data)
+
+    async def get_online_users(self) -> dict[str, Any] | None:
+        """
+        Получает список онлайн пользователей (POST /panel/api/inbounds/onlines).
+        Returns:
+            Словарь с полем success и obj (список client_id, например email вида base64_portNNNN).
+        """
+        try:
+            response = await self.post("/panel/api/inbounds/onlines", json_data={})
+            if response.get("success"):
+                return response
+            return None
+        except Exception as e:
+            await logger.error(f"Исключение при получении онлайн пользователей", e)
+            return None
+
+    async def get_client_ips(self, client_id: str) -> list[str]:
+        """
+        Получает список IP адресов для онлайн-клиента (POST /panel/api/inbounds/clientIps/{client_id}).
+        client_id — строка из obj onlines (например MzIzOTkzMjAyLDF8MTAwNTdiNzg=_port3000).
+
+        Returns:
+            Список IP-адресов или пустой список при ошибке.
+        """
+        from urllib.parse import quote
+        endpoint = f"/panel/api/inbounds/clientIps/{quote(client_id, safe='')}"
+        try:
+            response = await self.post(endpoint, json_data={})
+            if not response.get("success"):
+                return []
+            obj = response.get("obj")
+            if obj is None:
+                return []
+            if isinstance(obj, str):
+                obj = json.loads(obj)
+            if isinstance(obj, list):
+                return [str(x) for x in obj]
+            return []
+        except Exception as e:
+            await logger.error(f"Исключение при получении clientIps для {client_id[:50]}", e)
+            return []
 
     async def get_inbound_by_port(self, port: int) -> dict[str, Any] | None:
         """

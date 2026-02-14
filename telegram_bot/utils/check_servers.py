@@ -27,7 +27,7 @@ async def ping_servers(bot: Bot):
             if server.hidden == 1:
                 continue
 
-            # Только лёгкий пинг (без авторизации): HTTP GET, при неудаче — SSH
+            # Проверка доступности по HTTPS (лёгкий пинг)
             gateway = PanelGateway(server)
             reachable = await gateway.ping_only()
             await gateway.close()

@@ -34,7 +34,14 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+
+# Редакторы: резервные и временные файлы (~, .swp, .bak и т.п.)
 *~
+.*~
+*.swp
+*.swo
+*.bak
+*.backup
 
 # Python virtual environments
 venv/
