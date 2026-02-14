@@ -68,6 +68,27 @@ class ServerMethods:
             await logger.log_error(f"Error fetching servers from the database", e)
             return []
 
+    async def get_active_servers_for_keys(self) -> List[Servers]:
+        """
+        Получает список активных не скрытых серверов для создания ключей.
+        Возвращает серверы с заполненным available_ports (по умолчанию [443] если пусто).
+        """
+        try:
+            result = await self.session.execute(
+                select(Servers).where(Servers.hidden != 1)
+            )
+            servers = result.scalars().all()
+            
+            # Убеждаемся, что у каждого сервера есть available_ports
+            for server in servers:
+                if not server.available_ports:
+                    server.available_ports = [443]
+            
+            return servers
+        except SQLAlchemyError as e:
+            await logger.log_error(f"Error fetching active servers for keys", e)
+            return []
+
     async def update_server(self, server_ip, **kwargs):
         """
         Универсальное обновление сервера в базе данных.

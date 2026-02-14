@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 from config_data.config import PORT_X_UI, MY_SECRET_URL, ADMIN_IDS
 from database.context_manager import DatabaseContextManager
 from filters.admin import IsAdmin
-from handlers.services.key_create import BaseKeyManager
+from handlers.services.panel_gateway import PanelGateway
 from keyboards.kb_inline import InlineKeyboards, ServerCallbackData
 from logger.logging_config import logger
 from state.state import ServerManagementStates
@@ -24,17 +24,22 @@ async def show_servers_handler(message: types.Message):
             return
 
     for server in servers:
-        base = BaseKeyManager(server.server_ip)
-        reachable = await base._get_ssh_session_cookie()
+        # Сначала проверяем по HTTP, только при неудаче — по SSH
+        gateway = PanelGateway(server)
+        reachable = await gateway.check_reachable()
+        await gateway.close()
         status = "✅ Доступен" if reachable else "❌ Недоступен"
         hidden_status = "🟢 Включен" if server.hidden == 0 else "🔴 Выключен"
+        panel_port = getattr(server, "panel_port", None) or PORT_X_UI
+        url_secret = (getattr(server, "url_secret", None) or MY_SECRET_URL).strip("/")
+        panel_path = f"{url_secret}/" if url_secret else ""
 
         text = (
             f"Название: {server.name} 📌\n"
             f"IP: {server.server_ip} 🌐\n"
             f"Статус: {status}\n"
             f"В БД: {hidden_status}\n"
-            f"[Панель сервера](https://{server.server_ip}:{PORT_X_UI}/{MY_SECRET_URL}/panel/)"
+            f"[Панель сервера](https://{server.server_ip}:{panel_port}/{panel_path}panel/)"
         )
 
         await message.answer(

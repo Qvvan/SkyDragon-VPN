@@ -123,6 +123,10 @@ class Servers(Base):
     name = Column(String, nullable=False)
     limit = Column(Integer, nullable=True)
     hidden = Column(Integer, nullable=True, default=0)
+    # Новые поля для поддержки новой API и множественных портов
+    available_ports = Column(ARRAY(Integer), nullable=True)  # Список портов для инбаундов [443, 8443, 3000]
+    panel_port = Column(Integer, nullable=True)  # Порт панели управления (по умолчанию из конфига)
+    url_secret = Column(String, nullable=True)  # URL-секрет панели (по умолчанию из конфига)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 

@@ -75,9 +75,27 @@ class SSHTunnelManager:
         """
         Проверяет здоровье туннеля через реальное соединение
         """
+        from logger.logging_config import logger
+        
         try:
             # Проверяем что процесс еще жив
-            if tunnel_info.process.poll() is not None:
+            exit_code = tunnel_info.process.poll()
+            if exit_code is not None:
+                # Процесс завершился
+                stderr = ""
+                try:
+                    if tunnel_info.process.stderr:
+                        stderr = tunnel_info.process.stderr.read().decode()
+                except:
+                    pass
+                stderr_clean = stderr.strip() if stderr else "(пусто)"
+                await logger.warning(
+                    f"SSH туннель для {server_ip} завершился: "
+                    f"exit_code={exit_code}, stderr={stderr_clean}, "
+                    f"локальный_порт={tunnel_info.local_port}, "
+                    f"создан={tunnel_info.created_at.strftime('%Y-%m-%d %H:%M:%S')}, "
+                    f"проверок_здоровья={tunnel_info.health_check_count}"
+                )
                 return False
 
             # Проверяем что порт действительно слушает
@@ -87,11 +105,19 @@ class SSHTunnelManager:
 
             try:
                 result = sock.connect_ex(('localhost', tunnel_info.local_port))
+                if result != 0:
+                    await logger.info(
+                        f"SSH туннель для {server_ip}: порт {tunnel_info.local_port} "
+                        f"не отвечает (connect_ex={result})"
+                    )
                 return result == 0
             finally:
                 sock.close()
 
-        except Exception:
+        except Exception as e:
+            await logger.info(
+                f"SSH туннель для {server_ip}: ошибка проверки здоровья: {e}"
+            )
             return False
 
     async def get_tunnel_port(self, server_ip: str) -> Optional[int]:
@@ -105,13 +131,26 @@ class SSHTunnelManager:
             # Проверяем здоровье туннеля
             if await self._check_tunnel_health(server_ip, tunnel_info):
                 tunnel_info.health_check_count += 1
+                await logger.info(
+                    f"SSH туннель используется для {server_ip}: "
+                    f"локальный_порт={tunnel_info.local_port}, "
+                    f"создан={tunnel_info.created_at.strftime('%Y-%m-%d %H:%M:%S')}, "
+                    f"проверок_здоровья={tunnel_info.health_check_count}"
+                )
                 return tunnel_info.local_port
             else:
                 # Туннель мертв, удаляем
+                await logger.warning(
+                    f"SSH туннель для {server_ip} обнаружен как мертвый "
+                    f"(локальный_порт={tunnel_info.local_port}, "
+                    f"создан={tunnel_info.created_at.strftime('%Y-%m-%d %H:%M:%S')}), "
+                    f"закрываем и создаем новый"
+                )
                 await self._cleanup_tunnel(server_ip)
 
         # Создаем новый туннель (thread-safe)
         async with self._port_lock:
+            await logger.info(f"SSH туннель запрошен для {server_ip}, создаем новый")
             return await self._create_new_tunnel(server_ip)
 
     async def _create_new_tunnel(self, server_ip: str) -> Optional[int]:
@@ -159,8 +198,15 @@ class SSHTunnelManager:
 
                 if process.poll() is not None:
                     # Процесс завершился с ошибкой
+                    exit_code = process.returncode
                     stderr = process.stderr.read().decode() if process.stderr else ""
-                    await logger.log_error(f"SSH процесс завершился для {server_ip}: {stderr}", None)
+                    stderr_clean = stderr.strip() if stderr else "(пусто)"
+                    await logger.log_error(
+                        f"SSH процесс завершился для {server_ip} во время создания туннеля: "
+                        f"exit_code={exit_code}, stderr={stderr_clean}, "
+                        f"локальный_порт={local_port}, удаленный_порт={PORT_X_UI}",
+                        None
+                    )
                     return None
 
                 # Проверяем что туннель работает
@@ -171,6 +217,11 @@ class SSHTunnelManager:
                         created_at=datetime.now()
                     )
                     self._tunnels[server_ip] = tunnel_info
+                    await logger.info(
+                        f"SSH туннель успешно создан для {server_ip}: "
+                        f"локальный_порт={local_port}, удаленный_порт={PORT_X_UI}, "
+                        f"PID={process.pid}"
+                    )
                     return local_port
 
             # Таймаут создания туннеля
@@ -219,28 +270,60 @@ class SSHTunnelManager:
 
     async def _cleanup_tunnel(self, server_ip: str):
         """Безопасно закрывает туннель"""
+        from logger.logging_config import logger
+        
         if server_ip not in self._tunnels:
             return
 
         tunnel_info = self._tunnels[server_ip]
         process = tunnel_info.process
+        local_port = tunnel_info.local_port
+        created_at = tunnel_info.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        health_checks = tunnel_info.health_check_count
+        
+        # Проверяем статус процесса перед закрытием
+        exit_code_before = process.poll()
+        is_alive_before = exit_code_before is None
 
         try:
-            # Завершаем группу процессов (включая SSH)
-            os.killpg(os.getpgid(process.pid), 15)  # SIGTERM
+            if is_alive_before:
+                await logger.info(
+                    f"SSH туннель закрывается для {server_ip}: "
+                    f"локальный_порт={local_port}, PID={process.pid}, "
+                    f"создан={created_at}, проверок_здоровья={health_checks}"
+                )
+                # Завершаем группу процессов (включая SSH)
+                os.killpg(os.getpgid(process.pid), 15)  # SIGTERM
 
-            # Даем время на graceful shutdown
-            try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                os.killpg(os.getpgid(process.pid), 9)  # SIGKILL
+                # Даем время на graceful shutdown
+                try:
+                    process.wait(timeout=5)
+                    await logger.info(
+                        f"SSH туннель для {server_ip} закрыт gracefully "
+                        f"(PID={process.pid}, exit_code={process.returncode})"
+                    )
+                except subprocess.TimeoutExpired:
+                    os.killpg(os.getpgid(process.pid), 9)  # SIGKILL
+                    await logger.warning(
+                        f"SSH туннель для {server_ip} принудительно закрыт "
+                        f"(PID={process.pid}, timeout при graceful shutdown)"
+                    )
+            else:
+                await logger.info(
+                    f"SSH туннель для {server_ip} уже завершен: "
+                    f"локальный_порт={local_port}, PID={process.pid}, "
+                    f"exit_code={exit_code_before}, создан={created_at}, "
+                    f"проверок_здоровья={health_checks}"
+                )
 
-        except (ProcessLookupError, OSError):
-            pass  # Процесс уже мертв
+        except (ProcessLookupError, OSError) as e:
+            await logger.info(
+                f"SSH туннель для {server_ip} уже не существует "
+                f"(PID={process.pid}): {e}"
+            )
 
         # Удаляем из кэша
         del self._tunnels[server_ip]
-        del self._local_ports[server_ip]
 
     async def cleanup_all(self):
         """Закрывает все туннели при завершении"""

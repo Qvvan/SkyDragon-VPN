@@ -37,7 +37,20 @@ is_shutting_down = False
 def cleanup_tunnels():
     """Очистка SSH туннелей при завершении работы."""
     tunnel_manager = SSHTunnelManager()
-    tunnel_manager.cleanup()
+    # cleanup_all() - async метод, но atexit не поддерживает async
+    # Просто закрываем процессы напрямую
+    try:
+        for server_ip in list(tunnel_manager._tunnels.keys()):
+            tunnel_info = tunnel_manager._tunnels[server_ip]
+            process = tunnel_info.process
+            try:
+                import os
+                os.killpg(os.getpgid(process.pid), 15)  # SIGTERM
+            except (ProcessLookupError, OSError):
+                pass
+        tunnel_manager._tunnels.clear()
+    except Exception:
+        pass  # Игнорируем ошибки при завершении
 
 
 async def cleanup_bot_resources():
@@ -250,7 +263,7 @@ async def run_bot():
             await logger.error(f"💥 Бот завершил работу с ошибкой (попытка {restart_count}/{max_restarts})", e)
 
             if restart_count >= max_restarts:
-                await logger.error("❌ Превышено максимальное количество перезапусков. Завершение работы.")
+                await logger.error("❌ Превышено максимальное количество перезапусков. Завершение работы.", None)
                 break
 
             await logger.info(f"🔄 Перезапуск бота через {delay} секунд...")

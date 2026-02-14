@@ -5,7 +5,7 @@ from aiogram import Bot, Router
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from database.context_manager import DatabaseContextManager
-from handlers.services.key_create import BaseKeyManager
+from handlers.services.panel_gateway import PanelGateway
 from keyboards.kb_inline import ServerCallbackData
 from logger.logging_config import logger
 
@@ -27,8 +27,10 @@ async def ping_servers(bot: Bot):
             if server.hidden == 1:
                 continue
 
-            base = BaseKeyManager(server.server_ip)
-            reachable = await base._get_ssh_session_cookie()
+            # Только лёгкий пинг (без авторизации): HTTP GET, при неудаче — SSH
+            gateway = PanelGateway(server)
+            reachable = await gateway.ping_only()
+            await gateway.close()
             if reachable:
                 if server.server_ip in notification_dict:
                     del notification_dict[server.server_ip]
@@ -57,4 +59,5 @@ async def ping_servers(bot: Bot):
             if not notification_dict[server_ip]:
                 del notification_dict[server_ip]
 
-        await asyncio.sleep(3)
+        # Проверяем не чаще чем раз в 3 минуты; проверка — только лёгкий пинг без авторизации
+        await asyncio.sleep(180)
