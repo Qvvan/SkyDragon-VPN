@@ -43,21 +43,21 @@ def run_migration_sync():
     try:
         import psycopg2
     except ImportError:
-        print("Установите psycopg2: pip install psycopg2-binary")
+        print("Install psycopg2: pip3 install psycopg2-binary")
         return False
 
     dsn = get_psycopg_dsn()
     if not dsn:
-        print("Не задан DSN. Укажите DSN в .env или переменные DB_USER, DB_PASSWORD, DB_HOST, DB_NAME.")
+        print("DSN not set. Use .env or DB_USER, DB_PASSWORD, DB_HOST, DB_NAME.")
         return False
 
     migration_file = ROOT / "migrations" / "20260213_01_add_server_api_fields.sql"
     if not migration_file.exists():
-        print(f"Файл миграции не найден: {migration_file}")
+        print(f"Migration file not found: {migration_file}")
         return False
 
     sql = migration_file.read_text(encoding="utf-8")
-    print(f"Применяю миграцию: {migration_file.name}")
+    print(f"Applying migration: {migration_file.name}")
 
     try:
         conn = psycopg2.connect(dsn)
@@ -67,10 +67,10 @@ def run_migration_sync():
         conn.commit()
         cur.close()
         conn.close()
-        print("Миграция применена успешно.")
+        print("Migration applied successfully.")
         return True
     except Exception as e:
-        print(f"Ошибка применения миграции: {e}")
+        print(f"Migration failed: {e}")
         return False
 
 
@@ -93,21 +93,20 @@ async def run_migration_async():
 
     migration_file = ROOT / "migrations" / "20260213_01_add_server_api_fields.sql"
     if not migration_file.exists():
-        print(f"Файл миграции не найден: {migration_file}")
+        print(f"Migration file not found: {migration_file}")
         return False
 
     sql = migration_file.read_text(encoding="utf-8")
-    print(f"Применяю миграцию: {migration_file.name}")
+    print(f"Applying migration: {migration_file.name}")
 
     try:
         conn = await asyncpg.connect(dsn)
-        # asyncpg execute поддерживает несколько команд в одной строке
         await conn.execute(sql)
         await conn.close()
-        print("Миграция применена успешно.")
+        print("Migration applied successfully.")
         return True
     except Exception as e:
-        print(f"Ошибка применения миграции: {e}")
+        print(f"Migration failed: {e}")
         return False
 
 
