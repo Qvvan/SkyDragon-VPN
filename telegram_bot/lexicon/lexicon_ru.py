@@ -217,17 +217,17 @@ LEXICON_RU: dict[str, str] = {
 }
 
 app_link = {
-    "iPhone": "https://apps.apple.com/ru/app/streisand/id6450534064",
+    "iPhone": "https://apps.apple.com/ru/app/v2raytun/id6476628951",
     "Android": "https://play.google.com/store/apps/details?id=com.v2raytun.android&hl=ru",
-    "Windows": "https://github.com/hiddify/hiddify-next/releases",
-    "MacOS": "https://apps.apple.com/ru/app/v2box-v2ray-client/id6446814690"
+    "Windows": "https://github.com/Happ-proxy/happ-desktop/releases/latest/download/setup-Happ.x64.exe",
+    "MacOS": "https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973"
 }
 
 guide_install = {
     "iPhone": "🐉 <b>Как установить защиту дракона на iPhone:</b>\n\n"
               "1⃣ Скопируй ключ, просто нажав на него🔑\n"
-              "2⃣ Установи приложение <a href=\"https://apps.apple.com/ru/app/streisand/id6450534064\">Streisand</a> из AppStore\n"
-              "3⃣ Откройте Streisand, нажмите ➕ и выберите «Добавить из буфера»\n\n"
+              "2⃣ Установи приложение <a href=\"https://apps.apple.com/ru/app/v2raytun/id6476628951\">V2RayTun</a> из AppStore\n"
+              "3⃣ Откройте V2RayTun, нажмите ➕ и выберите «Добавить из буфера»\n\n"
               "🐲 Ключ доступа\n"
               "<pre>{key}</pre>",
 
@@ -240,20 +240,17 @@ guide_install = {
 
     "Windows": "🐉 <b>Как установить защиту дракона на Windows:</b>\n\n"
                "1⃣ Скопируй ключ, просто нажав на него🔑\n"
-               "2⃣ Скачай с <a href=\"https://github.com/hiddify/hiddify-next/releases\">GitHub</a>\n"
-               "3⃣ Запустите с правами администратора\n"
-               "4⃣ Запусти программу с правами администратора для активации\n"
-               "5⃣ Выбери свой регион\n"
-               "6⃣ Вставь подписку, выбрав «Новый профиль» > «Добавить профиль из буфера обмена»\n\n"
+               "2⃣ Скачай <a href=\"https://github.com/Happ-proxy/happ-desktop/releases/latest/download/setup-Happ.x64.exe\">Happ</a>\n"
+                 "3⃣ Открой Happ\n"
+                 "4⃣ Нажми снизу кнопку <Из буфера>\n\n"
                "🐲 Ключ доступа\n"
                "<pre>{key}</pre>",
 
     "MacOS": "🐉 <b>Как установить защиту дракона на MacOS:</b>\n\n"
              "1⃣ Скопируй ключ, просто нажав на него🔑\n"
-             "2⃣ Установи приложение <a href=\"https://apps.apple.com/ru/app/v2box-v2ray-client/id6446814690\">V2Box</a> из AppStore\n"
-             "3⃣ Открой V2Box и перейди во вкладку «Configs»\n"
-             "4⃣ Нажми ➕ в правом верхнем углу и выбери «Import v2ray uri from clipboard»\n"
-             "5⃣ Перейди на вкладку «Home» и нажми на большую кнопку «Tap to Connect» для активации защиты\n\n"
+             "2⃣ Установи приложение <a href=\"https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973\">Happ</a> из AppStore\n"
+             "3⃣ Открой Happ\n"
+             "4⃣ Нажми снизу кнопку <Из буфера>\n\n"
              "🐲 Ключ доступа\n"
              "<pre>{key}</pre>"
 }

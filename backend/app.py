@@ -125,7 +125,7 @@ async def get_subscription_list(encrypted_part: str, db: Session = Depends(get_d
 
 @app.get("/import/iphone/{encrypted_part}")
 async def get_subscription(encrypted_part: str):
-    redirect_url = f"streisand://import/https://skydragonvpn.ru/sub/{encrypted_part}"
+    redirect_url = f"v2raytun://import/https://skydragonvpn.ru/sub/{encrypted_part}"
 
     # Возвращаем редирект
     return RedirectResponse(url=redirect_url, status_code=302)
