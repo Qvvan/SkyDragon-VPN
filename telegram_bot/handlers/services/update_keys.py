@@ -43,7 +43,7 @@ async def update_keys(user_id: int, subscription_id: int, status: bool):
                             email=email,
                             tg_id=str(user_id),
                             sub_id=sub_uuid,
-                            limit_ip=1,
+                            limit_ip=2,
                         )
                         
                         if result:

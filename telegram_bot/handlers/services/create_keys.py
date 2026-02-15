@@ -48,7 +48,7 @@ async def create_keys(user_id: int, username: str, sub_id: int, expiry_days: int
                             email=email,
                             tg_id=str(user_id),
                             sub_id=sub_uuid,
-                            limit_ip=1,
+                            limit_ip=2,
                             expiry_days=expiry_days,
                             enable=True,
                         )

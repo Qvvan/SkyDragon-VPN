@@ -65,7 +65,7 @@ async def process_trial_subscription_callback(callback: CallbackQuery, state: FS
                             user_id=user.user_id,
                             username=callback.from_user.username or "",
                             subscription_id=subscription.subscription_id,
-                            expiry_days=5,
+                            expiry_days=0,
                         )
                     )
             else:

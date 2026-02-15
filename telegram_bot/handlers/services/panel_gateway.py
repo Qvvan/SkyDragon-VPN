@@ -173,6 +173,31 @@ class PanelGateway:
             )
         return None
 
+    def _client_exists_in_inbound(self, inbound: dict, email: str) -> bool:
+        """
+        Проверяет, есть ли в инбаунде клиент с указанным email.
+
+        Args:
+            inbound: Словарь инбаунда (с полем settings)
+            email: Email клиента
+
+        Returns:
+            True если клиент найден в settings.clients
+        """
+        settings_raw = inbound.get("settings")
+        if not settings_raw:
+            return False
+        try:
+            settings = json.loads(settings_raw) if isinstance(settings_raw, str) else settings_raw
+            if not isinstance(settings, dict):
+                return False
+            for c in settings.get("clients", []):
+                if isinstance(c, dict) and c.get("email") == email:
+                    return True
+        except (json.JSONDecodeError, TypeError):
+            pass
+        return False
+
     async def add_client(
         self,
         port: int,
@@ -274,7 +299,10 @@ class PanelGateway:
         limit_ip: int = 1,
     ) -> bool:
         """
-        Обновляет статус включения/выключения клиента по HTTPS
+        Обновляет статус включения/выключения клиента по HTTPS.
+        Сначала проверяет наличие ключа в инбаунде:
+        - Включение (enable=True): если ключ есть — обновляет, если нет — создаёт.
+        - Выключение (enable=False): если ключа нет — ничего не делает, если есть — выключает.
 
         Args:
             port: Порт инбаунда
@@ -286,9 +314,8 @@ class PanelGateway:
             limit_ip: Лимит IP адресов
 
         Returns:
-            True если статус успешно обновлен
+            True если операция успешна (обновлён/создан/пропущен при выключении несуществующего)
         """
-        # Попытка через HTTP
         try:
             http_client = self._get_http_client()
             inbound = await http_client.get_inbound_by_port(port)
@@ -300,23 +327,61 @@ class PanelGateway:
                 raise HttpServerUnavailableError(f"Инбаунд с портом {port} не содержит ID")
             protocol = (inbound.get("protocol") or "vless").strip().lower()
 
-            result = await http_client.update_client_enable(
-                inbound_id=inbound_id,
-                client_id=client_id,
-                enable=enable,
-                email=email,
-                tg_id=tg_id,
-                sub_id=sub_id,
-                limit_ip=limit_ip,
-                protocol=protocol,
-            )
+            client_exists = self._client_exists_in_inbound(inbound, email)
 
-            if result:
-                await logger.info(
-                    f"Статус клиента {client_id} успешно обновлен (enable={enable}) "
-                    f"на порт {port} сервера {self._server.server_ip}"
+            if enable:
+                if client_exists:
+                    result = await http_client.update_client_enable(
+                        inbound_id=inbound_id,
+                        client_id=client_id,
+                        enable=True,
+                        email=email,
+                        tg_id=tg_id,
+                        sub_id=sub_id,
+                        limit_ip=limit_ip,
+                        protocol=protocol,
+                    )
+                    if result:
+                        await logger.info(
+                            f"Статус клиента {client_id} успешно обновлен (включён) "
+                            f"на порт {port} сервера {self._server.server_ip}"
+                        )
+                    return result
+                else:
+                    result = await self.add_client(
+                        port=port,
+                        client_id=client_id,
+                        email=email,
+                        tg_id=tg_id,
+                        sub_id=sub_id,
+                        limit_ip=limit_ip,
+                        expiry_days=0,
+                        enable=True,
+                    )
+                    return result
+            else:
+                if not client_exists:
+                    await logger.info(
+                        f"Ключ в инбаунде порт {port} ({self._server.server_ip}) не найден, "
+                        f"выключение не требуется"
+                    )
+                    return True
+                result = await http_client.update_client_enable(
+                    inbound_id=inbound_id,
+                    client_id=client_id,
+                    enable=False,
+                    email=email,
+                    tg_id=tg_id,
+                    sub_id=sub_id,
+                    limit_ip=limit_ip,
+                    protocol=protocol,
                 )
-                return True
+                if result:
+                    await logger.info(
+                        f"Статус клиента {client_id} успешно обновлен (выключен) "
+                        f"на порт {port} сервера {self._server.server_ip}"
+                    )
+                return result
 
         except HttpServerUnavailableError as e:
             await logger.warning(

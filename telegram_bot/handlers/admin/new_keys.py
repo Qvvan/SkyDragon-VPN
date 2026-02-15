@@ -138,7 +138,7 @@ async def create_keys(server_ip: str) -> tuple[bool, int, int]:
                             email=email,
                             tg_id=str(sub.user_id),
                             sub_id=sub_uuid,
-                            limit_ip=1,
+                            limit_ip=2,
                             expiry_days=0,  # Без ограничений для админского создания
                             enable=True,
                         )

@@ -57,7 +57,7 @@ class SubscriptionsServiceCard:
                         user_id=user_id,
                         username=username or "",
                         subscription_id=subscription.subscription_id,
-                        expiry_days=durations_days,
+                        expiry_days=0,
                     )
                 )
 
@@ -163,7 +163,7 @@ class SubscriptionsServiceCard:
                         user_id=user_id,
                         username=username or "",
                         subscription_id=subscription.subscription_id,
-                        expiry_days=durations_days,
+                        expiry_days=0,
                     )
                 )
 
@@ -206,7 +206,7 @@ class SubscriptionsServiceCard:
                                 user_id=referrer_id,
                                 username=str(username) or "",
                                 subscription_id=subscription.subscription_id,
-                                expiry_days=15,
+                                expiry_days=0,
                             )
                         )
             except Exception as error:
