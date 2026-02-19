@@ -1,9 +1,26 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, BigInteger, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
+
+
+class Subscriptions(Base):
+    """Модель подписки (таблица subscriptions из бота)."""
+    __tablename__ = "subscriptions"
+
+    subscription_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, nullable=False)
+    service_id = Column(Integer, nullable=True)
+    start_date = Column(DateTime, nullable=True)
+    end_date = Column(DateTime, nullable=True)
+    status = Column(String, nullable=True)  # 'активная' | 'истекла' | 'отключена'
+    reminder_sent = Column(Integer, default=0)
+    auto_renewal = Column(Boolean, default=True)
+    card_details_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class Servers(Base):

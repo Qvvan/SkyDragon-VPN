@@ -2,6 +2,9 @@ import asyncio
 import base64
 import hashlib
 import re
+import uuid
+from datetime import datetime
+from typing import Optional
 
 from cryptography.fernet import Fernet
 from fastapi import FastAPI, Response, Depends
@@ -13,6 +16,11 @@ from cfg.config import CRYPTO_KEY
 from db import methods
 from db.db import get_db
 from sub_fetcher import get_sub_from_server
+
+# Ссылки для заголовков подписки (v2rayTun / Hiddify и др.)
+SUPPORT_URL_ACTIVE = "https://t.me/SkyDragonSupport"
+BOT_URL_EXPIRED = "https://t.me/SkyDragonVPNBot"
+SUB_STATUS_ACTIVE = "активная"
 
 app = FastAPI()
 
@@ -46,6 +54,74 @@ def _decode_sub_to_keys(base64_text: str, server_ip: str, server_name: str) -> l
     return keys
 
 
+def _subscription_is_active(sub: Optional[dict]) -> bool:
+    if not sub:
+        return False
+    if sub.get("status") != SUB_STATUS_ACTIVE:
+        return False
+    end = sub.get("end_date")
+    if end is None:
+        return True
+    now = datetime.utcnow()
+    return end.replace(tzinfo=None) >= now if hasattr(end, "replace") else end >= now
+
+
+def _expire_unix(sub: Optional[dict]) -> int:
+    if not sub or not sub.get("end_date"):
+        return 0
+    end = sub["end_date"]
+    return int(end.timestamp()) if hasattr(end, "timestamp") else 0
+
+
+def _build_userinfo(upload: int = 0, download: int = 0, total: int = 0, expire: int = 0) -> str:
+    return f"upload={upload}; download={download}; total={total}; expire={expire}"
+
+
+def _b64(text: str) -> str:
+    """Текст в base64 для заголовков (profile-title, announce)."""
+    return f"base64:{base64.b64encode(text.encode('utf-8')).decode('ascii')}"
+
+
+# Короткое название подписки
+PROFILE_TITLE = "SkyDragon🐉"
+ANNOUNCE_ACTIVE = "Выберите другой сервер, если текущий плохо работает. Поддержка: https://t.me/SkyDragonSupport"
+ANNOUNCE_EXPIRED = "Ваша подписка истекла. Продлить в боте: https://t.me/SkyDragonVPNBot"
+
+# Мета в теле подписки (#-строки, как у WhyPN / v2rayTun)
+SUB_INFO_COLOR = "blue"
+SUB_INFO_ACTIVE = (
+    "Поддержка SkyDragon работает 24/7. Напишите нам, если у вас что-то не работает"
+)
+SUB_INFO_BUTTON_ACTIVE = "Написать в поддержку 💬"
+SUB_INFO_EXPIRED = "Ваша подписка истекла. Продлите в боте — мы всегда рады помочь."
+SUB_INFO_BUTTON_EXPIRED = "Продлить в боте 🐉"
+
+
+def _build_subscription_body(keys: list[str], *, is_active: bool) -> str:
+    """Собирает тело подписки: #-мета сверху, ключи, #announce в конце (формат WhyPN)."""
+    if is_active:
+        meta = [
+            f"#sub-info-color: {SUB_INFO_COLOR}",
+            f"#sub-info-text: {SUB_INFO_ACTIVE}",
+            f"#sub-info-button-text: {SUB_INFO_BUTTON_ACTIVE}",
+            f"#sub-info-button-link: {SUPPORT_URL_ACTIVE}",
+            f"#profile-title: {PROFILE_TITLE}",
+        ]
+        announce = ANNOUNCE_ACTIVE
+    else:
+        meta = [
+            f"#sub-info-color: {SUB_INFO_COLOR}",
+            f"#sub-info-text: {SUB_INFO_EXPIRED}",
+            f"#sub-info-button-text: {SUB_INFO_BUTTON_EXPIRED}",
+            f"#sub-info-button-link: {BOT_URL_EXPIRED}",
+            f"#profile-title: {PROFILE_TITLE} — Истекла",
+        ]
+        announce = ANNOUNCE_EXPIRED
+
+    lines = meta + [""] + keys + ["", f"#announce: {_b64(announce)}"]
+    return "\n".join(lines)
+
+
 @app.get("/sub/{encrypted_part}")
 async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
     try:
@@ -54,6 +130,30 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
         sub_id = int(data.split("|")[1])
     except Exception:
         return Response(content="Invalid encryption", status_code=400)
+
+    subscription = await methods.get_subscription_by_user_and_sub_id(db, user_id, sub_id)
+    is_active = _subscription_is_active(subscription)
+    expire_unix = _expire_unix(subscription)
+
+    if not is_active:
+        # Истекла: не опрашиваем сервера, отдаём один стаб-ключ с рандомным UUID
+        stub_uuid = str(uuid.uuid4())
+        stub_key = (
+            f"vless://{stub_uuid}@127.0.0.1:8443"
+            "?type=tcp&encryption=none&security=reality#ИСТЕКЛА😢"
+        )
+        body = _build_subscription_body([stub_key], is_active=False)
+        encoded_subscription = base64.b64encode(body.encode()).decode()
+        headers = {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Profile-Title": _b64(PROFILE_TITLE),
+            "Profile-Update-Interval": "1",
+            "Subscription-Userinfo": _build_userinfo(expire=expire_unix),
+            "Support-Url": BOT_URL_EXPIRED,
+            "Announce": _b64(ANNOUNCE_EXPIRED),
+            "Content-Length": str(len(encoded_subscription)),
+        }
+        return Response(content=encoded_subscription, headers=headers)
 
     encoded_sub_id = encode_numbers(user_id, sub_id)
     servers = await methods.get_server(db)
@@ -72,16 +172,18 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
 
     results = await asyncio.gather(*[fetch_one(s) for s in servers])
     keys = [k for key_list in results for k in key_list]
-    encoded_subscription = base64.b64encode("\n".join(keys).encode()).decode()
+    body = _build_subscription_body(keys, is_active=True)
+    encoded_subscription = base64.b64encode(body.encode()).decode()
 
     headers = {
         "Content-Type": "text/plain; charset=utf-8",
-        "Profile-Title": "SkyDragon",
+        "Profile-Title": _b64(PROFILE_TITLE),
         "Profile-Update-Interval": "1",
-        "Subscription-Userinfo": "upload=0; download=0; total=0; expire=0",
-        "Content-Length": str(len(encoded_subscription))
+        "Subscription-Userinfo": _build_userinfo(expire=expire_unix),
+        "Support-Url": SUPPORT_URL_ACTIVE,
+        "Announce": _b64(ANNOUNCE_ACTIVE),
+        "Content-Length": str(len(encoded_subscription)),
     }
-
     return Response(content=encoded_subscription, headers=headers)
 
 
