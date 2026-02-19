@@ -84,22 +84,24 @@ def _b64(text: str) -> str:
 
 # Короткое название подписки
 PROFILE_TITLE = "SkyDragon🐉"
-ANNOUNCE_ACTIVE = "Выберите другой сервер, если текущий плохо работает. Поддержка: https://t.me/SkyDragonSupport"
-ANNOUNCE_EXPIRED = "Ваша подписка истекла. Продлить в боте: https://t.me/SkyDragonVPNBot"
+
+# Тексты announce (капс + смайлики, чтобы заметили)
+ANNOUNCE_ACTIVE = "⚠️ ВЫБЕРИТЕ ДРУГОЙ СЕРВЕР, ЕСЛИ ТЕКУЩИЙ ПЛОХО РАБОТАЕТ 🔄 Поддержка — нажмите кнопку ниже 👇"
+ANNOUNCE_EXPIRED = "❌ ПОДПИСКА ИСТЕКЛА! ПРОДЛИТЕ В БОТЕ — НАЖМИТЕ КНОПКУ НИЖЕ 👇🐉"
 
 # Мета в теле подписки (#-строки, как у WhyPN / v2rayTun)
 SUB_INFO_COLOR = "blue"
-SUB_INFO_ACTIVE = (
-    "Поддержка SkyDragon работает 24/7. Напишите нам, если у вас что-то не работает"
-)
-SUB_INFO_BUTTON_ACTIVE = "Написать в поддержку 💬"
-SUB_INFO_EXPIRED = "Ваша подписка истекла. Продлите в боте — мы всегда рады помочь."
+# Текст сверху; кнопка снизу — она и есть кликабельная ссылка
+SUB_INFO_ACTIVE = "⚠️ ВЫБЕРИТЕ ДРУГОЙ СЕРВЕР, ЕСЛИ ТЕКУЩИЙ ПЛОХО РАБОТАЕТ 🔄"
+SUB_INFO_BUTTON_ACTIVE = "Поддержка 💬"
+SUB_INFO_EXPIRED = "❌ ПОДПИСКА ИСТЕКЛА. ПРОДЛИТЕ В БОТЕ 🐉"
 SUB_INFO_BUTTON_EXPIRED = "Продлить в боте 🐉"
 
 
 def _build_subscription_body(keys: list[str], *, is_active: bool) -> str:
-    """Собирает тело подписки: #-мета сверху, ключи, #announce в конце (формат WhyPN)."""
+    """Собирает тело подписки: #-мета сверху, ключи, #announce и #announce-url в конце."""
     if is_active:
+        announce_url = SUPPORT_URL_ACTIVE
         meta = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
             f"#sub-info-text: {SUB_INFO_ACTIVE}",
@@ -109,6 +111,7 @@ def _build_subscription_body(keys: list[str], *, is_active: bool) -> str:
         ]
         announce = ANNOUNCE_ACTIVE
     else:
+        announce_url = BOT_URL_EXPIRED
         meta = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
             f"#sub-info-text: {SUB_INFO_EXPIRED}",
@@ -118,7 +121,11 @@ def _build_subscription_body(keys: list[str], *, is_active: bool) -> str:
         ]
         announce = ANNOUNCE_EXPIRED
 
-    lines = meta + [""] + keys + ["", f"#announce: {_b64(announce)}"]
+    lines = meta + [""] + keys + [
+        "",
+        f"#announce: {_b64(announce)}",
+        f"#announce-url: {announce_url}",
+    ]
     return "\n".join(lines)
 
 
@@ -151,6 +158,7 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
             "Subscription-Userinfo": _build_userinfo(expire=expire_unix),
             "Support-Url": BOT_URL_EXPIRED,
             "Announce": _b64(ANNOUNCE_EXPIRED),
+            "Announce-Url": BOT_URL_EXPIRED,
             "Content-Length": str(len(encoded_subscription)),
         }
         return Response(content=encoded_subscription, headers=headers)
@@ -182,6 +190,7 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
         "Subscription-Userinfo": _build_userinfo(expire=expire_unix),
         "Support-Url": SUPPORT_URL_ACTIVE,
         "Announce": _b64(ANNOUNCE_ACTIVE),
+        "Announce-Url": SUPPORT_URL_ACTIVE,
         "Content-Length": str(len(encoded_subscription)),
     }
     return Response(content=encoded_subscription, headers=headers)
