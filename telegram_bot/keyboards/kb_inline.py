@@ -7,7 +7,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from database.context_manager import DatabaseContextManager
 from logger.logging_config import logger
-from models.models import NameApp, SubscriptionStatusEnum, Subscriptions
+from models.models import NameApp, Subscriptions
 
 
 class ServerCallbackData(CallbackData, prefix="server_disable"):
@@ -270,41 +270,42 @@ class InlineKeyboards:
             try:
                 keyboard = InlineKeyboardBuilder()
                 subscription = await session_methods.subscription.get_subscription_by_id(subscription_id)
-                if subscription.status == SubscriptionStatusEnum.ACTIVE:
-                    keyboard.add(
-                        InlineKeyboardButton(
-                            text='⏳ Продлить',
-                            callback_data=SubscriptionCallbackFactory(
-                                action='extend_subscription',
-                                subscription_id=subscription_id,
-                                back=f"view_details_{subscription_id}"
-                            ).pack()),
-                        InlineKeyboardButton(
-                            text='📜 Инструкция',
-                            callback_data=SubscriptionCallbackFactory(
-                                action='get_guide_install_app',
-                                subscription_id=subscription_id,
-                            ).pack()),
-                        InlineKeyboardButton(
-                            text="💰 История платежей",
-                            callback_data="history_payments"
-                        ),
-                        InlineKeyboardButton(
-                            text='🔄 Автопродление',
-                            callback_data=AutoRenewalCallbackFactory(
-                                action='auto_renewal',
-                                auto_renewal_enabled=auto_renewal,
-                                subscription_id=subscription_id,
-                            ).pack()),
-                        InlineKeyboardButton(
-                            text='🧑‍💻 Онлайн на серверах',
-                            callback_data="online",
-                        ),
-                        InlineKeyboardButton(
-                            text="🌌 Главное меню",
-                            callback_data="main_menu",
-                        )
+
+                # Одни и те же кнопки и для активной, и для истёкшей подписки
+                keyboard.add(
+                    InlineKeyboardButton(
+                        text='⏳ Продлить',
+                        callback_data=SubscriptionCallbackFactory(
+                            action='extend_subscription',
+                            subscription_id=subscription_id,
+                            back=f"view_details_{subscription_id}"
+                        ).pack()),
+                    InlineKeyboardButton(
+                        text='📜 Инструкция',
+                        callback_data=SubscriptionCallbackFactory(
+                            action='get_guide_install_app',
+                            subscription_id=subscription_id,
+                        ).pack()),
+                    InlineKeyboardButton(
+                        text="💰 История платежей",
+                        callback_data="history_payments"
+                    ),
+                    InlineKeyboardButton(
+                        text='🔄 Автопродление',
+                        callback_data=AutoRenewalCallbackFactory(
+                            action='auto_renewal',
+                            auto_renewal_enabled=auto_renewal,
+                            subscription_id=subscription_id,
+                        ).pack()),
+                    InlineKeyboardButton(
+                        text='🧑‍💻 Онлайн на серверах',
+                        callback_data="online",
+                    ),
+                    InlineKeyboardButton(
+                        text="🌌 Главное меню",
+                        callback_data="main_menu",
                     )
+                )
                 keyboard.adjust(2, 1)
 
                 return keyboard.as_markup()

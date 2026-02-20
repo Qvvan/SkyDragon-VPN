@@ -17,9 +17,8 @@ from db import methods
 from db.db import get_db
 from sub_fetcher import get_sub_from_server
 
-# Ссылки для заголовков подписки (v2rayTun / Hiddify и др.)
 SUPPORT_URL_ACTIVE = "https://t.me/SkyDragonSupport"
-BOT_URL_EXPIRED = "https://t.me/SkyDragonVPNBot"
+BOT_URL_EXPIRED = "https://t.me/SkyDragonVPNBot?start=1"
 SUB_STATUS_ACTIVE = "активная"
 
 app = FastAPI()
@@ -85,13 +84,10 @@ def _b64(text: str) -> str:
 # Короткое название подписки
 PROFILE_TITLE = "SkyDragon🐉"
 
-# Тексты announce (капс + смайлики, чтобы заметили)
 ANNOUNCE_ACTIVE = "⚠️ ВЫБЕРИТЕ ДРУГОЙ СЕРВЕР, ЕСЛИ ТЕКУЩИЙ ПЛОХО РАБОТАЕТ 🔄 Поддержка — Нажмите сюда"
-ANNOUNCE_EXPIRED = "❌ ПОДПИСКА ИСТЕКЛА! ПРОДЛИТЕ В БОТЕ — ЖМИ СЮДА🐉"
+ANNOUNCE_EXPIRED = "❌ ПОДПИСКА ИСТЕКЛА! ПРОДЛИТЕ В БОТЕ — ЖМИ СЮДА, ЧТОБЫ ПРОДЛИТЬ🐉"
 
-# Мета в теле подписки (#-строки, как у WhyPN / v2rayTun)
 SUB_INFO_COLOR = "blue"
-# Текст сверху; кнопка снизу — она и есть кликабельная ссылка
 SUB_INFO_ACTIVE = "⚠️ ВЫБЕРИТЕ ДРУГОЙ СЕРВЕР, ЕСЛИ ТЕКУЩИЙ ПЛОХО РАБОТАЕТ 🔄"
 SUB_INFO_BUTTON_ACTIVE = "Поддержка 💬"
 SUB_INFO_EXPIRED = "❌ ПОДПИСКА ИСТЕКЛА. ПРОДЛИТЕ В БОТЕ 🐉"
@@ -143,7 +139,6 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
     expire_unix = _expire_unix(subscription)
 
     if not is_active:
-        # Истекла: не опрашиваем сервера, отдаём один стаб-ключ с рандомным UUID
         stub_uuid = str(uuid.uuid4())
         stub_key = (
             f"vless://{stub_uuid}@127.0.0.1:8443"

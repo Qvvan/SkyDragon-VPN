@@ -23,12 +23,10 @@ async def get_user_subs_callback(callback: CallbackQuery, state: FSMContext):
     previous_message_id = data.get("text_dragons_overview_id")
     show_guide_message_id = data.get("show_guide_message")
 
-    # Функция для удаления сообщения с обработкой исключений
     async def delete_message_safe(message_id):
         try:
             await callback.bot.delete_message(callback.message.chat.id, message_id)
         except Exception as e:
-            # Если сообщение не найдено, логируем ошибку
             await logger.info(f"Не удалось удалить сообщение с ID {message_id}")
 
     if show_guide_message_id:
