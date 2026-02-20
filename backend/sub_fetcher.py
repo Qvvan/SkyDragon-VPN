@@ -97,5 +97,9 @@ async def fetch_external_subscription_keys(url: str) -> list[str]:
             continue
         # Только строки, похожие на ключи (vless://, vmess://, trojan:// и т.д.)
         if "://" in line and not line.startswith("#"):
+            # В название ключа (после #) приписываем РЕЗЕРВ в начале
+            if "#" in line:
+                before_hash, _, name = line.partition("#")
+                line = f"{before_hash}#РЕЗЕРВ {name}"
             keys.append(line)
     return keys
