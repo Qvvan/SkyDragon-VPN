@@ -4,8 +4,10 @@
 """
 import asyncio
 import base64
+import re
 import logging
 from typing import Optional
+from urllib.parse import unquote
 
 import aiohttp
 from aiohttp import ClientTimeout
@@ -67,6 +69,43 @@ async def get_sub_from_server(server: Servers, encoded_sub_id: str) -> Optional[
 # Таймаут для внешней подписки (секунды)
 EXTERNAL_SUB_TIMEOUT = 3
 
+# Страны/города, которые не включаем во внешнюю подписку (резерв)
+EXTERNAL_EXCLUDED_NAMES = (
+    "Италия", "Украина", "Румыния", "Израиль", "Чехия", "Армения", "Милан"
+)
+
+# Регулярка: только цифры (убираем из токенов)
+_RE_DIGITS = re.compile(r"\d+")
+
+
+def _decode_fragment(name: str) -> str:
+    """Декодирует fragment из URL (%D0%A3... -> буквы), иначе исключения не найдутся."""
+    try:
+        return unquote(name)
+    except Exception:
+        return name
+
+
+def _is_excluded_reserve_name(name: str) -> bool:
+    """True, если в названии есть исключённая страна/город (Италия, Украина и т.д.)."""
+    name_decoded = _decode_fragment(name)
+    name_lower = name_decoded.lower()
+    for excluded in EXTERNAL_EXCLUDED_NAMES:
+        if excluded.lower() in name_lower:
+            return True
+    return False
+
+
+def _first_two_tokens_no_digits(name: str) -> str:
+    """Первые два токена (по пробелу), из каждого убраны цифры. Нумерацию ставим свою потом."""
+    name_decoded = _decode_fragment(name)
+    tokens = name_decoded.split()
+    first_two = tokens[:2]
+    # Убираем цифры из каждого токена (чтобы не тащить их номер)
+    cleaned = [_RE_DIGITS.sub("", t).strip() for t in first_two]
+    cleaned = [t for t in cleaned if t]
+    return " ".join(cleaned)
+
 
 async def fetch_external_subscription_keys(url: str) -> list[str]:
     """
@@ -91,15 +130,27 @@ async def fetch_external_subscription_keys(url: str) -> list[str]:
     except Exception:
         decoded = raw
 
+    # Группируем по стране/региону (base); нумеруем внутри каждой группы: США 1, США 2, Франция 1, ...
+    by_base: dict[str, list[str]] = {}
     for line in decoded.strip().split("\n"):
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        # Только строки, похожие на ключи (vless://, vmess://, trojan:// и т.д.)
-        if "://" in line and not line.startswith("#"):
-            # В название ключа (после #) приписываем РЕЗЕРВ в начале
-            if "#" in line:
-                before_hash, _, name = line.partition("#")
-                line = f"{before_hash}#РЕЗЕРВ {name}"
-            keys.append(line)
+        if "://" not in line:
+            continue
+        if "#" not in line:
+            by_base.setdefault("Резерв", []).append(line)
+            continue
+        before_hash, _, name = line.partition("#")
+        if _is_excluded_reserve_name(name):
+            continue
+        base = _first_two_tokens_no_digits(name)
+        if not base:
+            base = "Резерв"
+        by_base.setdefault(base, []).append(before_hash)
+
+    for base, before_hashes in by_base.items():
+        for i, before_hash in enumerate(before_hashes, start=1):
+            label = f"РЕЗЕРВ {base} {i}".strip()
+            keys.append(f"{before_hash}#{label}")
     return keys
