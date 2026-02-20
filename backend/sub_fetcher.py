@@ -3,6 +3,7 @@
 Таймаут 3 секунды. Поддержка sub_port из БД.
 """
 import asyncio
+import base64
 import logging
 from typing import Optional
 
@@ -61,3 +62,40 @@ async def get_sub_from_server(server: Servers, encoded_sub_id: str) -> Optional[
     server_ip = server.server_ip
     port = _sub_port(server)
     return await _fetch_via_http(server_ip, port, encoded_sub_id)
+
+
+# Таймаут для внешней подписки (секунды)
+EXTERNAL_SUB_TIMEOUT = 3
+
+
+async def fetch_external_subscription_keys(url: str) -> list[str]:
+    """
+    Загружает подписку с внешнего URL (ожидает base64 строку в теле ответа).
+    Таймаут 3 секунды. Возвращает список строк-ключей (vless://, vmess:// и т.д.);
+    при таймауте или ошибке возвращает пустой список.
+    """
+    timeout = ClientTimeout(connect=EXTERNAL_SUB_TIMEOUT, total=EXTERNAL_SUB_TIMEOUT)
+    keys = []
+    try:
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(url) as resp:
+                if resp.status != 200:
+                    return []
+                raw = (await resp.text()).strip()
+    except (asyncio.TimeoutError, aiohttp.ClientError, OSError) as e:
+        logger.warning("Внешняя подписка %s: таймаут или ошибка (%s)", url, type(e).__name__)
+        return []
+
+    try:
+        decoded = base64.b64decode(raw).decode("utf-8")
+    except Exception:
+        decoded = raw
+
+    for line in decoded.strip().split("\n"):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        # Только строки, похожие на ключи (vless://, vmess://, trojan:// и т.д.)
+        if "://" in line and not line.startswith("#"):
+            keys.append(line)
+    return keys

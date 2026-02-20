@@ -15,9 +15,11 @@ from starlette.responses import RedirectResponse
 from cfg.config import CRYPTO_KEY
 from db import methods
 from db.db import get_db
-from sub_fetcher import get_sub_from_server
+from sub_fetcher import get_sub_from_server, fetch_external_subscription_keys
 
 SUPPORT_URL_ACTIVE = "https://t.me/SkyDragonSupport"
+# Внешняя подписка: ключи добавляются к нашим (таймаут 3 сек)
+EXTERNAL_SUB_URL = "https://sp.vpnlider.online/ndKFYzNwuk2ryHba"
 BOT_URL_EXPIRED = "https://t.me/SkyDragonVPNBot?start=1"
 SUB_STATUS_ACTIVE = "активная"
 
@@ -173,8 +175,14 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
             print(f"Error getting subscription for server {server.server_ip}: {e}")
             return []
 
-    results = await asyncio.gather(*[fetch_one(s) for s in servers])
-    keys = [k for key_list in results for k in key_list]
+    # Параллельно: наши сервера + внешняя подписка (таймаут 3 сек)
+    server_tasks = [fetch_one(s) for s in servers]
+    external_task = fetch_external_subscription_keys(EXTERNAL_SUB_URL)
+    server_results, external_keys = await asyncio.gather(
+        asyncio.gather(*server_tasks),
+        external_task,
+    )
+    keys = [k for key_list in server_results for k in key_list] + list(external_keys)
     body = _build_subscription_body(keys, is_active=True)
     encoded_subscription = base64.b64encode(body.encode()).decode()
 
@@ -220,9 +228,10 @@ async def get_subscription_list(encrypted_part: str, db: Session = Depends(get_d
             print(f"Error getting subscription for server {server.server_ip}: {e}")
             return {"server_ip": server.server_ip, "name": server.name or server.server_ip, "keys": []}
 
-    results = await asyncio.gather(*[fetch_one(s) for s in servers])
-    all_keys = [k for r in results for k in r["keys"]]
-    server_infos = [{"server_ip": r["server_ip"], "name": r["name"]} for r in results]
+    server_results = await asyncio.gather(*[fetch_one(s) for s in servers])
+    external_keys = await fetch_external_subscription_keys(EXTERNAL_SUB_URL)
+    all_keys = [k for r in server_results for k in r["keys"]] + list(external_keys)
+    server_infos = [{"server_ip": r["server_ip"], "name": r["name"]} for r in server_results]
     return {
         "keys": all_keys,
         "servers": server_infos,
