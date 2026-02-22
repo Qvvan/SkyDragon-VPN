@@ -18,8 +18,11 @@ from db.db import get_db
 from sub_fetcher import get_sub_from_server, fetch_external_subscription_keys
 
 SUPPORT_URL_ACTIVE = "https://t.me/SkyDragonSupport"
-# Внешняя подписка: ключи добавляются к нашим (таймаут 3 сек)
-EXTERNAL_SUB_URL = "https://sp.vpnlider.online/ndKFYzNwuk2ryHba"
+# Внешние подписки: ключи добавляются к нашим (таймаут 3 сек каждый)
+EXTERNAL_SUB_URLS = [
+    "https://sp.vpnlider.online/ndKFYzNwuk2ryHba",
+    "https://key.whypn.com/QKLZy",
+]
 BOT_URL_EXPIRED = "https://t.me/SkyDragonVPNBot?start=1"
 SUB_STATUS_ACTIVE = "активная"
 
@@ -175,14 +178,15 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
             print(f"Error getting subscription for server {server.server_ip}: {e}")
             return []
 
-    # Параллельно: наши сервера + внешняя подписка (таймаут 3 сек)
+    # Параллельно: наши сервера + все внешние подписки (таймаут 3 сек каждая)
     server_tasks = [fetch_one(s) for s in servers]
-    external_task = fetch_external_subscription_keys(EXTERNAL_SUB_URL)
-    server_results, external_keys = await asyncio.gather(
+    external_tasks = [fetch_external_subscription_keys(u) for u in EXTERNAL_SUB_URLS]
+    server_results, *external_results = await asyncio.gather(
         asyncio.gather(*server_tasks),
-        external_task,
+        *external_tasks,
     )
-    keys = [k for key_list in server_results for k in key_list] + list(external_keys)
+    external_keys = [k for keys_list in external_results for k in keys_list]
+    keys = [k for key_list in server_results for k in key_list] + external_keys
     body = _build_subscription_body(keys, is_active=True)
     encoded_subscription = base64.b64encode(body.encode()).decode()
 
@@ -229,7 +233,8 @@ async def get_subscription_list(encrypted_part: str, db: Session = Depends(get_d
             return {"server_ip": server.server_ip, "name": server.name or server.server_ip, "keys": []}
 
     server_results = await asyncio.gather(*[fetch_one(s) for s in servers])
-    external_keys = await fetch_external_subscription_keys(EXTERNAL_SUB_URL)
+    external_results = await asyncio.gather(*[fetch_external_subscription_keys(u) for u in EXTERNAL_SUB_URLS])
+    external_keys = [k for keys_list in external_results for k in keys_list]
     all_keys = [k for r in server_results for k in r["keys"]] + list(external_keys)
     server_infos = [{"server_ip": r["server_ip"], "name": r["name"]} for r in server_results]
     return {

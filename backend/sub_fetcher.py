@@ -76,6 +76,13 @@ EXTERNAL_EXCLUDED_NAMES = (
 
 # Регулярка: только цифры (убираем из токенов)
 _RE_DIGITS = re.compile(r"\d+")
+# WhyPN и прочий мусор в названиях; эмодзи включая флаги (🇺🇸), символы (📶✅🛟)
+_RE_WHYPN = re.compile(r"\bwhypn\b", re.IGNORECASE)
+_RE_EMOJI = re.compile(
+    r"[*\u2600-\u26FF\u2700-\u27BF\U0001F1E0-\U0001F1FF\U0001F300-\U0001F9FF\uFE00-\uFE0F]+",
+    re.UNICODE,
+)
+_RE_ZAпасной = re.compile(r"\s*\(?\s*[Зз]апасной\s*\)?\s*", re.IGNORECASE)
 
 
 def _decode_fragment(name: str) -> str:
@@ -84,6 +91,16 @@ def _decode_fragment(name: str) -> str:
         return unquote(name)
     except Exception:
         return name
+
+
+def _normalize_external_name(name: str) -> str:
+    """Убирает WhyPN, смайлики (включая флаги), «(Запасной)» — для WhyPN и похожих источников."""
+    s = _decode_fragment(name)
+    s = _RE_WHYPN.sub(" ", s)
+    s = _RE_ZAпасной.sub(" ", s)
+    s = _RE_EMOJI.sub(" ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
 
 
 def _is_excluded_reserve_name(name: str) -> bool:
@@ -142,6 +159,7 @@ async def fetch_external_subscription_keys(url: str) -> list[str]:
             by_base.setdefault("Резерв", []).append(line)
             continue
         before_hash, _, name = line.partition("#")
+        name = _normalize_external_name(name)
         if _is_excluded_reserve_name(name):
             continue
         base = _first_two_tokens_no_digits(name)
