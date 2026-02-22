@@ -4,7 +4,7 @@ import hashlib
 import re
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from cryptography.fernet import Fernet
 from fastapi import FastAPI, Response, Depends
@@ -91,17 +91,24 @@ PROFILE_TITLE = "SkyDragon🐉"
 
 ANNOUNCE_ACTIVE = "⚠️ ВЫБЕРИТЕ ДРУГОЙ СЕРВЕР, ЕСЛИ ТЕКУЩИЙ ПЛОХО РАБОТАЕТ 🔄 Поддержка — Нажмите сюда"
 ANNOUNCE_EXPIRED = "❌ ПОДПИСКА ИСТЕКЛА! ПРОДЛИТЕ В БОТЕ — ЖМИ СЮДА, ЧТОБЫ ПРОДЛИТЬ🐉"
+ANNOUNCE_NOT_FOUND = "🔍 ПОДПИСКА НЕ НАЙДЕНА ИЛИ УДАЛЕНА. ОФОРМИТЕ НОВУЮ В БОТЕ — НАЖМИТЕ СЮДА 🐉"
 
 SUB_INFO_COLOR = "blue"
 SUB_INFO_ACTIVE = "⚠️ ВЫБЕРИТЕ ДРУГОЙ СЕРВЕР, ЕСЛИ ТЕКУЩИЙ ПЛОХО РАБОТАЕТ 🔄"
 SUB_INFO_BUTTON_ACTIVE = "Поддержка 💬"
 SUB_INFO_EXPIRED = "❌ ПОДПИСКА ИСТЕКЛА. ПРОДЛИТЕ В БОТЕ 🐉"
 SUB_INFO_BUTTON_EXPIRED = "Продлить в боте 🐉"
+SUB_INFO_NOT_FOUND = "🔍 Этой подписки больше нет — она удалена или не найдена в системе."
+SUB_INFO_BUTTON_NOT_FOUND = "Оформить подписку в боте 🐉"
 
 
-def _build_subscription_body(keys: list[str], *, is_active: bool) -> str:
+def _build_subscription_body(
+    keys: list[str],
+    *,
+    state: Literal["active", "expired", "not_found"],
+) -> str:
     """Собирает тело подписки: #-мета сверху, ключи, #announce и #announce-url в конце."""
-    if is_active:
+    if state == "active":
         announce_url = SUPPORT_URL_ACTIVE
         meta = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
@@ -111,7 +118,7 @@ def _build_subscription_body(keys: list[str], *, is_active: bool) -> str:
             f"#profile-title: {PROFILE_TITLE}",
         ]
         announce = ANNOUNCE_ACTIVE
-    else:
+    elif state == "expired":
         announce_url = BOT_URL_EXPIRED
         meta = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
@@ -121,6 +128,16 @@ def _build_subscription_body(keys: list[str], *, is_active: bool) -> str:
             f"#profile-title: {PROFILE_TITLE} — Истекла",
         ]
         announce = ANNOUNCE_EXPIRED
+    else:
+        announce_url = BOT_URL_EXPIRED
+        meta = [
+            f"#sub-info-color: {SUB_INFO_COLOR}",
+            f"#sub-info-text: {SUB_INFO_NOT_FOUND}",
+            f"#sub-info-button-text: {SUB_INFO_BUTTON_NOT_FOUND}",
+            f"#sub-info-button-link: {BOT_URL_EXPIRED}",
+            f"#profile-title: {PROFILE_TITLE} — Не найдена",
+        ]
+        announce = ANNOUNCE_NOT_FOUND
 
     lines = meta + [""] + keys + [
         "",
@@ -143,13 +160,35 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
     is_active = _subscription_is_active(subscription)
     expire_unix = _expire_unix(subscription)
 
+    # Подписка не найдена или удалена
+    if subscription is None:
+        stub_uuid = str(uuid.uuid4())
+        stub_key = (
+            f"vless://{stub_uuid}@127.0.0.1:8443"
+            "?type=tcp&encryption=none&security=reality#Подписка не найдена"
+        )
+        body = _build_subscription_body([stub_key], state="not_found")
+        encoded_subscription = base64.b64encode(body.encode()).decode()
+        headers = {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Profile-Title": _b64(f"{PROFILE_TITLE} — Не найдена"),
+            "Profile-Update-Interval": "1",
+            "Subscription-Userinfo": _build_userinfo(expire=0),
+            "Support-Url": BOT_URL_EXPIRED,
+            "Announce": _b64(ANNOUNCE_NOT_FOUND),
+            "Announce-Url": BOT_URL_EXPIRED,
+            "Content-Length": str(len(encoded_subscription)),
+        }
+        return Response(content=encoded_subscription, headers=headers)
+
+    # Подписка есть, но истекла
     if not is_active:
         stub_uuid = str(uuid.uuid4())
         stub_key = (
             f"vless://{stub_uuid}@127.0.0.1:8443"
             "?type=tcp&encryption=none&security=reality#ИСТЕКЛА😢"
         )
-        body = _build_subscription_body([stub_key], is_active=False)
+        body = _build_subscription_body([stub_key], state="expired")
         encoded_subscription = base64.b64encode(body.encode()).decode()
         headers = {
             "Content-Type": "text/plain; charset=utf-8",
@@ -187,7 +226,7 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
     )
     external_keys = [k for keys_list in external_results for k in keys_list]
     keys = [k for key_list in server_results for k in key_list] + external_keys
-    body = _build_subscription_body(keys, is_active=True)
+    body = _build_subscription_body(keys, state="active")
     encoded_subscription = base64.b64encode(body.encode()).decode()
 
     headers = {
@@ -215,6 +254,14 @@ async def get_subscription_list(encrypted_part: str, db: Session = Depends(get_d
         sub_id = int(data.split("|")[1])
     except Exception:
         return Response(content="Invalid encryption", status_code=400)
+
+    subscription = await methods.get_subscription_by_user_and_sub_id(db, user_id, sub_id)
+    if subscription is None:
+        return {
+            "keys": [],
+            "servers": [],
+            "message": "Подписка не найдена или удалена. Оформите новую в боте.",
+        }
 
     encoded_sub_id = encode_numbers(user_id, sub_id)
     servers = await methods.get_server(db)

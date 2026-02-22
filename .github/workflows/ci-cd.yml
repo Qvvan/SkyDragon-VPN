@@ -1,4 +1,3 @@
-# .github/workflows/ci-cd.yml
 name: CI/CD для SkyDragon
 
 on:
@@ -51,8 +50,12 @@ jobs:
           script: |
             cd /root/SkyDragon-VPN
             git pull origin main
+            # Сначала билдим не трогая запущенный бот
+            docker-compose build
+            
+            # Только когда собрался — быстро переключаем
             docker-compose down
-            docker-compose up -d --build
+            docker-compose up -d
 
       - name: Notify end of deployment
         if: success()  # Это сообщение будет отправлено только если деплой прошел успешно
