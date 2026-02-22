@@ -98,7 +98,87 @@ class AutoRenewalCallbackFactory(CallbackData, prefix="auto_renewal"):
     subscription_id: Optional[int] = None
 
 
+# Единый вид кнопок навигации
+BACK_BTN = "🔙 Назад"
+MAIN_MENU_BTN = "🌌 Главное меню"
+MAIN_MENU_CB = "main_menu"
+
+
 class InlineKeyboards:
+    @staticmethod
+    def row_back(back_target: str) -> InlineKeyboardMarkup:
+        """Одна строка: кнопка «Назад» с единым видом."""
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=BACK_BTN, callback_data=back_target)]
+        ])
+
+    @staticmethod
+    def row_main_menu() -> InlineKeyboardMarkup:
+        """Одна строка: кнопка «Главное меню»."""
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=MAIN_MENU_BTN, callback_data=MAIN_MENU_CB)]
+        ])
+
+    @staticmethod
+    def row_back_and_main(back_target: str) -> InlineKeyboardMarkup:
+        """Две строки: «Назад» и «Главное меню» — единый вид для всех экранов."""
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=BACK_BTN, callback_data=back_target)],
+            [InlineKeyboardButton(text=MAIN_MENU_BTN, callback_data=MAIN_MENU_CB)]
+        ])
+
+    @staticmethod
+    def history_payments_keyboard() -> InlineKeyboardMarkup:
+        """Клавиатура экрана «История платежей»: назад к подпискам + главное меню."""
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=BACK_BTN, callback_data="view_subs")],
+            [InlineKeyboardButton(text=MAIN_MENU_BTN, callback_data=MAIN_MENU_CB)]
+        ])
+
+    @staticmethod
+    def online_keyboard() -> InlineKeyboardMarkup:
+        """Клавиатура экрана «Онлайн на серверах»."""
+        return InlineKeyboards.row_main_menu()
+
+    @staticmethod
+    def back_to_main_keyboard() -> InlineKeyboardMarkup:
+        """Клавиатура с одной кнопкой «Главное меню» (для подарков, ошибок и т.д.)."""
+        return InlineKeyboards.row_main_menu()
+
+    @staticmethod
+    def no_subscription_keyboard() -> InlineKeyboardMarkup:
+        """Нет подписок: оформить подписку + главное меню."""
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔥 Оформить подписку", callback_data="subscribe")],
+            [InlineKeyboardButton(text=BACK_BTN, callback_data=MAIN_MENU_CB)]
+        ])
+
+    @staticmethod
+    def trial_used_keyboard() -> InlineKeyboardMarkup:
+        """Пробный период уже использован: мои подписки + главное меню."""
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🐉 Мои подписки", callback_data="view_subs")],
+            [InlineKeyboardButton(text=BACK_BTN, callback_data=MAIN_MENU_CB)]
+        ])
+
+    @staticmethod
+    def referrals_empty_keyboard() -> InlineKeyboardMarkup:
+        """Приглашённых нет: пригласить друга + главное меню."""
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔗 Пригласить друга", callback_data="get_invite_link")],
+            [InlineKeyboardButton(text=MAIN_MENU_BTN, callback_data=MAIN_MENU_CB)]
+        ])
+
+    @staticmethod
+    def invite_link_keyboard() -> InlineKeyboardMarkup:
+        """Экран с инвайт-ссылкой: только главное меню."""
+        return InlineKeyboards.row_main_menu()
+
+    @staticmethod
+    def referrals_list_keyboard() -> InlineKeyboardMarkup:
+        """Список рефералов: только главное меню."""
+        return InlineKeyboards.row_main_menu()
+
     @staticmethod
     async def create_order_keyboards(status_pay: StatusPay, back_target: str = None,
                                      subscription_id: int = None) -> InlineKeyboardMarkup:
@@ -124,7 +204,7 @@ class InlineKeyboards:
 
                 if back_target:
                     keyboard.row(
-                        InlineKeyboardButton(text='🔙 Назад', callback_data=back_target)
+                        InlineKeyboardButton(text=BACK_BTN, callback_data=back_target)
                     )
                 else:
                     keyboard.row(
@@ -163,7 +243,7 @@ class InlineKeyboards:
                 keyboard.row(*buttons)
 
                 keyboard.row(
-                    InlineKeyboardButton(text='🔙 Назад', callback_data=f'view_details_{subscription_id}')
+                    InlineKeyboardButton(text=BACK_BTN, callback_data=f'view_details_{subscription_id}')
                 )
 
                 keyboard.adjust(1)
@@ -177,7 +257,7 @@ class InlineKeyboards:
         keyboard = InlineKeyboardBuilder()
         keyboard.button(text=f"Оплатить {price} ⭐️", pay=True)
         keyboard.button(
-            text="🔙 Назад",
+            text=BACK_BTN,
             callback_data=ServiceCallbackFactory(
                 service_id=callback_data.service_id,
                 status_pay=callback_data.status_pay
@@ -210,7 +290,7 @@ class InlineKeyboards:
             ],
             [
                 InlineKeyboardButton(
-                    text="🔙 Назад",
+                    text=BACK_BTN,
                     callback_data=SubscriptionCallbackFactory(
                         action='extend_subscription',
                         subscription_id=subscription_id,
@@ -244,15 +324,15 @@ class InlineKeyboards:
         if callback_data:
             keyboard.inline_keyboard.append([
                 InlineKeyboardButton(
-                    text="🔙 Назад",
+                    text=BACK_BTN,
                     callback_data=callback_data
                 )
             ])
         else:
             keyboard.inline_keyboard.append([
                 InlineKeyboardButton(
-                    text="🌌 Главное меню",
-                    callback_data='back_to_start'
+                    text=MAIN_MENU_BTN,
+                    callback_data=MAIN_MENU_CB
                 )
             ])
 
@@ -302,8 +382,8 @@ class InlineKeyboards:
                         callback_data="online",
                     ),
                     InlineKeyboardButton(
-                        text="🌌 Главное меню",
-                        callback_data="main_menu",
+                        text=MAIN_MENU_BTN,
+                        callback_data=MAIN_MENU_CB,
                     )
                 )
                 keyboard.adjust(2, 1)
@@ -383,7 +463,7 @@ class InlineKeyboards:
                 action='name_app', name_app="OUTLINE").pack())
         keyboard.add(button)
         keyboard.row(
-            InlineKeyboardButton(text='🔙 Назад', callback_data=f'view_details_{subscription_id}')
+            InlineKeyboardButton(text=BACK_BTN, callback_data=f'view_details_{subscription_id}')
         )
 
         return keyboard.as_markup()
@@ -442,8 +522,8 @@ class InlineKeyboards:
             ],
             [
                 InlineKeyboardButton(
-                    text="🔙 Назад",
-                    callback_data="back_to_start"
+                    text=BACK_BTN,
+                    callback_data=MAIN_MENU_CB
                 )
             ]
         ])
@@ -472,8 +552,8 @@ class InlineKeyboards:
             ],
             [
                 InlineKeyboardButton(
-                    text="🌌 Главное меню",
-                    callback_data="main_menu"
+                    text=MAIN_MENU_BTN,
+                    callback_data=MAIN_MENU_CB
                 )
             ],
         ],
@@ -482,6 +562,7 @@ class InlineKeyboards:
 
     @staticmethod
     async def get_invite_keyboard(callback_data: str = None):
+        """Раздел «Пригласить друга»: одна кнопка навигации — «Главное меню»."""
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -494,67 +575,40 @@ class InlineKeyboards:
                     text="🔗 Пригласить друга",
                     callback_data="get_invite_link"
                 )
-            ]
+            ],
+            [InlineKeyboardButton(text=MAIN_MENU_BTN, callback_data=MAIN_MENU_CB)]
         ])
-
-        # Добавляем кнопку "Назад" при наличии callback_data
-        if callback_data:
-            keyboard.inline_keyboard.append([
-                InlineKeyboardButton(
-                    text="🔙 Назад",
-                    callback_data=callback_data
-                )
-            ])
-
         return keyboard
 
     @staticmethod
+    def _faq_back_row():
+        return [[InlineKeyboardButton(text=BACK_BTN + " в меню FAQ", callback_data="faq")]]
+
+    @staticmethod
     async def get_back_to_faq_keyboard(faq_key):
+        main_menu_row = [[InlineKeyboardButton(text=MAIN_MENU_BTN, callback_data=MAIN_MENU_CB)]]
         if faq_key in ["faq_change_app", "faq_change_territory", "faq_slow_internet"]:
             return InlineKeyboardMarkup(inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="🐉 Мои подписки",
-                        callback_data="view_subs"
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        text="🔙 Вернуться в меню FAQ",
-                        callback_data="faq"
-                    )
-                ]
+                [InlineKeyboardButton(text="🐉 Мои подписки", callback_data="view_subs")],
+                *InlineKeyboards._faq_back_row(),
+                *main_menu_row
             ])
-        elif faq_key == 'faq_install_amulet':
+        if faq_key == 'faq_install_amulet':
             return InlineKeyboardMarkup(inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="🐉 Мои подписки",
-                        callback_data="view_subs"
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        text="🔙 Вернуться в меню FAQ",
-                        callback_data="faq"
-                    )
-                ]
+                [InlineKeyboardButton(text="🐉 Мои подписки", callback_data="view_subs")],
+                *InlineKeyboards._faq_back_row(),
+                *main_menu_row
             ])
-        elif faq_key == 'faq_payment':
+        if faq_key == 'faq_payment':
             return InlineKeyboardMarkup(inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="🔥 Оформить подписку",
-                        callback_data="subscribe"
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        text="🔙 Вернуться в меню FAQ",
-                        callback_data="faq"
-                    )
-                ]
+                [InlineKeyboardButton(text="🔥 Оформить подписку", callback_data="subscribe")],
+                *InlineKeyboards._faq_back_row(),
+                *main_menu_row
             ])
+        return InlineKeyboardMarkup(inline_keyboard=[
+            *InlineKeyboards._faq_back_row(),
+            *main_menu_row
+        ])
 
     @staticmethod
     async def get_faq_keyboard():
@@ -585,7 +639,7 @@ class InlineKeyboards:
             ],
             [
                 InlineKeyboardButton(
-                    text="🔙 Назад",
+                    text=BACK_BTN,
                     callback_data="support_callback"
                 )
             ]
@@ -624,7 +678,7 @@ class InlineKeyboards:
             ],
             [
                 InlineKeyboardButton(
-                    text="🔙 Назад",
+                    text=BACK_BTN,
                     callback_data=f"view_details_{subscription_id}")
             ],
         ])

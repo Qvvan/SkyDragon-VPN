@@ -3,7 +3,7 @@ from datetime import date
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, CallbackQuery
 
 from database.context_manager import DatabaseContextManager
 from keyboards.kb_inline import InlineKeyboards
@@ -35,22 +35,9 @@ async def show_referrals(callback: CallbackQuery):
         try:
             list_referrals = await session_methods.referrals.get_list_referrers(user_id)
             if not list_referrals:
-                keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                    [
-                        InlineKeyboardButton(
-                            text="🔗 Пригласить друга",
-                            callback_data="get_invite_link")
-                    ],
-                    [
-                        InlineKeyboardButton(
-                            text="🔙 Назад",
-                            callback_data="back_to_call_allies"
-                        )
-                    ]
-                ])
                 await callback.message.edit_text(
                     text=LEXICON_RU['no_invites'],
-                    reply_markup=keyboard
+                    reply_markup=InlineKeyboards.referrals_empty_keyboard()
                 )
                 await callback.answer()
                 return
@@ -68,14 +55,7 @@ async def show_referrals(callback: CallbackQuery):
             referral_text = "\n".join(referral_details)
             await callback.message.edit_text(
                 text=f"🐲 Ваши доступные бонусы:\n\n{referral_text}",
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [
-                        InlineKeyboardButton(
-                            text="🔙 Назад",
-                            callback_data="back_to_call_allies"
-                        )
-                    ]
-                ])
+                reply_markup=InlineKeyboards.referrals_list_keyboard()
             )
             await callback.answer()
         except Exception as e:
@@ -90,13 +70,6 @@ async def send_invite_link(callback: CallbackQuery):
 
     await callback.message.edit_text(
         text=invite_text,
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="🔙 Назад",
-                    callback_data="back_to_call_allies"
-                )
-            ]
-        ])
+        reply_markup=InlineKeyboards.invite_link_keyboard()
     )
     await callback.answer()

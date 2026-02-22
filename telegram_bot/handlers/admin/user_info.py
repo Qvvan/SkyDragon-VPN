@@ -1,3 +1,5 @@
+import asyncio
+
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -8,6 +10,7 @@ from database.context_manager import DatabaseContextManager
 from filters.admin import IsAdmin
 from handlers.services.create_config_link import create_config_link
 from handlers.services.extend_latest_subscription import extend_user_subscription
+from handlers.services.key_operations_background import create_keys_background
 from keyboards.kb_inline import InlineKeyboards, UserInfoCallbackFactory, UserSelectCallback, ChangeUserSubCallback
 from logger.logging_config import logger
 from models.models import SubscriptionStatusEnum
@@ -188,9 +191,21 @@ async def process_duration_days(message: types.Message, state: FSMContext):
 
         async with DatabaseContextManager() as session_methods:
             user = await session_methods.users.get_user(user_id)
-            await extend_user_subscription(user_id, user.username, duration_days, session_methods)
+            subscription = await extend_user_subscription(
+                user_id, user.username or "", duration_days, session_methods
+            )
             await session_methods.session.commit()
             await message.answer("Дата успешно изменена!")
+
+            if subscription:
+                asyncio.create_task(
+                    create_keys_background(
+                        user_id=user_id,
+                        username=user.username or "",
+                        subscription_id=subscription.subscription_id,
+                        expiry_days=0,
+                    )
+                )
 
     except ValueError:
         await message.answer('Некорректное количество дней. Попробуйте снова.')

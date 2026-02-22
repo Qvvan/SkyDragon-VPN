@@ -1,7 +1,8 @@
 from aiogram import Router
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import CallbackQuery
 
 from database.context_manager import DatabaseContextManager
+from keyboards.kb_inline import InlineKeyboards
 from logger.logging_config import logger
 
 router = Router()
@@ -28,16 +29,7 @@ async def handle_know_more(callback: CallbackQuery):
 
     await callback.message.edit_text(
         text=answer,
-        reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="🔙 Назад ",
-                        callback_data='view_subs'
-                    )
-                ]
-            ]
-        ),
+        reply_markup=InlineKeyboards.history_payments_keyboard(),
         parse_mode="HTML",
         disable_web_page_preview=True
     )

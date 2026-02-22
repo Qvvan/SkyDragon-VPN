@@ -7,7 +7,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 
 from database.context_manager import DatabaseContextManager
 from handlers.services.extend_latest_subscription import extend_user_subscription
-from keyboards.kb_inline import InlineKeyboards
+from keyboards.kb_inline import InlineKeyboards, BACK_BTN, MAIN_MENU_CB
 from keyboards.set_menu import set_main_menu
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
@@ -129,7 +129,7 @@ async def handle_know_more(callback: CallbackQuery):
     await callback.answer()
     await callback.message.edit_text(
         text=LEXICON_RU['invite_info'],
-        reply_markup=await InlineKeyboards.get_invite_keyboard('back_to_start')
+        reply_markup=await InlineKeyboards.get_invite_keyboard(MAIN_MENU_CB)
     )
 
 
@@ -145,18 +145,8 @@ async def handle_know_more(callback: CallbackQuery, state: FSMContext):
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="🔥 Оформить подписку",
-                        callback_data="subscribe"
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        text="🔙 Назад",
-                        callback_data="back_to_start"
-                    )
-                ]
+                [InlineKeyboardButton(text="🔥 Оформить подписку", callback_data="subscribe")],
+                [InlineKeyboardButton(text=BACK_BTN, callback_data=MAIN_MENU_CB)],
             ]
         )
     )
@@ -179,22 +169,7 @@ async def handle_know_more(callback: CallbackQuery, state: FSMContext):
             else:
                 await callback.message.edit_text(
                     text=LEXICON_RU['trial_subscription_used'],
-                    reply_markup=InlineKeyboardMarkup(
-                        inline_keyboard=[
-                            [
-                                InlineKeyboardButton(
-                                    text="🐉 Мои подписки",
-                                    callback_data="view_subs"
-                                )
-                            ],
-                            [
-                                InlineKeyboardButton(
-                                    text="🔙 Назад",
-                                    callback_data="back_to_start"
-                                )
-                            ]
-                        ]
-                    )
+                    reply_markup=InlineKeyboards.trial_used_keyboard()
                 )
         except Exception as e:
             await logger.log_error(f"Error fetching user @{callback.from_user.username}\n"

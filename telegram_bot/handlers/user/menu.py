@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 
-from keyboards.kb_inline import InlineKeyboards
+from keyboards.kb_inline import InlineKeyboards, MAIN_MENU_BTN, MAIN_MENU_CB
 from lexicon.lexicon_ru import LEXICON_RU
 
 router = Router()
@@ -45,9 +45,7 @@ async def handle_my_gifts(callback: CallbackQuery):
             if not user:
                 await callback.message.edit_text(
                     "❌ Не удалось найти ваш профиль",
-                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-                        InlineKeyboardButton(text="◀️ Назад", callback_data="main_menu")
-                    ]])
+                    reply_markup=InlineKeyboards.row_main_menu()
                 )
                 return
 
@@ -58,9 +56,7 @@ async def handle_my_gifts(callback: CallbackQuery):
             if not user_gifts:
                 await callback.message.edit_text(
                     "🎁 У вас нет подарков для активации",
-                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-                        InlineKeyboardButton(text="◀️ Назад", callback_data="main_menu")
-                    ]])
+                    reply_markup=InlineKeyboards.row_main_menu()
                 )
                 return
 
@@ -90,10 +86,7 @@ async def handle_my_gifts(callback: CallbackQuery):
                 except Exception:
                     continue
 
-            # Добавляем кнопку "Назад"
-            keyboard.append([
-                InlineKeyboardButton(text="◀️ Назад", callback_data="main_menu")
-            ])
+            keyboard.append([InlineKeyboardButton(text=MAIN_MENU_BTN, callback_data=MAIN_MENU_CB)])
 
             await callback.message.edit_text(
                 message_text,
@@ -104,7 +97,5 @@ async def handle_my_gifts(callback: CallbackQuery):
         except Exception as e:
             await callback.message.edit_text(
                 "❌ Произошла ошибка при загрузке подарков",
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-                    InlineKeyboardButton(text="◀️ Назад", callback_data="main_menu")
-                ]])
+                reply_markup=InlineKeyboards.row_main_menu()
             )

@@ -6,6 +6,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQu
 
 from database.context_manager import DatabaseContextManager
 from handlers.services.extend_latest_subscription import extend_user_subscription
+from keyboards.kb_inline import InlineKeyboards
 from logger.logging_config import logger
 
 
@@ -30,6 +31,10 @@ async def gift_checker(bot: Bot):
                             [InlineKeyboardButton(
                                 text="🎁 Активировать подарок",
                                 callback_data=f"activate_gift_{gift.gift_id}"
+                            )],
+                            [InlineKeyboardButton(
+                                text="🌌 Главное меню",
+                                callback_data="main_menu"
                             )]
                         ])
                         await bot.send_message(
@@ -101,19 +106,21 @@ async def activate_gift_handler(bot: Bot, callback_query: CallbackQuery, gift_id
                 session_methods
             )
 
-            # Уведомляем получателя об успешной активации
+            # Уведомляем получателя об успешной активации (в том же окне, с клавиатурой)
             await callback_query.message.edit_text(
                 f"✅ Подарок успешно активирован! 🎉\n\n"
                 f"💪 Защита {service.name} на {service.duration_days} дней активирована! 🛡️\n\n"
-                f"🌐 Для подробной информации зайдите в /profile 🔒"
+                f"🌐 Для подробной информации зайдите в /profile 🔒",
+                reply_markup=InlineKeyboards.row_main_menu()
             )
 
-            # Уведомляем дарителя об активации
+            # Уведомляем дарителя об активации (с клавиатурой)
             if giver:
                 await bot.send_message(
                     giver.user_id,
                     f"🎉 Отлично! @{recipient_user.username} активировал ваш подарок! ✨\n"
-                    f"💪 Защита {service.name} на {service.duration_days} дней теперь активна!"
+                    f"💪 Защита {service.name} на {service.duration_days} дней теперь активна!",
+                    reply_markup=InlineKeyboards.row_main_menu()
                 )
 
             await session_methods.session.commit()

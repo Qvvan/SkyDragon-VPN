@@ -5,8 +5,7 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 
 from database.context_manager import DatabaseContextManager
 from handlers.services.card_service import create_payment
-from keyboards.kb_inline import InlineKeyboards, ServiceCallbackFactory, StatusPay, StarsPayCallbackFactory, \
-    DefaultCallback
+from keyboards.kb_inline import InlineKeyboards, BACK_BTN, ServiceCallbackFactory, StatusPay, StarsPayCallbackFactory, DefaultCallback
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 from models.models import Payments
@@ -124,15 +123,15 @@ async def back_to_services(callback: CallbackQuery, state: FSMContext):
     except ValueError:
         status_pay = StatusPay.NEW
 
+    back_target = user_data.get('back_target', 'main_menu')
     try:
-        await callback.message.answer(
+        await callback.message.edit_text(
             text=LEXICON_RU['createorder'],
-            reply_markup=await InlineKeyboards.create_order_keyboards(status_pay),
+            reply_markup=await InlineKeyboards.create_order_keyboards(status_pay, back_target=back_target),
             parse_mode="HTML"
         )
-        await callback.message.delete()
     except Exception as e:
-        await logger.log_error(f"Ошибка: Невозможно удалить сообщение", e)
+        await logger.log_error(f"Ошибка при редактировании сообщения", e)
 
 
 @router.callback_query(StarsPayCallbackFactory.filter(F.action == 'card_pay'))
@@ -185,7 +184,7 @@ async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallba
                     ],
                     [
                         InlineKeyboardButton(
-                            text="🔙 Назад",
+                            text=BACK_BTN,
                             callback_data=ServiceCallbackFactory(
                                 service_id=str(service_id),
                                 status_pay=status_pay.value,
@@ -217,7 +216,10 @@ async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallba
             await logger.log_error(f'Пользователь: @{callback_query.from_user.username}'
                                    f'ID: {callback_query.from_user.id}\n'
                                    f'Ошибка при создании платежа', e)
-            await callback_query.message.edit_text(text="Что-то пошло не так, обратитесь в техподдержку.")
+            await callback_query.message.edit_text(
+                text="Что-то пошло не так, обратитесь в техподдержку.",
+                reply_markup=InlineKeyboards.row_main_menu()
+            )
 
 
 @router.callback_query(lambda c: c.data == 'empty')

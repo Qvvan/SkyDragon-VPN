@@ -1,8 +1,9 @@
 from aiogram import Router
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import CallbackQuery
 
 from database.context_manager import DatabaseContextManager
 from handlers.services.panel_gateway import PanelGateway
+from keyboards.kb_inline import InlineKeyboards
 from logger.logging_config import logger
 
 router = Router()
@@ -35,17 +36,13 @@ async def callback_get_support(callback: CallbackQuery):
                     answer += f"\n{server.name}: Ошибка соединения"
                     await logger.log_error(f"Ошибка соединения с сервером {server.name}, {server.server_ip}", e)
 
-            await callback.message.answer(
+            await callback.message.edit_text(
                 text=answer,
-                reply_markup=InlineKeyboardMarkup(
-                    inline_keyboard=[
-                        [InlineKeyboardButton(
-                            text="🌌 Главное меню",
-                            callback_data='main_menu'
-                        )]
-                    ]
-                )
+                reply_markup=InlineKeyboards.online_keyboard()
             )
         except Exception as e:
             await logger.log_error("Ошибки при отправке онлайн пользователей", e)
-            await callback.message.answer("Произошла ошибка при получении данных о пользователях онлайн")
+            await callback.message.edit_text(
+                "Произошла ошибка при получении данных о пользователях онлайн",
+                reply_markup=InlineKeyboards.row_main_menu()
+            )

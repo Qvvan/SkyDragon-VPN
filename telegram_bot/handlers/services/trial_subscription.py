@@ -58,8 +58,7 @@ async def process_trial_subscription_callback(callback: CallbackQuery, state: FS
                         f"ID: {callback.from_user.id}\n"
                         f"Активировал(а) пробную подписку"
                     )
-                    
-                    # Запускаем создание ключей в фоне (не блокируем ответ пользователю)
+
                     asyncio.create_task(
                         create_keys_background(
                             user_id=user.user_id,
@@ -71,10 +70,13 @@ async def process_trial_subscription_callback(callback: CallbackQuery, state: FS
             else:
                 await callback.message.edit_text(
                     text=LEXICON_RU['trial_subscription_used'],
-                    reply_markup=await InlineKeyboards.get_subscriptions_keyboard()
+                    reply_markup=InlineKeyboards.trial_used_keyboard()
                 )
         except Exception as error:
             await session_methods.session.rollback()
             await logger.log_error(
                 f"Ошибка при создании пробной подписки для пользователя с ID: {callback.from_user.id}", error)
-            await callback.message.answer(text=LEXICON_RU['error'])
+            await callback.message.edit_text(
+                text=LEXICON_RU['error'],
+                reply_markup=InlineKeyboards.row_main_menu()
+            )

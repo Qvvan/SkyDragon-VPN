@@ -8,7 +8,7 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 
 from database.context_manager import DatabaseContextManager
 from handlers.services.create_config_link import create_config_link
-from keyboards.kb_inline import InlineKeyboards, SubscriptionCallbackFactory, StatusPay, AutoRenewalCallbackFactory
+from keyboards.kb_inline import InlineKeyboards, BACK_BTN, SubscriptionCallbackFactory, StatusPay, AutoRenewalCallbackFactory
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 
@@ -75,32 +75,12 @@ async def show_user_subscriptions(user_id, username, message, state: FSMContext)
                     try:
                         await message.edit_text(
                             text=LEXICON_RU['subscription_not_found'],
-                            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                                [
-                                    InlineKeyboardButton(
-                                        text="🔥 Оформить подписку",
-                                        callback_data="subscribe"
-                                    )
-                                ],
-                                [
-                                    InlineKeyboardButton(
-                                        text="🔙 Назад",
-                                        callback_data="back_to_start"
-                                    )
-                                ],
-                            ])
+                            reply_markup=InlineKeyboards.no_subscription_keyboard()
                         )
-                    except:
+                    except Exception:
                         await message.answer(
                             text=LEXICON_RU['subscription_not_found'],
-                            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                                [
-                                    InlineKeyboardButton(
-                                        text="🔥 Оформить подписку",
-                                        callback_data="subscribe"
-                                    )
-                                ],
-                            ])
+                            reply_markup=InlineKeyboards.no_subscription_keyboard()
                         )
                 return
 
@@ -300,7 +280,7 @@ async def toggle_auto_renewal(callback: CallbackQuery, callback_data: AutoRenewa
                     auto_renewal_enabled=not is_auto_renewal_enabled).pack()
             ),
             InlineKeyboardButton(
-                text='🔙 Назад',
+                text=BACK_BTN,
                 callback_data=f'view_details_{subscription_id}'
             )
         ]
@@ -332,7 +312,7 @@ async def toggle_auto_renewal(callback: CallbackQuery, callback_data: AutoRenewa
                     auto_renewal_enabled=not is_auto_renewal_enabled).pack()
             ),
             InlineKeyboardButton(
-                text='🔙 Назад',
+                text=BACK_BTN,
                 callback_data=f'view_details_{subscription_id}'
             )
         ]
