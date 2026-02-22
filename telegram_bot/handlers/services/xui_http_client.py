@@ -120,9 +120,11 @@ class XuiPanelHttpClient:
         url = f"{self._server_url}/"
         timeout = ClientTimeout(connect=5, total=5)
         try:
-            connector = aiohttp.TCPConnector(ssl=False)
-            async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+            # Сессия без своего connector — закрывается полностью при выходе из with
+            async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(url, ssl=False) as response:
+                    # Дочитываем тело, чтобы соединение корректно вернулось в пул/закрылось
+                    await response.read()
                     await logger.info(
                         f"ping: {self._server_url} ответил статусом {response.status}"
                     )
