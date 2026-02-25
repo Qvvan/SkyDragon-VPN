@@ -2,6 +2,7 @@ import asyncio
 import json
 from datetime import timedelta, datetime
 
+import requests
 from yookassa import Configuration, Payment
 
 from config_data.config import SHOP_ID, SHOP_API_TOKEN
@@ -68,8 +69,27 @@ async def create_payment(amount, description, return_url, service_id, service_ty
 
 
 async def check_payment_status(payment_id):
-    payment_info = Payment.find_one(payment_id)
-    return payment_info
+    """
+    Запрос статуса в YooKassa. При таймауте/недоступности API возвращает None.
+    У библиотеки yookassa баг: при ReadTimeout raw_response бывает None → AttributeError.
+    """
+    try:
+        payment_info = Payment.find_one(payment_id)
+        return payment_info
+    except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout,
+            requests.exceptions.ConnectionError) as e:
+        await logger.info(
+            f"check_payment_status: таймаут/сеть для платежа {payment_id}, повтор позже: {type(e).__name__}"
+        )
+        return None
+    except AttributeError as e:
+        # Баг yookassa: при таймауте в __handle_error обращается к raw_response.status_code при raw_response is None
+        if "status_code" in str(e) or "NoneType" in str(e):
+            await logger.info(
+                f"check_payment_status: API недоступен для платежа {payment_id} (таймаут), повтор позже"
+            )
+            return None
+        raise
 
 
 async def payment_status_checker(bot):
@@ -82,6 +102,8 @@ async def payment_status_checker(bot):
                     for payment in unpaid_payments:
                         try:
                             payment_response = await check_payment_status(payment.payment_id)
+                            if payment_response is None:
+                                continue
                             if payment_response.status == 'succeeded':
                                 user_id = payment.user_id
                                 try:
