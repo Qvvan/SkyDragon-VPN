@@ -17,13 +17,9 @@ Configuration.account_id = SHOP_ID
 Configuration.secret_key = SHOP_API_TOKEN
 
 
-def _payment_create(params):
-    return Payment.create(params)
-
-
 async def auto_renewal_payment(amount, description, payment_method_id, user_id, username, subscription_id, service_id):
     try:
-        payment = await asyncio.to_thread(_payment_create, {
+        payment = Payment.create({
             "amount": {
                 "value": amount,
                 "currency": "RUB"
@@ -39,36 +35,37 @@ async def auto_renewal_payment(amount, description, payment_method_id, user_id, 
                 "subscription_id": subscription_id
             }
         })
-        return json.loads(payment.json()) if payment else None
+        return json.loads(payment.json())
     except Exception as e:
         return None
 
 
 async def create_payment(amount, description, return_url, service_id, service_type, user_id, username,
                    subscription_id: int = None, recipient_user_id: int = None):
-    params = {
-        "amount": {
-            "value": amount,
-            "currency": "RUB"
-        },
-        "capture": True,
-        "save_payment_method": True,
-        "description": description,
-        "confirmation": {
-            "type": "redirect",
-            "return_url": return_url
-        },
-        "metadata": {
-            "service_id": service_id,
-            "service_type": service_type,
-            "user_id": user_id,
-            "username": username,
-            "recipient_user_id": recipient_user_id,
-            "subscription_id": subscription_id
+    payment = Payment.create(
+        {
+            "amount": {
+                "value": amount,
+                "currency": "RUB"
+            },
+            "capture": True,
+            "save_payment_method": True,
+            "description": description,
+            "confirmation": {
+                "type": "redirect",
+                "return_url": return_url
+            },
+            "metadata": {
+                "service_id": service_id,
+                "service_type": service_type,
+                "user_id": user_id,
+                "username": username,
+                "recipient_user_id": recipient_user_id,
+                "subscription_id": subscription_id
+            }
         }
-    }
-    payment = await asyncio.to_thread(_payment_create, params)
-    return json.loads(payment.json()) if payment else None
+    )
+    return json.loads(payment.json())
 
 
 async def check_payment_status(payment_id):
@@ -77,7 +74,7 @@ async def check_payment_status(payment_id):
     У библиотеки yookassa баг: при ReadTimeout raw_response бывает None → AttributeError.
     """
     try:
-        payment_info = await asyncio.to_thread(Payment.find_one, payment_id)
+        payment_info = Payment.find_one(payment_id)
         return payment_info
     except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout,
             requests.exceptions.ConnectionError) as e:

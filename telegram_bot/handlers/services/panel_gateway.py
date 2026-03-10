@@ -19,23 +19,6 @@ _http_client_cache: dict[str, tuple[XuiPanelHttpClient, float]] = {}
 HTTP_CACHE_TTL_SEC = 30 * 60  # 30 минут
 
 
-async def close_all_cached_http_clients() -> None:
-    """
-    Закрывает все кэшированные aiohttp-сессии. Вызывать при shutdown приложения,
-    чтобы избежать предупреждений «Unclosed client session».
-    """
-    global _http_client_cache
-    for key in list(_http_client_cache.keys()):
-        client, _ = _http_client_cache.pop(key, (None, 0))
-        if client is not None:
-            try:
-                await client.close()
-            except Exception as e:
-                await logger.warning(
-                    f"Ошибка при закрытии кэшированного HTTP-клиента {key}: {e}"
-                )
-
-
 def _server_cache_key(server: Servers) -> str:
     """Ключ кэша по данным сервера."""
     port = server.panel_port or PORT_X_UI or 443
@@ -71,7 +54,7 @@ class PanelGateway:
             return f"/{url_secret}" if url_secret else ""
         return ""
 
-    async def _get_http_client(self) -> XuiPanelHttpClient:
+    def _get_http_client(self) -> XuiPanelHttpClient:
         """Возвращает HTTP клиент: из кэша (с куками) или создаёт новый и кэширует."""
         if self._http_client is not None:
             return self._http_client
@@ -82,15 +65,8 @@ class PanelGateway:
             if now - cached_at < HTTP_CACHE_TTL_SEC:
                 self._http_client = client
                 return client
-            # Истёк TTL — закрываем старую сессию и убираем из кэша
-            old_client, _ = _http_client_cache.pop(key, (None, 0))
-            if old_client is not None:
-                try:
-                    await old_client.close()
-                except Exception as e:
-                    await logger.warning(
-                        f"Ошибка при закрытии HTTP-клиента при evict из кэша: {e}"
-                    )
+            # Истёк TTL — убираем из кэша, ниже создадим новый клиент
+            del _http_client_cache[key]
         client = XuiPanelHttpClient(
             server_url=self._get_server_url(),
             base_path=self._get_base_path(),
@@ -130,7 +106,7 @@ class PanelGateway:
         Проверяет доступность панели по HTTPS (с авторизацией).
         """
         try:
-            http_client = await self._get_http_client()
+            http_client = self._get_http_client()
             if await http_client._authenticate():
                 await logger.info(
                     f"check_reachable: {self._server.server_ip} доступен по HTTPS"
@@ -152,7 +128,7 @@ class PanelGateway:
             Словарь с полем success и obj (список client_id) или None при ошибке.
         """
         try:
-            http_client = await self._get_http_client()
+            http_client = self._get_http_client()
             return await http_client.get_online_users()
         except Exception as e:
             await logger.warning(
@@ -165,7 +141,7 @@ class PanelGateway:
         Получает список IP адресов для онлайн-клиента на этом сервере.
         """
         try:
-            http_client = await self._get_http_client()
+            http_client = self._get_http_client()
             return await http_client.get_client_ips(client_id)
         except Exception as e:
             await logger.warning(
@@ -184,7 +160,7 @@ class PanelGateway:
             Словарь с данными инбаунда или None если не найден
         """
         try:
-            http_client = await self._get_http_client()
+            http_client = self._get_http_client()
             inbound = await http_client.get_inbound_by_port(port)
             if inbound:
                 await logger.info(
@@ -257,7 +233,7 @@ class PanelGateway:
 
         # Попытка через HTTP
         try:
-            http_client = await self._get_http_client()
+            http_client = self._get_http_client()
             inbound = await http_client.get_inbound_by_port(port)
             if not inbound:
                 raise HttpServerUnavailableError(f"Инбаунд с портом {port} не найден")
@@ -341,7 +317,7 @@ class PanelGateway:
             True если операция успешна (обновлён/создан/пропущен при выключении несуществующего)
         """
         try:
-            http_client = await self._get_http_client()
+            http_client = self._get_http_client()
             inbound = await http_client.get_inbound_by_port(port)
             if not inbound:
                 raise HttpServerUnavailableError(f"Инбаунд с портом {port} не найден")

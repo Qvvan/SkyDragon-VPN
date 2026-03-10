@@ -1,4 +1,3 @@
-import asyncio
 from datetime import datetime, timezone
 
 import requests
@@ -37,20 +36,18 @@ async def generate_receipt(service_name, amount, duration_days, quantity=1, paym
         "ignoreMaxTotalIncomeRestriction": False
     }
 
-    # Синхронные вызовы в потоке, чтобы не блокировать event loop
-    token_data = await asyncio.to_thread(get_valid_token)
+    token_data = get_valid_token()
     TOKEN = token_data.get("token", None)
 
+    # Заголовки для запроса
     HEADERS = {
         "Authorization": f"Bearer {TOKEN}",
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
 
-    def _do_post():
-        return requests.post(API_URL, headers=HEADERS, json=payload)
-
-    response = await asyncio.to_thread(_do_post)
+    # Отправляем запрос
+    response = requests.post(API_URL, headers=HEADERS, json=payload)
 
     if response.status_code == 200:
         data = response.json()
