@@ -20,6 +20,7 @@ from logger.logging_config import logger
 from middleware.logging_middleware import CallbackLoggingMiddleware, MessageLoggingMiddleware
 from middleware.trottling import ThrottlingMiddleware
 from scripts import update_keys
+from handlers.services.panel_gateway import close_all_cached_http_clients
 from utils.check_servers import ping_servers
 from utils.gift_checker import run_gift_checker
 from utils.online_abuse_checker import run_online_abuse_check
@@ -48,6 +49,12 @@ async def cleanup_bot_resources():
                 pass
 
     background_tasks.clear()
+
+    # Закрываем все кэшированные aiohttp-сессии (панели 3x-ui)
+    try:
+        await close_all_cached_http_clients()
+    except Exception as e:
+        await logger.log_error("Ошибка при закрытии кэшированных HTTP-клиентов", e)
 
     # Закрываем сессию бота
     if bot_instance and bot_instance.session:
