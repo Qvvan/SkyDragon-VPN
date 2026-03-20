@@ -4,8 +4,22 @@ import traceback
 
 from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
 from config_data import config
+
+
+def normalize_telegram_proxy(proxy: str) -> str:
+    """
+    Приводим прокси к формату, который ожидает aiogram/AiohttpSession.
+    Поддерживаем ввод как `ip:port` (автопрефикс `socks5://`) или полный URL.
+    """
+    proxy = (proxy or "").strip()
+    if not proxy:
+        return ""
+    if "://" not in proxy:
+        return f"socks5://{proxy}"
+    return proxy
 
 
 class CustomLogger:
@@ -46,9 +60,12 @@ class CustomLogger:
             error_message = ""
 
         escaped_message = html.escape(message)
+        telegram_proxy = normalize_telegram_proxy(config.TELEGRAM_PROXY)
+        session = AiohttpSession(proxy=telegram_proxy or None)
         async with Bot(
                 token=config.BOT_TOKEN,
-                default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+                default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+                session=session,
         ) as bot:
             await bot.send_message(
                 chat_id=group_id,
