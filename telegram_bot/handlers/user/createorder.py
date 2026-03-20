@@ -136,6 +136,11 @@ async def back_to_services(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(StarsPayCallbackFactory.filter(F.action == 'card_pay'))
 async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallbackFactory):
+    # Ответим сразу, чтобы Telegram понимал что callback принят,
+    # пока дальше делаем сетевые вызовы на создание платежа.
+    await callback_query.answer()
+    # Важно: не вызывать `answer()` второй раз для того же callback.
+
     service_list = [
         "Краткосрочная мощь духа дракона, дарующая защиту на время одного полного круга луны.",
         "Щит древности, что бережёт вас в течение трёх смен времён года, словно хранитель древних тайн.",
@@ -153,11 +158,17 @@ async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallba
         try:
             sub = await session_methods.subscription.get_subscription_by_id(subscription_id)
             if sub is None and status_pay == StatusPay.OLD.value:
-                await callback_query.answer(
-                    text="Подписка, которую вы хотите продлить, не найдена🙏",
-                    show_alert=True,
-                    cache_time=5
-                )
+                # Не показываем повторный answerCallbackQuery, т.к. он уже отправлен выше.
+                try:
+                    await callback_query.message.edit_text(
+                        text="Подписка, которую вы хотите продлить, не найдена🙏",
+                        reply_markup=InlineKeyboards.row_main_menu()
+                    )
+                except Exception:
+                    await callback_query.message.answer(
+                        text="Подписка, которую вы хотите продлить, не найдена🙏",
+                        reply_markup=InlineKeyboards.row_main_menu()
+                    )
                 return
             service = await session_methods.services.get_service_by_id(service_id)
             payment_data = await create_payment(

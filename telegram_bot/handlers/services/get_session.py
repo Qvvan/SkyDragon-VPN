@@ -4,6 +4,9 @@ import requests
 
 from config_data.config import PASSWORD_MY_NALOG, INN, SOURCE_DEVICE_ID
 
+# connect/read timeout to avoid infinite hangs
+REQUEST_TIMEOUT = (5, 20)  # (connect, read) seconds
+
 # Константы
 AUTH_URL = "https://lknpd.nalog.ru/api/v1/auth/lkfl"
 REFRESH_URL = "https://lknpd.nalog.ru/api/v1/auth/token"
@@ -28,7 +31,7 @@ def get_token():
         "password": PASSWORD,
         "deviceInfo": DEVICE_INFO
     }
-    response = requests.post(AUTH_URL, json=payload)
+    response = requests.post(AUTH_URL, json=payload, timeout=REQUEST_TIMEOUT)
     if response.status_code == 200:
         data = response.json()
         token_data = {
@@ -47,7 +50,7 @@ def refresh_token():
         "refreshToken": token_data["refresh_token"],
         "deviceInfo": DEVICE_INFO
     }
-    response = requests.post(REFRESH_URL, json=payload)
+    response = requests.post(REFRESH_URL, json=payload, timeout=REQUEST_TIMEOUT)
     if response.status_code == 200:
         data = response.json()
         token_data = {

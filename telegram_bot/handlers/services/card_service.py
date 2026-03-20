@@ -16,10 +16,16 @@ from logger.logging_config import logger
 Configuration.account_id = SHOP_ID
 Configuration.secret_key = SHOP_API_TOKEN
 
+# yookassa внутри использует sync-requests, но конкретные таймауты там не
+# контролируются отсюда. Поэтому ставим "ограничение ожидания" на уровне asyncio,
+# чтобы не ждать бесконечно.
+YOOKASSA_CREATE_TIMEOUT_SEC = 25
+YOOKASSA_FIND_TIMEOUT_SEC = 15
+
 
 async def auto_renewal_payment(amount, description, payment_method_id, user_id, username, subscription_id, service_id):
     try:
-        payment = Payment.create({
+        payload = {
             "amount": {
                 "value": amount,
                 "currency": "RUB"
@@ -34,38 +40,54 @@ async def auto_renewal_payment(amount, description, payment_method_id, user_id, 
                 "username": username,
                 "subscription_id": subscription_id
             }
-        })
-        return json.loads(payment.json())
+        }
+
+        # yookassa внутри использует sync-requests, поэтому переносим в отдельный поток,
+        # иначе можем "заморозить" весь asyncio event loop.
+        def _create_payment_sync():
+            payment = Payment.create(payload)
+            return json.loads(payment.json())
+
+        return await asyncio.wait_for(
+            asyncio.to_thread(_create_payment_sync),
+            timeout=YOOKASSA_CREATE_TIMEOUT_SEC,
+        )
     except Exception as e:
         return None
 
 
 async def create_payment(amount, description, return_url, service_id, service_type, user_id, username,
                    subscription_id: int = None, recipient_user_id: int = None):
-    payment = Payment.create(
-        {
-            "amount": {
-                "value": amount,
-                "currency": "RUB"
-            },
-            "capture": True,
-            "save_payment_method": True,
-            "description": description,
-            "confirmation": {
-                "type": "redirect",
-                "return_url": return_url
-            },
-            "metadata": {
-                "service_id": service_id,
-                "service_type": service_type,
-                "user_id": user_id,
-                "username": username,
-                "recipient_user_id": recipient_user_id,
-                "subscription_id": subscription_id
-            }
+    payload = {
+        "amount": {
+            "value": amount,
+            "currency": "RUB"
+        },
+        "capture": True,
+        "save_payment_method": True,
+        "description": description,
+        "confirmation": {
+            "type": "redirect",
+            "return_url": return_url
+        },
+        "metadata": {
+            "service_id": service_id,
+            "service_type": service_type,
+            "user_id": user_id,
+            "username": username,
+            "recipient_user_id": recipient_user_id,
+            "subscription_id": subscription_id
         }
+    }
+
+    def _create_payment_sync():
+        payment = Payment.create(payload)
+        return json.loads(payment.json())
+
+    return await asyncio.wait_for(
+        asyncio.to_thread(_create_payment_sync),
+        timeout=YOOKASSA_CREATE_TIMEOUT_SEC,
     )
-    return json.loads(payment.json())
 
 
 async def check_payment_status(payment_id):
@@ -74,8 +96,18 @@ async def check_payment_status(payment_id):
     У библиотеки yookassa баг: при ReadTimeout raw_response бывает None → AttributeError.
     """
     try:
-        payment_info = Payment.find_one(payment_id)
-        return payment_info
+        def _find_one_sync():
+            return Payment.find_one(payment_id)
+
+        return await asyncio.wait_for(
+            asyncio.to_thread(_find_one_sync),
+            timeout=YOOKASSA_FIND_TIMEOUT_SEC,
+        )
+    except asyncio.TimeoutError:
+        await logger.info(
+            f"check_payment_status: ожидание YooKassa вышло по таймауту для платежа {payment_id}"
+        )
+        return None
     except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout,
             requests.exceptions.ConnectionError) as e:
         await logger.info(

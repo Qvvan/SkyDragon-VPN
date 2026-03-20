@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import asyncio
 
 import requests
 
@@ -7,6 +8,10 @@ from handlers.services.get_session import get_valid_token
 from logger.logging_config import logger
 
 API_URL = "https://lknpd.nalog.ru/api/v1/income"
+
+# Чтобы запросы к ФНС не зависали бесконечно и не "замораживали" бота,
+# если они окажутся выполнены не в потоке.
+REQUEST_TIMEOUT = (5, 20)  # (connect, read) seconds
 
 
 async def generate_receipt(service_name, amount, duration_days, quantity=1, payment_type="CASH"):
@@ -36,30 +41,36 @@ async def generate_receipt(service_name, amount, duration_days, quantity=1, paym
         "ignoreMaxTotalIncomeRestriction": False
     }
 
-    token_data = get_valid_token()
-    TOKEN = token_data.get("token", None)
+    def _generate_receipt_sync():
+        token_data = get_valid_token()
+        token = token_data.get("token", None)
 
-    # Заголовки для запроса
-    HEADERS = {
-        "Authorization": f"Bearer {TOKEN}",
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-    }
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
 
-    # Отправляем запрос
-    response = requests.post(API_URL, headers=HEADERS, json=payload)
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=REQUEST_TIMEOUT)
 
-    if response.status_code == 200:
+        if response.status_code != 200:
+            return {"ok": False, "error": f"HTTP {response.status_code}", "details": response.text}
+
         data = response.json()
         receipt_uuid = data.get("approvedReceiptUuid")
-        if receipt_uuid:
-            await logger.log_info(f"✅ Чек успешно создан! UUID: {receipt_uuid}")
-            return receipt_uuid
-        else:
-            await logger.log_error("❌ Ошибка: не удалось получить UUID чека", None)
-    else:
-        await logger.log_error(f"❌ Ошибка запроса: {response.status_code}, {response.text}", None)
+        if not receipt_uuid:
+            return {"ok": False, "error": "Missing approvedReceiptUuid", "details": data}
 
+        return {"ok": True, "receipt_uuid": receipt_uuid}
+
+    # requests синхронный -> переносим в thread, чтобы не блокировать event loop
+    result = await asyncio.to_thread(_generate_receipt_sync)
+    if result.get("ok"):
+        receipt_uuid = result["receipt_uuid"]
+        await logger.log_info(f"✅ Чек успешно создан! UUID: {receipt_uuid}")
+        return receipt_uuid
+
+    await logger.log_error(f"❌ Ошибка запроса ФНС: {result.get('error')}, {result.get('details')}", None)
     return None
 
 
