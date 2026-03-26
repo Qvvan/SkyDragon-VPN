@@ -21,7 +21,7 @@ SUPPORT_URL_ACTIVE = "https://t.me/SkyDragonSupport"
 # Внешние подписки: ключи добавляются к нашим (таймаут 3 сек каждый)
 EXTERNAL_SUB_URLS = [
     "https://sp.vpnlider.online/ndKFYzNwuk2ryHba",
-    "https://key.whypn.com/QKLZy",
+    "https://link.1cdn.lol/QKLZy",
 ]
 BOT_URL_EXPIRED = "https://t.me/SkyDragonVPNBot?start=1"
 SUB_STATUS_ACTIVE = "активная"
