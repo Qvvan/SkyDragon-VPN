@@ -125,38 +125,16 @@ class XuiPanelHttpClient:
                 async with session.get(url, ssl=False) as response:
                     # Дочитываем тело, чтобы соединение корректно вернулось в пул/закрылось
                     await response.read()
-                    await logger.info(
-                        f"ping: {self._server_url} ответил статусом {response.status}"
-                    )
                     return True
         except asyncio.TimeoutError:
-            await logger.info(
-                f"ping: timeout для {self._server_url} (URL: {url}, timeout=5s)"
-            )
             return False
-        except aiohttp.ClientConnectorError as e:
-            await logger.info(
-                f"ping: connection error для {self._server_url} "
-                f"(URL: {url}): {e}"
-            )
+        except aiohttp.ClientConnectorError:
             return False
-        except aiohttp.ClientError as e:
-            await logger.info(
-                f"ping: client error для {self._server_url} "
-                f"(URL: {url}): {e}"
-            )
+        except aiohttp.ClientError:
             return False
-        except OSError as e:
-            await logger.info(
-                f"ping: OS error для {self._server_url} "
-                f"(URL: {url}): {e}"
-            )
+        except OSError:
             return False
-        except Exception as e:
-            await logger.info(
-                f"ping: неожиданная ошибка для {self._server_url} "
-                f"(URL: {url}): {type(e).__name__}: {e}"
-            )
+        except Exception:
             return False
 
     async def _get_session(self) -> ClientSession:
