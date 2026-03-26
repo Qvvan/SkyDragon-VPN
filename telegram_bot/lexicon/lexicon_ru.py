@@ -11,6 +11,7 @@ LEXICON_COMMANDS_ADMIN: dict[str, str] = {
     "/get_user": "Получить ифнормацию по ID",
     '/user_info': 'Получить информацию о пользователе по Telegram ID',
     "/add_gift": "Подарить подписку",
+    "/grant_sub": "Выдать подписку по Telegram ID",
     '/add_server': 'Добавить сервер в базу данных',
     '/new_keys': 'Создать ключи для нового сервера',
     '/show_servers': 'Управление серверами',

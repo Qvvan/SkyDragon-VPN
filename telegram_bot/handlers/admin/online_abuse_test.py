@@ -7,7 +7,7 @@ from config_data.config import ADMIN_IDS
 from filters.admin import IsAdmin
 from logger.logging_config import logger
 from utils.online_abuse_checker import (
-    MAX_CONNECTIONS_PER_SUBSCRIPTION,
+    MAX_UNIQUE_IPS_PER_SUBSCRIPTION,
     collect_all_online_data,
     _format_abuse_message,
 )
@@ -30,13 +30,13 @@ async def cmd_test_online_check(message: Message):
     violations = [
         sub_online
         for sub_online in by_sub.values()
-        if sub_online.total_keys > MAX_CONNECTIONS_PER_SUBSCRIPTION
+        if sub_online.unique_ips_count > MAX_UNIQUE_IPS_PER_SUBSCRIPTION
     ]
 
     summary = (
         f"Проверка завершена.\n"
         f"Подписок с онлайном: {total_subs}\n"
-        f"С превышением лимита ({MAX_CONNECTIONS_PER_SUBSCRIPTION}): {len(violations)}\n"
+        f"С превышением лимита по уникальным IP ({MAX_UNIQUE_IPS_PER_SUBSCRIPTION}): {len(violations)}\n"
     )
     if violations:
         summary += "\nНиже — уведомления о нарушениях (как при автоматической проверке):"

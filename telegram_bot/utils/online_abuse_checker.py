@@ -1,7 +1,7 @@
 """
 Проверка онлайна по подпискам: собирает со всех серверов список онлайн-клиентов,
 для каждого запрашивает IP (clientIps), группирует по подписке (user_id, sub_id).
-Если по одной подписке онлайн больше чем MAX_CONNECTIONS_PER_SUBSCRIPTION — уведомление админам.
+Если по одной подписке уникальных IP больше чем MAX_UNIQUE_IPS_PER_SUBSCRIPTION — уведомление.
 """
 import asyncio
 import base64
@@ -10,13 +10,13 @@ from typing import Any
 
 from aiogram import Bot
 
-from config_data.config import ADMIN_IDS
+from config_data.config import ADMIN_IDS, ONLINE_ABUSE_CHAT_ID
 from database.context_manager import DatabaseContextManager
 from handlers.services.panel_gateway import PanelGateway
 from logger.logging_config import logger
 
-# Лимит: если ключей (подключений) по одной подписке больше этого — шлём алерт
-MAX_CONNECTIONS_PER_SUBSCRIPTION = 2
+# Лимит: если уникальных IP по одной подписке больше этого — шлём алерт
+MAX_UNIQUE_IPS_PER_SUBSCRIPTION = 3
 
 # Интервал между проверками (секунды)
 CHECK_INTERVAL_SEC = 5 * 60  # 5 минут
@@ -45,6 +45,20 @@ class SubscriptionOnline:
     @property
     def total_ips(self) -> int:
         return sum(len(e.ips) for e in self.entries)
+
+    @property
+    def unique_ips(self) -> list[str]:
+        unique_ips = {
+            ip.strip()
+            for entry in self.entries
+            for ip in entry.ips
+            if isinstance(ip, str) and ip.strip()
+        }
+        return sorted(unique_ips)
+
+    @property
+    def unique_ips_count(self) -> int:
+        return len(self.unique_ips)
 
     @property
     def server_names(self) -> list[str]:
@@ -149,7 +163,7 @@ async def collect_all_online_data() -> dict[tuple[int, int], SubscriptionOnline]
 async def run_online_abuse_check(bot: Bot) -> None:
     """
     Фоновая задача: раз в CHECK_INTERVAL_SEC обходит серверы, собирает онлайны и IP,
-    группирует по подписке (user_id, sub_id). Если по подписке ключей > MAX — шлёт уведомление админам.
+    группирует по подписке (user_id, sub_id). Если по подписке уникальных IP > MAX — шлёт уведомление.
     """
     while True:
         try:
@@ -163,16 +177,23 @@ async def run_online_abuse_check(bot: Bot) -> None:
 
 async def _do_one_check(bot: Bot) -> None:
     by_sub = await collect_all_online_data()
+    target_chat_ids = _get_target_chat_ids()
 
     for (user_id, sub_id), sub_online in by_sub.items():
-        if sub_online.total_keys <= MAX_CONNECTIONS_PER_SUBSCRIPTION:
+        if sub_online.unique_ips_count <= MAX_UNIQUE_IPS_PER_SUBSCRIPTION:
             continue
         message = _format_abuse_message(sub_online)
-        for admin_id in ADMIN_IDS:
+        for chat_id in target_chat_ids:
             try:
-                await bot.send_message(admin_id, message)
+                await bot.send_message(chat_id, message)
             except Exception as e:
-                await logger.log_error(f"Не удалось отправить уведомление о нарушении админу {admin_id}", e)
+                await logger.log_error(f"Не удалось отправить уведомление о нарушении в чат {chat_id}", e)
+
+
+def _get_target_chat_ids() -> list[int]:
+    if ONLINE_ABUSE_CHAT_ID:
+        return [ONLINE_ABUSE_CHAT_ID]
+    return ADMIN_IDS
 
 
 def _format_abuse_message(sub: SubscriptionOnline) -> str:
@@ -181,8 +202,9 @@ def _format_abuse_message(sub: SubscriptionOnline) -> str:
         "",
         f"Подписка: <code>user_id={sub.user_id}, sub_id={sub.sub_id}</code>",
         f"Telegram ID владельца: <code>{sub.user_id}</code>",
-        f"Всего ключей онлайн: <b>{sub.total_keys}</b> (лимит {MAX_CONNECTIONS_PER_SUBSCRIPTION})",
+        f"Всего ключей онлайн: <b>{sub.total_keys}</b>",
         f"Всего IP-адресов: {sub.total_ips}",
+        f"Уникальных IP-адресов: <b>{sub.unique_ips_count}</b> (лимит {MAX_UNIQUE_IPS_PER_SUBSCRIPTION})",
         f"Серверы: {', '.join(sub.server_names)}",
         "",
         "Подключения по серверам:",

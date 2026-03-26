@@ -14,6 +14,7 @@ TELEGRAM_PROXY = env.str("TELEGRAM_PROXY", "")
 
 ERROR_GROUP_ID = env.int("ERROR_GROUP_ID")
 INFO_GROUP_ID = env.int("INFO_GROUP_ID")
+ONLINE_ABUSE_CHAT_ID = env.int("ONLINE_ABUSE_CHAT_ID", 0)
 
 MY_SECRET_URL = env.str("MY_SECRET_URL", "mysecreturl")
 LOGIN_X_UI_PANEL = env.str("LOGIN_X_UI_PANEL", "admin")
