@@ -8,7 +8,6 @@ from aiogram.types import Update
 from database.context_manager import DatabaseContextManager
 from database.methods.users import LogicError
 from logger.logging_config import logger
-from models.models import Users
 
 
 class MessageLoggingMiddleware(BaseMiddleware):
@@ -22,7 +21,6 @@ class MessageLoggingMiddleware(BaseMiddleware):
             user_id = event.chat.id
             username = event.chat.username
             await logger.info(f"Пользователь {username} (ID: {user_id}) отправил сообщение: {event.text}")
-            await ensure_user_exists(user_id, username)
             await last_visit(user_id, username)
             ban_user = await check_ban(user_id)
             if ban_user is not None:
@@ -68,26 +66,6 @@ async def last_visit(user_id: int, username: str = None):
         except Exception as e:
             await session_methods.session.rollback()
             await logger.log_error("Error updating last visit", e)
-
-
-async def ensure_user_exists(user_id: int, username: str = None):
-    async with DatabaseContextManager() as session_methods:
-        try:
-            user = await session_methods.users.get_user(user_id)
-            if user:
-                return
-
-            user_created = await session_methods.users.add_user(
-                Users(
-                    user_id=user_id,
-                    username=username
-                )
-            )
-            if user_created:
-                await session_methods.session.commit()
-        except Exception as e:
-            await session_methods.session.rollback()
-            await logger.log_error("Error ensuring user exists", e)
 
 
 async def check_ban(user_id: int):

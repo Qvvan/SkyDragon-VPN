@@ -320,7 +320,16 @@ class XuiPanelHttpClient:
             if isinstance(obj, str):
                 obj = json.loads(obj)
             if isinstance(obj, list):
-                return [str(x) for x in obj]
+                ips: list[str] = []
+                for x in obj:
+                    # API иногда отдаёт структуру: {"ip": "...", "timestamp": ...}
+                    if isinstance(x, dict):
+                        ip_value = x.get("ip") or x.get("address")
+                        if ip_value:
+                            ips.append(str(ip_value))
+                        continue
+                    ips.append(str(x))
+                return ips
             return []
         except Exception as e:
             await logger.error(f"Исключение при получении clientIps для {client_id[:50]}", e)
