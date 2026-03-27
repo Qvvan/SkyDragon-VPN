@@ -6,6 +6,7 @@ import re
 import uuid
 from datetime import datetime, timezone
 from typing import Literal, Optional
+from urllib.parse import quote
 
 from cryptography.fernet import Fernet
 from fastapi import FastAPI, Response, Depends, Request
@@ -227,6 +228,15 @@ def _to_import_url(import_type: str, config_url: str) -> str:
 
 def _public_sub_url(encrypted_part: str) -> str:
     return f"{PUBLIC_BASE_URL}/sub/{encrypted_part}"
+
+
+def _happ_add_subscription_deeplink(encrypted_part: str) -> str:
+    """
+    В Happ: «Добавить конфигурацию» — happ://add/{url}
+    URL подписки кодируем, чтобы : и / не ломали разбор схемы.
+    """
+    sub_url = _public_sub_url(encrypted_part)
+    return f"happ://add/{quote(sub_url, safe='')}"
 
 
 def _build_import_route_url(platform: str, app_name: str, encrypted_part: str) -> str:
@@ -568,12 +578,12 @@ async def import_android_legacy(encrypted_part: str):
 
 @app.get("/import/iphone/happ/{encrypted_part}")
 async def import_iphone_happ(encrypted_part: str):
-    return RedirectResponse(url=_public_sub_url(encrypted_part), status_code=302)
+    return RedirectResponse(url=_happ_add_subscription_deeplink(encrypted_part), status_code=302)
 
 
 @app.get("/import/android/happ/{encrypted_part}")
 async def import_android_happ(encrypted_part: str):
-    return RedirectResponse(url=_public_sub_url(encrypted_part), status_code=302)
+    return RedirectResponse(url=_happ_add_subscription_deeplink(encrypted_part), status_code=302)
 
 
 @app.get("/import/android/v2raytun/{encrypted_part}")
@@ -588,7 +598,7 @@ async def import_iphone_v2raytun(encrypted_part: str):
 
 @app.get("/import/windows/happ/{encrypted_part}")
 async def import_windows_happ(encrypted_part: str):
-    return RedirectResponse(url=_public_sub_url(encrypted_part), status_code=302)
+    return RedirectResponse(url=_happ_add_subscription_deeplink(encrypted_part), status_code=302)
 
 
 @app.get("/import/windows/v2raytun/{encrypted_part}")
@@ -598,7 +608,7 @@ async def import_windows_v2raytun(encrypted_part: str):
 
 @app.get("/import/macos/happ/{encrypted_part}")
 async def import_macos_happ(encrypted_part: str):
-    return RedirectResponse(url=_public_sub_url(encrypted_part), status_code=302)
+    return RedirectResponse(url=_happ_add_subscription_deeplink(encrypted_part), status_code=302)
 
 
 @app.get("/import/macos/v2raytun/{encrypted_part}")
