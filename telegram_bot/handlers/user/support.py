@@ -13,7 +13,7 @@ router = Router()
 async def get_support(message: Message):
     await message.answer(
         text=LEXICON_RU['help_message'],
-        reply_markup=await InlineKeyboards.get_support(),
+        reply_markup=await InlineKeyboards.get_support(user_id=message.from_user.id),
     )
 
 
@@ -24,7 +24,7 @@ async def callback_get_support(callback: CallbackQuery, state: FSMContext):
     back_target = data.get('back_target', 'main_menu')
     await callback.message.edit_text(
         text=LEXICON_RU['help_message'],
-        reply_markup=await InlineKeyboards.get_support(back_target),
+        reply_markup=await InlineKeyboards.get_support(back_target, callback.from_user.id),
     )
 
 
@@ -42,7 +42,7 @@ async def handle_back_to_support_menu(callback: CallbackQuery):
     await callback.answer()
     await callback.message.edit_text(
         text=LEXICON_RU['help_message'],
-        reply_markup=await InlineKeyboards.get_support()
+        reply_markup=await InlineKeyboards.get_support(user_id=callback.from_user.id)
     )
 
 
@@ -52,7 +52,7 @@ async def handle_subscribe(callback: CallbackQuery):
     await callback.answer()
     await callback.message.edit_text(
         text=LEXICON_RU['help_message'],
-        reply_markup=await InlineKeyboards.get_support()
+        reply_markup=await InlineKeyboards.get_support(user_id=callback.from_user.id)
     )
 
 

@@ -36,3 +36,27 @@ class Servers(Base):
     url_secret = Column(String(255), nullable=True)  # путь панели, напр. /0PkmGmepRhDqrF
     sub_port = Column(Integer, nullable=True)      # порт, на котором отдаётся /sub/ (2096)
     available_ports = Column(String, nullable=True)  # в БД может быть ARRAY; для SQLAlchemy как JSON/текст при необходимости
+
+
+class Services(Base):
+    __tablename__ = "services"
+
+    service_id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False)
+    duration_days = Column(Integer, nullable=False)
+    price = Column(Integer, nullable=False)
+
+
+class Payments(Base):
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    payment_id = Column(String, nullable=False, unique=True)
+    user_id = Column(BigInteger, nullable=False)
+    recipient_user_id = Column(BigInteger, nullable=True)
+    service_id = Column(Integer, nullable=True)
+    status = Column(String, nullable=False, default="pending")
+    payment_type = Column(String, nullable=True, default="myself")
+    receipt_link = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

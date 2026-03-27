@@ -1,18 +1,21 @@
 import asyncio
 import base64
 import hashlib
+from pathlib import Path
 import re
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal, Optional
 
 from cryptography.fernet import Fernet
-from fastapi import FastAPI, Response, Depends
+from fastapi import FastAPI, Response, Depends, Request
+from yookassa import Configuration, Payment
 from sqlalchemy.orm import Session
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import RedirectResponse
+from starlette.templating import Jinja2Templates
 
-from cfg.config import CRYPTO_KEY
+from cfg.config import CRYPTO_KEY, SHOP_ID, SHOP_API_TOKEN
 from db import methods
 from db.db import get_db
 from sub_fetcher import get_sub_from_server, fetch_external_subscription_keys
@@ -27,6 +30,10 @@ BOT_URL_EXPIRED = "https://t.me/SkyDragonVPNBot?start=1"
 SUB_STATUS_ACTIVE = "активная"
 
 app = FastAPI()
+templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+if SHOP_ID and SHOP_API_TOKEN:
+    Configuration.account_id = SHOP_ID
+    Configuration.secret_key = SHOP_API_TOKEN
 
 app.add_middleware(
     CORSMiddleware,
@@ -88,53 +95,238 @@ def _b64(text: str) -> str:
 
 # Короткое название подписки
 PROFILE_TITLE = "SkyDragon🐉"
+RU_MONTHS = (
+    "янв", "фев", "мар", "апр", "май", "июн",
+    "июл", "авг", "сен", "окт", "ноя", "дек",
+)
 
-ANNOUNCE_ACTIVE = "⚠️ ВЫБЕРИТЕ ДРУГОЙ СЕРВЕР, ЕСЛИ ТЕКУЩИЙ ПЛОХО РАБОТАЕТ 🔄 Поддержка — Нажмите сюда"
-ANNOUNCE_EXPIRED = "❌ ПОДПИСКА ИСТЕКЛА! ПРОДЛИТЕ В БОТЕ — ЖМИ СЮДА, ЧТОБЫ ПРОДЛИТЬ🐉"
-ANNOUNCE_NOT_FOUND = "🔍 ПОДПИСКА НЕ НАЙДЕНА ИЛИ УДАЛЕНА. ОФОРМИТЕ НОВУЮ В БОТЕ — НАЖМИТЕ СЮДА 🐉"
+CLIENT_USER_AGENTS = (
+    "streisand",
+    "happ",
+    "hiddify",
+    "v2raytun",
+)
+
+BROWSER_USER_AGENTS = (
+    "mozilla",
+    "chrome",
+    "safari",
+    "firefox",
+    "edg/",
+    "opera",
+)
+
+DEVICE_LABELS = {
+    "iphone": "iPhone",
+    "android": "Android",
+    "windows": "Windows",
+    "macos": "MacOS",
+}
+
+APPS_BY_PLATFORM = {
+    "iphone": [
+        {
+            "app_name": "Happ (RU App Store)",
+            "store_url": "https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973",
+            "import_type": "direct",
+        },
+        {
+            "app_name": "Happ (EU/US App Store)",
+            "store_url": "https://apps.apple.com/us/app/happ-proxy-utility/id6504287215",
+            "import_type": "direct",
+        }
+    ],
+    "android": [
+        {
+            "app_name": "Happ (Google Play)",
+            "store_url": "https://play.google.com/store/apps/details?id=com.happproxy",
+            "import_type": "direct",
+        }
+    ],
+    "windows": [
+        {
+            "app_name": "Happ",
+            "store_url": "https://github.com/Happ-proxy/happ-desktop/releases/latest/download/setup-Happ.x64.exe",
+            "import_type": "direct",
+        }
+    ],
+    "macos": [
+        {
+            "app_name": "Happ",
+            "store_url": "https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973",
+            "import_type": "direct",
+        }
+    ],
+}
+
+ANNOUNCE_ACTIVE = "Если VPN работает нестабильно, смените страну подключения. Для продления нажмите сюда."
+ANNOUNCE_EXPIRED = "Подписка истекла. Нажмите, чтобы продлить. Если подписка оплачена, но статус ещё «истекла», нажмите кнопку 🔁."
+ANNOUNCE_NOT_FOUND = "Подписка удалена или не найдена. Нажмите, чтобы оформить новую. Если подписка оплачена, но статус ещё «истекла», нажмите кнопку 🔁."
 
 SUB_INFO_COLOR = "blue"
-SUB_INFO_ACTIVE = "⚠️ ВЫБЕРИТЕ ДРУГОЙ СЕРВЕР, ЕСЛИ ТЕКУЩИЙ ПЛОХО РАБОТАЕТ 🔄"
-SUB_INFO_BUTTON_ACTIVE = "Поддержка 💬"
-SUB_INFO_EXPIRED = "❌ ПОДПИСКА ИСТЕКЛА. ПРОДЛИТЕ В БОТЕ 🐉"
-SUB_INFO_BUTTON_EXPIRED = "Продлить в боте 🐉"
-SUB_INFO_NOT_FOUND = "🔍 Этой подписки больше нет — она удалена или не найдена в системе."
-SUB_INFO_BUTTON_NOT_FOUND = "Оформить подписку в боте 🐉"
+SUB_INFO_ACTIVE = "Если VPN работает нестабильно, смените страну подключения."
+SUB_INFO_BUTTON_ACTIVE = "Для продления нажмите сюда"
+SUB_INFO_EXPIRED = "Подписка истекла. Нажмите, чтобы продлить."
+SUB_INFO_BUTTON_EXPIRED = "Нажмите, чтобы продлить"
+SUB_INFO_NOT_FOUND = "Подписка удалена или не найдена. Нажмите, чтобы оформить новую."
+SUB_INFO_BUTTON_NOT_FOUND = "Оформить новую подписку"
+
+
+def _is_known_client_request(user_agent: Optional[str]) -> bool:
+    if not user_agent:
+        return False
+    ua = user_agent.lower()
+    return any(client_ua in ua for client_ua in CLIENT_USER_AGENTS)
+
+
+def _detect_platform_from_ua(user_agent: Optional[str]) -> str:
+    if not user_agent:
+        return "android"
+    ua = user_agent.lower()
+    if "iphone" in ua or "ipad" in ua or "ios" in ua:
+        return "iphone"
+    if "mac os" in ua or "macintosh" in ua:
+        return "macos"
+    if "windows" in ua:
+        return "windows"
+    if "android" in ua:
+        return "android"
+    return "android"
+
+
+def _is_browser_request(user_agent: Optional[str]) -> bool:
+    if not user_agent:
+        return False
+    ua = user_agent.lower()
+    return any(token in ua for token in BROWSER_USER_AGENTS)
+
+
+def _to_import_url(import_type: str, config_url: str) -> str:
+    if import_type == "v2raytun":
+        return f"v2raytun://import/{config_url}"
+    return config_url
+
+
+def _format_date_ru(value: Optional[datetime]) -> str:
+    if not value:
+        return "—"
+    month_name = RU_MONTHS[value.month - 1]
+    return f"{value.day:02d} {month_name} {value.year}"
+
+
+def _subscription_status_key(status: Optional[str]) -> str:
+    status_map = {
+        "активная": "active",
+        "истекла": "expired",
+        "отключена": "cancelled",
+    }
+    return status_map.get((status or "").strip().lower(), "pending")
+
+
+def _days_remaining(end_date: Optional[datetime]) -> int:
+    if not end_date:
+        return 0
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    delta = end_date.replace(tzinfo=None) - now
+    return max(0, delta.days)
+
+
+def _build_sub_info(subscription: Optional[dict]) -> Optional[dict]:
+    if not subscription:
+        return None
+    status_key = _subscription_status_key(subscription.get("status"))
+    price = subscription.get("service_price")
+    service_id = subscription.get("service_id")
+    is_trial = service_id == 0
+    duration_days = subscription.get("service_duration_days")
+    if is_trial and not duration_days:
+        duration_days = 0
+    price = "Бесплатно" if is_trial else (f"{price} ₽" if price is not None else "—")
+    return {
+        "service_name": "Пробный период" if is_trial else (subscription.get("service_name") or "SkyDragon VPN"),
+        "status": subscription.get("status") or "неизвестно",
+        "status_key": status_key,
+        "duration_days": duration_days or 0,
+        "price": price,
+        "source": "Telegram Bot",
+        "auto_renewal": bool(subscription.get("auto_renewal")),
+        "start_date": _format_date_ru(subscription.get("start_date")),
+        "end_date": _format_date_ru(subscription.get("end_date")),
+        "days_remaining": _days_remaining(subscription.get("end_date")),
+    }
+
+
+async def _create_yookassa_payment(
+    *,
+    amount: int,
+    service_id: int,
+    service_name: str,
+    user_id: int,
+    subscription_id: int,
+) -> dict:
+    payload = {
+        "amount": {
+            "value": amount,
+            "currency": "RUB",
+        },
+        "capture": True,
+        "save_payment_method": True,
+        "description": f"Оплата за услугу: {service_name}",
+        "confirmation": {
+            "type": "redirect",
+            "return_url": "https://t.me/SkyDragonVPNBot",
+        },
+        "metadata": {
+            "service_id": service_id,
+            "service_type": "old",
+            "user_id": user_id,
+            "username": "",
+            "recipient_user_id": None,
+            "subscription_id": subscription_id,
+        },
+    }
+
+    def _create_payment_sync() -> dict:
+        return Payment.create(payload)
+
+    payment = await asyncio.to_thread(_create_payment_sync)
+    return payment
 
 
 def _build_subscription_body(
     keys: list[str],
     *,
     state: Literal["active", "expired", "not_found"],
+    profile_url: str,
 ) -> str:
     """Собирает тело подписки: #-мета сверху, ключи, #announce и #announce-url в конце."""
     if state == "active":
-        announce_url = SUPPORT_URL_ACTIVE
+        announce_url = profile_url
         meta = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
             f"#sub-info-text: {SUB_INFO_ACTIVE}",
             f"#sub-info-button-text: {SUB_INFO_BUTTON_ACTIVE}",
-            f"#sub-info-button-link: {SUPPORT_URL_ACTIVE}",
+            f"#sub-info-button-link: {profile_url}",
             f"#profile-title: {PROFILE_TITLE}",
         ]
         announce = ANNOUNCE_ACTIVE
     elif state == "expired":
-        announce_url = BOT_URL_EXPIRED
+        announce_url = profile_url
         meta = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
             f"#sub-info-text: {SUB_INFO_EXPIRED}",
             f"#sub-info-button-text: {SUB_INFO_BUTTON_EXPIRED}",
-            f"#sub-info-button-link: {BOT_URL_EXPIRED}",
+            f"#sub-info-button-link: {profile_url}",
             f"#profile-title: {PROFILE_TITLE} — Истекла",
         ]
         announce = ANNOUNCE_EXPIRED
     else:
-        announce_url = BOT_URL_EXPIRED
+        announce_url = profile_url
         meta = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
             f"#sub-info-text: {SUB_INFO_NOT_FOUND}",
             f"#sub-info-button-text: {SUB_INFO_BUTTON_NOT_FOUND}",
-            f"#sub-info-button-link: {BOT_URL_EXPIRED}",
+            f"#sub-info-button-link: {profile_url}",
             f"#profile-title: {PROFILE_TITLE} — Не найдена",
         ]
         announce = ANNOUNCE_NOT_FOUND
@@ -148,7 +340,11 @@ def _build_subscription_body(
 
 
 @app.get("/sub/{encrypted_part}")
-async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
+async def get_subscription(
+    encrypted_part: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     try:
         data = decrypt_part(encrypted_part)
         user_id = int(data.split("|")[0])
@@ -159,6 +355,39 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
     subscription = await methods.get_subscription_by_user_and_sub_id(db, user_id, sub_id)
     is_active = _subscription_is_active(subscription)
     expire_unix = _expire_unix(subscription)
+    config_url = str(request.url)
+    user_agent = request.headers.get("user-agent", "")
+
+    if _is_browser_request(user_agent) and not _is_known_client_request(user_agent):
+        detected_platform = _detect_platform_from_ua(user_agent)
+        apps_by_platform = {}
+        for platform, apps in APPS_BY_PLATFORM.items():
+            mapped_apps = []
+            for app_cfg in apps:
+                mapped_apps.append(
+                    {
+                        "app_name": app_cfg["app_name"],
+                        "store_url": app_cfg["store_url"],
+                        "import_url": _to_import_url(app_cfg["import_type"], config_url),
+                    }
+                )
+            apps_by_platform[platform] = mapped_apps
+        services_for_renewal = await methods.get_services_for_renewal(db)
+        return templates.TemplateResponse(
+            name="subscription_import.html",
+            request=request,
+            context={
+                "config_url": config_url,
+                "encrypted_part": encrypted_part,
+                "telegram_user_id": user_id,
+                "subscription_id": sub_id,
+                "detected_platform": detected_platform,
+                "devices": list(DEVICE_LABELS.items()),
+                "apps_by_platform": apps_by_platform,
+                "sub_info": _build_sub_info(subscription),
+                "services_for_renewal": services_for_renewal,
+            },
+        )
 
     # Подписка не найдена или удалена
     if subscription is None:
@@ -167,16 +396,16 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
             f"vless://{stub_uuid}@127.0.0.1:8443"
             "?type=tcp&encryption=none&security=reality#Подписка не найдена"
         )
-        body = _build_subscription_body([stub_key], state="not_found")
+        body = _build_subscription_body([stub_key], state="not_found", profile_url=config_url)
         encoded_subscription = base64.b64encode(body.encode()).decode()
         headers = {
             "Content-Type": "text/plain; charset=utf-8",
             "Profile-Title": _b64(f"{PROFILE_TITLE} — Не найдена"),
             "Profile-Update-Interval": "1",
             "Subscription-Userinfo": _build_userinfo(expire=0),
-            "Support-Url": BOT_URL_EXPIRED,
+            "Support-Url": config_url,
             "Announce": _b64(ANNOUNCE_NOT_FOUND),
-            "Announce-Url": BOT_URL_EXPIRED,
+            "Announce-Url": config_url,
             "Content-Length": str(len(encoded_subscription)),
         }
         return Response(content=encoded_subscription, headers=headers)
@@ -188,16 +417,16 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
             f"vless://{stub_uuid}@127.0.0.1:8443"
             "?type=tcp&encryption=none&security=reality#ИСТЕКЛА😢"
         )
-        body = _build_subscription_body([stub_key], state="expired")
+        body = _build_subscription_body([stub_key], state="expired", profile_url=config_url)
         encoded_subscription = base64.b64encode(body.encode()).decode()
         headers = {
             "Content-Type": "text/plain; charset=utf-8",
             "Profile-Title": _b64(PROFILE_TITLE),
             "Profile-Update-Interval": "1",
             "Subscription-Userinfo": _build_userinfo(expire=expire_unix),
-            "Support-Url": BOT_URL_EXPIRED,
+            "Support-Url": config_url,
             "Announce": _b64(ANNOUNCE_EXPIRED),
-            "Announce-Url": BOT_URL_EXPIRED,
+            "Announce-Url": config_url,
             "Content-Length": str(len(encoded_subscription)),
         }
         return Response(content=encoded_subscription, headers=headers)
@@ -226,7 +455,7 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
     )
     external_keys = [k for keys_list in external_results for k in keys_list]
     keys = [k for key_list in server_results for k in key_list] + external_keys
-    body = _build_subscription_body(keys, state="active")
+    body = _build_subscription_body(keys, state="active", profile_url=config_url)
     encoded_subscription = base64.b64encode(body.encode()).decode()
 
     headers = {
@@ -234,9 +463,9 @@ async def get_subscription(encrypted_part: str, db: Session = Depends(get_db)):
         "Profile-Title": _b64(PROFILE_TITLE),
         "Profile-Update-Interval": "1",
         "Subscription-Userinfo": _build_userinfo(expire=expire_unix),
-        "Support-Url": SUPPORT_URL_ACTIVE,
+        "Support-Url": config_url,
         "Announce": _b64(ANNOUNCE_ACTIVE),
-        "Announce-Url": SUPPORT_URL_ACTIVE,
+        "Announce-Url": config_url,
         "Content-Length": str(len(encoded_subscription)),
     }
     return Response(content=encoded_subscription, headers=headers)
@@ -323,3 +552,105 @@ def decrypt_part(encrypted_data: str) -> str:
     """Дешифрует данные."""
     decrypted_data = cipher.decrypt(encrypted_data.encode())
     return decrypted_data.decode('utf-8')
+
+
+@app.post("/sub/{encrypted_part}/auto-renewal/disable")
+async def disable_auto_renewal(
+    encrypted_part: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    try:
+        data = decrypt_part(encrypted_part)
+        user_id = int(data.split("|")[0])
+        sub_id = int(data.split("|")[1])
+    except Exception:
+        return Response(content="Invalid encryption", status_code=400)
+
+    await methods.disable_auto_renewal_by_user_and_sub_id(db, user_id, sub_id)
+    return RedirectResponse(url=f"/sub/{encrypted_part}", status_code=303)
+
+
+@app.post("/sub/{encrypted_part}/auto-renewal/enable")
+async def enable_auto_renewal(
+    encrypted_part: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    try:
+        data = decrypt_part(encrypted_part)
+        user_id = int(data.split("|")[0])
+        sub_id = int(data.split("|")[1])
+    except Exception:
+        return Response(content="Invalid encryption", status_code=400)
+
+    await methods.enable_auto_renewal_by_user_and_sub_id(db, user_id, sub_id)
+    return RedirectResponse(url=f"/sub/{encrypted_part}", status_code=303)
+
+
+@app.post("/sub/{encrypted_part}/payments/create")
+async def create_payment_for_renewal(
+    encrypted_part: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    try:
+        form_data = await request.form()
+        service_id = int(str(form_data.get("service_id", "0")))
+    except Exception:
+        return Response(content="Invalid service_id", status_code=400)
+
+    if service_id <= 0:
+        return Response(content="Invalid service_id", status_code=400)
+
+    if not SHOP_ID or not SHOP_API_TOKEN:
+        return Response(content="Payment is not configured", status_code=503)
+
+    try:
+        data = decrypt_part(encrypted_part)
+        user_id = int(data.split("|")[0])
+        sub_id = int(data.split("|")[1])
+    except Exception:
+        return Response(content="Invalid encryption", status_code=400)
+
+    service = await methods.get_service_by_id(db, service_id)
+    if service is None:
+        return Response(content="Service not found", status_code=404)
+
+    payment = await _create_yookassa_payment(
+        amount=int(service["price"]),
+        service_id=service_id,
+        service_name=str(service["name"]),
+        user_id=user_id,
+        subscription_id=sub_id,
+    )
+    payment_id = str(payment.id)
+    payment_url = str(payment.confirmation.confirmation_url)
+
+    await methods.create_pending_payment(
+        db,
+        payment_id=payment_id,
+        user_id=user_id,
+        service_id=service_id,
+    )
+    return RedirectResponse(url=payment_url, status_code=303)
+
+
+@app.get("/sub/{encrypted_part}/services")
+async def get_renewal_services(
+    encrypted_part: str,
+    db: Session = Depends(get_db),
+):
+    try:
+        data = decrypt_part(encrypted_part)
+        user_id = int(data.split("|")[0])
+        sub_id = int(data.split("|")[1])
+    except Exception:
+        return Response(content="Invalid encryption", status_code=400)
+
+    subscription = await methods.get_subscription_by_user_and_sub_id(db, user_id, sub_id)
+    if subscription is None:
+        return {"services": []}
+
+    services_for_renewal = await methods.get_services_for_renewal(db)
+    return {"services": services_for_renewal}

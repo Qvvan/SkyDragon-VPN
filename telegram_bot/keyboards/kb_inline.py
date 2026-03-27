@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import Optional
+from urllib.parse import quote
 
 from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -303,9 +304,17 @@ class InlineKeyboards:
         return keyboard
 
     @staticmethod
-    async def get_support(callback_data: str = None) -> InlineKeyboardMarkup:
+    async def get_support(callback_data: str = None, user_id: Optional[int] = None) -> InlineKeyboardMarkup:
         support_user_id = "SkyDragonSupport"
-        support_link = f"t.me/{support_user_id}"
+        if user_id is not None:
+            support_text = (
+                "Здравствуйте!\n"
+                f"Telegram ID пользователя: {user_id}\n\n"
+                "Опишите ваш вопрос:"
+            )
+            support_link = f"https://t.me/{support_user_id}?text={quote(support_text)}"
+        else:
+            support_link = f"https://t.me/{support_user_id}"
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [

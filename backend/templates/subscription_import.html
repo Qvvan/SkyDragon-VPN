@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Импорт подписки</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #08090a;
+      --bg-mid: #0e1012;
+      --bg-card: #131518;
+      --bg-card-hover: #181b1f;
+      --bg-input: #1a1d21;
+      --border: #25282d;
+      --border-focus: #3b82f6;
+      --text: #f0f1f3;
+      --text-muted: #8b9098;
+      --text-soft: #6b7280;
+      --accent: #3b82f6;
+      --accent-light: #60a5fa;
+      --accent-hover: #2563eb;
+      --accent-glow: rgba(59, 130, 246, 0.25);
+      --success: #10b981;
+      --success-soft: rgba(16, 185, 129, 0.15);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--text);
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.08), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 0%, rgba(59, 130, 246, 0.04), transparent),
+        radial-gradient(ellipse 60% 40% at 0% 0%, rgba(59, 130, 246, 0.04), transparent);
+      -webkit-font-smoothing: antialiased;
+    }
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 4rem;
+    }
+    .header {
+      margin-bottom: 2.5rem;
+      animation: fadeUp 0.5s ease-out;
+    }
+    .header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.35rem 0;
+      color: var(--text);
+    }
+    .header p {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      margin: 0;
+    }
+    .grid {
+      display: grid;
+      gap: 1.75rem;
+      animation: fadeUp 0.5s ease-out 0.1s both;
+    }
+    @media (min-width: 720px) {
+      .grid { grid-template-columns: 1fr 1fr; gap: 2rem; }
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem 1.5rem;
+      box-shadow: var(--shadow);
+      transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+      animation: fadeUp 0.5s ease-out both;
+    }
+    .card:nth-child(1) { animation-delay: 0.15s; }
+    .card:nth-child(2) { animation-delay: 0.2s; }
+    .card:hover {
+      border-color: rgba(59, 130, 246, 0.2);
+      box-shadow: var(--shadow), 0 0 0 1px rgba(59, 130, 246, 0.05);
+      background: var(--bg-card-hover);
+    }
+    .card-title {
+      font-weight: 600;
+      font-size: 1rem;
+      letter-spacing: -0.01em;
+      margin: 0 0 1.5rem 0;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .card-title::before {
+      content: '';
+      width: 3px;
+      height: 1.1em;
+      background: linear-gradient(180deg, var(--accent), var(--accent-light));
+      border-radius: 2px;
+    }
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+    .step-num {
+      flex-shrink: 0;
+      width: 1.75em;
+      height: 1.75em;
+      line-height: 1.75em;
+      text-align: center;
+      border-radius: 50%;
+      background: linear-gradient(145deg, var(--border), rgba(37, 40, 45, 0.8));
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.8em;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .step:first-child .step-num { background: linear-gradient(145deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1)); border-color: rgba(59, 130, 246, 0.2); color: var(--accent-light); }
+    .step-content { flex: 1; min-width: 0; }
+    .select-wrap {
+      margin: 0.75rem 0 0.25rem 0;
+      position: relative;
+    }
+    .custom-select {
+      position: relative;
+      width: 100%;
+    }
+    .custom-select__trigger {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      color: var(--text);
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      text-align: left;
+      outline: none;
+    }
+    .custom-select__trigger:hover {
+      border-color: var(--text-soft);
+      background: #1e2226;
+    }
+    .custom-select__trigger:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .custom-select_open .custom-select__trigger {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    .custom-select__trigger-label {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .custom-select__chevron {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      color: var(--text-muted);
+      transition: transform 0.2s ease, color 0.2s ease;
+    }
+    .custom-select_open .custom-select__chevron {
+      transform: rotate(180deg);
+      color: var(--accent-light);
+    }
+    .custom-select__dropdown {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      z-index: 50;
+      margin-top: -1px;
+      padding: 4px 0;
+      background: var(--bg-input);
+      border: 1px solid var(--accent);
+      border-top: none;
+      border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--border);
+      max-height: 240px;
+      overflow-y: auto;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-6px);
+      transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    }
+    .custom-select_open .custom-select__dropdown {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+    .custom-select__dropdown::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-select__dropdown::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-select__dropdown::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+    .custom-select__dropdown::-webkit-scrollbar-thumb:hover {
+      background: var(--text-soft);
+    }
+    .custom-select__option {
+      display: block;
+      width: 100%;
+      padding: 0.65rem 1rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: var(--text);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.12s ease, color 0.12s ease;
+    }
+    .custom-select__option:hover {
+      background: rgba(59, 130, 246, 0.12);
+      color: var(--text);
+    }
+    .custom-select__option_selected {
+      background: rgba(59, 130, 246, 0.18);
+      color: var(--accent-light);
+      font-weight: 500;
+    }
+    .custom-select__option_selected:hover {
+      background: rgba(59, 130, 246, 0.22);
+    }
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.25rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #fff;
+      background: linear-gradient(180deg, var(--accent) 0%, var(--accent-hover) 100%);
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    }
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+      filter: brightness(1.05);
+    }
+    .btn:active { transform: translateY(0); }
+    .btn-secondary {
+      background: var(--bg-input);
+      color: var(--text);
+      border: 1px solid var(--border);
+      box-shadow: none;
+    }
+    .btn-secondary:hover {
+      background: #22262a;
+      border-color: var(--text-soft);
+      box-shadow: none;
+      filter: none;
+    }
+    .manual-block {
+      margin-top: 1rem;
+    }
+    .url-box {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      align-items: stretch;
+    }
+    .url-box input {
+      flex: 1;
+      min-width: 0;
+      padding: 0.75rem 1rem;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      color: var(--text);
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .url-box input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .btn-copy {
+      flex-shrink: 0;
+      padding: 0.75rem 1.1rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .copy-ok {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--success);
+      font-size: 0.85rem;
+      margin-top: 0.6rem;
+      opacity: 0;
+      transform: translateY(-4px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    .copy-ok.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .copy-ok::before {
+      content: '';
+      width: 6px;
+      height: 10px;
+      border: 2px solid var(--success);
+      border-top: 0;
+      border-left: 0;
+      transform: rotate(45deg);
+      margin-bottom: 2px;
+    }
+    .app-empty {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-top: 0.75rem;
+      padding: 0.75rem 1rem;
+      background: rgba(139, 144, 152, 0.06);
+      border-radius: var(--radius-sm);
+      border: 1px dashed var(--border);
+    }
+    .renewal-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem 1.5rem;
+      box-shadow: var(--shadow);
+      text-align: center;
+      animation: fadeUp 0.5s ease-out 0.15s both;
+    }
+    .renewal-card:hover {
+      border-color: rgba(59, 130, 246, 0.2);
+      box-shadow: var(--shadow), 0 0 0 1px rgba(59, 130, 246, 0.05);
+      background: var(--bg-card-hover);
+    }
+    .renewal-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 1rem;
+      color: var(--text-muted);
+    }
+    .renewal-card h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 0 0 0.5rem;
+      color: var(--text);
+    }
+    .renewal-card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin: 0 0 1.5rem;
+      line-height: 1.6;
+    }
+    .btn-renewal {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.8rem 1.75rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #fff;
+      background: linear-gradient(180deg, var(--accent) 0%, var(--accent-hover) 100%);
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+      box-shadow: 0 2px 12px rgba(59, 130, 246, 0.35);
+    }
+    .btn-renewal:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+      filter: brightness(1.08);
+    }
+    .btn-renewal:active { transform: translateY(0); }
+    .btn-renewal svg {
+      width: 18px;
+      height: 18px;
+    }
+    .sub-info {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem 1.5rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 2rem;
+      animation: fadeUp 0.5s ease-out 0.05s both;
+    }
+    .sub-info:hover {
+      border-color: rgba(59, 130, 246, 0.2);
+      box-shadow: var(--shadow), 0 0 0 1px rgba(59, 130, 246, 0.05);
+      background: var(--bg-card-hover);
+    }
+    .sub-info__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .sub-info__title {
+      font-weight: 600;
+      font-size: 1rem;
+      letter-spacing: -0.01em;
+      margin: 0;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .sub-info__title::before {
+      content: '';
+      width: 3px;
+      height: 1.1em;
+      background: linear-gradient(180deg, var(--accent), var(--accent-light));
+      border-radius: 2px;
+    }
+    .sub-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.75rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+    .sub-badge--active {
+      background: var(--success-soft);
+      color: var(--success);
+    }
+    .sub-badge--expired {
+      background: rgba(239, 68, 68, 0.12);
+      color: #f87171;
+    }
+    .sub-badge--paused {
+      background: rgba(251, 191, 36, 0.12);
+      color: #fbbf24;
+    }
+    .sub-badge--pending {
+      background: rgba(139, 144, 152, 0.12);
+      color: var(--text-muted);
+    }
+    .sub-badge--cancelled {
+      background: rgba(239, 68, 68, 0.12);
+      color: #f87171;
+    }
+    .sub-badge__dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .sub-info__grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem 2rem;
+    }
+    @media (min-width: 720px) {
+      .sub-info__grid { grid-template-columns: 1fr 1fr 1fr; }
+    }
+    .sub-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .sub-field__label {
+      font-size: 0.78rem;
+      color: var(--text-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-weight: 500;
+    }
+    .sub-field__value {
+      font-size: 0.95rem;
+      color: var(--text);
+      font-weight: 500;
+    }
+    .sub-field__value--accent {
+      color: var(--accent-light);
+    }
+    .sub-field__value--success {
+      color: var(--success);
+    }
+    .sub-field__value--warn {
+      color: #fbbf24;
+    }
+    .auto-renewal-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.2rem 0.55rem;
+      font-size: 0.78rem;
+      font-weight: 500;
+      border-radius: 6px;
+    }
+    .auto-renewal-badge--on {
+      background: var(--success-soft);
+      color: var(--success);
+    }
+    .auto-renewal-badge--off {
+      background: rgba(139, 144, 152, 0.1);
+      color: var(--text-muted);
+    }
+    .auto-renewal-actions {
+      margin-top: 0.55rem;
+    }
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.14);
+      color: #fda4af;
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      box-shadow: none;
+      padding: 0.45rem 0.8rem;
+      font-size: 0.8rem;
+    }
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.45);
+      box-shadow: none;
+      filter: none;
+      transform: none;
+    }
+    .btn-success {
+      background: rgba(16, 185, 129, 0.18);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      box-shadow: none;
+      padding: 0.45rem 0.8rem;
+      font-size: 0.8rem;
+    }
+    .btn-success:hover {
+      background: rgba(16, 185, 129, 0.24);
+      border-color: rgba(16, 185, 129, 0.5);
+      box-shadow: none;
+      filter: none;
+      transform: none;
+    }
+    .quick-links {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.4rem;
+      animation: fadeUp 0.5s ease-out 0.03s both;
+    }
+    .renew-action-row {
+      margin-bottom: 1rem;
+    }
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 1rem;
+    }
+    .modal.open {
+      display: flex;
+    }
+    .modal__card {
+      width: min(780px, 100%);
+      max-height: 88vh;
+      overflow-y: auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 1.25rem;
+    }
+    .modal__head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .modal__title {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .service-list {
+      display: grid;
+      gap: 0.85rem;
+    }
+    .service-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.95rem;
+      background: var(--bg-input);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.9rem;
+      flex-wrap: wrap;
+    }
+    .service-item__name {
+      font-size: 0.92rem;
+      color: var(--text);
+      font-weight: 600;
+      margin: 0;
+    }
+    .service-item__meta {
+      margin: 0.25rem 0 0;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      {% if not sub_info %}
+      <h1>Подписка не найдена</h1>
+      <p>Такой подписки нет в системе или она была удалена. Необходимо оформить новую подписку.</p>
+      {% elif sub_info and sub_info.status_key != 'active' %}
+      <h1>Подписка неактивна</h1>
+      <p>Нажмите, чтобы продлить подписку. Если уже оплатили, но статус не обновился — нажмите кнопку 🔁 в приложении.</p>
+      {% else %}
+      <h1>Импорт подписки</h1>
+      <p>Если VPN работает нестабильно, смените страну подключения. Для продления нажмите кнопку ниже.</p>
+      {% endif %}
+    </header>
+    {% if not sub_info %}
+    <div class="quick-links">
+      <a
+        class="btn btn-secondary"
+        id="btn-support"
+        href="https://t.me/SkyDragonSupport"
+        target="_blank"
+        rel="noopener"
+        data-telegram-id="{{ telegram_user_id }}"
+        data-sub-id="{{ subscription_id }}"
+      >Написать в техподдержку</a>
+      <a class="btn" href="https://t.me/SkyDragonVPNBot?start=1" target="_blank" rel="noopener">Купить новую в боте</a>
+    </div>
+    {% else %}
+    <div class="quick-links">
+      <button type="button" class="btn" id="btn-open-renew">Продлить подписку</button>
+      <a
+        class="btn btn-secondary"
+        id="btn-support"
+        href="https://t.me/SkyDragonSupport"
+        target="_blank"
+        rel="noopener"
+        data-telegram-id="{{ telegram_user_id }}"
+        data-sub-id="{{ subscription_id }}"
+      >Написать в техподдержку</a>
+      <a class="btn" href="https://t.me/SkyDragonVPNBot?start=1" target="_blank" rel="noopener">Перейти в бота</a>
+    </div>
+    {% endif %}
+
+    {% if sub_info %}
+    <section class="sub-info">
+      <div class="sub-info__header">
+        <h2 class="sub-info__title">{{ sub_info.service_name }}</h2>
+        <span class="sub-badge sub-badge--{{ sub_info.status_key }}">
+          <span class="sub-badge__dot"></span>
+          {{ sub_info.status }}
+        </span>
+      </div>
+      <div class="sub-info__grid">
+        <div class="sub-field">
+          <span class="sub-field__label">Тариф</span>
+          <span class="sub-field__value">
+            {% if sub_info.service_name == "Пробный период" %}
+            Пробный период — {{ sub_info.price }}
+            {% else %}
+            {{ sub_info.duration_days }} дн. — {{ sub_info.price }}
+            {% endif %}
+          </span>
+        </div>
+        <div class="sub-field">
+          <span class="sub-field__label">Источник</span>
+          <span class="sub-field__value">{{ sub_info.source }}</span>
+        </div>
+        <div class="sub-field">
+          <span class="sub-field__label">Автопродление</span>
+          {% if sub_info.auto_renewal %}
+          <span class="auto-renewal-badge auto-renewal-badge--on">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Включено
+          </span>
+          <div class="auto-renewal-actions">
+            <form method="post" action="/sub/{{ encrypted_part }}/auto-renewal/disable">
+              <button class="btn btn-danger" type="submit">Выключить автопродление</button>
+            </form>
+          </div>
+          {% else %}
+          <span class="auto-renewal-badge auto-renewal-badge--off">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Выключено
+          </span>
+          <div class="auto-renewal-actions">
+            <form method="post" action="/sub/{{ encrypted_part }}/auto-renewal/enable">
+              <button class="btn btn-success" type="submit">Включить автопродление</button>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+        <div class="sub-field">
+          <span class="sub-field__label">Дата покупки</span>
+          <span class="sub-field__value">{{ sub_info.start_date }}</span>
+        </div>
+        <div class="sub-field">
+          <span class="sub-field__label">Действует до</span>
+          <span class="sub-field__value sub-field__value--accent">{{ sub_info.end_date }}</span>
+        </div>
+        <div class="sub-field">
+          <span class="sub-field__label">Осталось</span>
+          <span class="sub-field__value {% if sub_info.days_remaining <= 3 %}sub-field__value--warn{% elif sub_info.days_remaining > 3 %}sub-field__value--success{% endif %}">
+            {{ sub_info.days_remaining }}
+            {% if sub_info.days_remaining == 1 %}день
+            {% elif sub_info.days_remaining >= 2 and sub_info.days_remaining <= 4 %}дня
+            {% else %}дней{% endif %}
+          </span>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {% if not sub_info %}
+    <section class="renewal-card">
+      <svg class="renewal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="9" y1="9" x2="15" y2="15"/>
+        <line x1="15" y1="9" x2="9" y2="15"/>
+      </svg>
+      <h2>Подписка отсутствует</h2>
+      <p>Похоже, эта подписка была удалена или ссылка больше неактуальна. Оформите новую подписку через бота или напишите в поддержку.</p>
+    </section>
+    {% elif sub_info and sub_info.status_key != 'active' %}
+    <section class="renewal-card">
+      <svg class="renewal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <h2>Срок подписки истёк</h2>
+      <p>Чтобы продолжить пользоваться VPN, продлите подписку в профиле. Если уже оплатили, но статус ещё «истекла», нажмите кнопку 🔁 в приложении.</p>
+      <a class="btn-renewal" href="{{ config_url }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Продлить в профиле
+      </a>
+    </section>
+    {% else %}
+    <div class="grid">
+      <section class="card">
+        <h2 class="card-title">Быстрая установка</h2>
+        <div class="steps">
+          <div class="step">
+            <span class="step-num">1</span>
+            <span class="step-content">Выберите устройство</span>
+          </div>
+          <div class="select-wrap">
+            <div class="custom-select" id="device-select" role="listbox" aria-label="Устройство" data-value="{{ detected_platform }}">
+              <button type="button" class="custom-select__trigger" id="device-trigger" aria-haspopup="listbox" aria-expanded="false">
+                <span class="custom-select__trigger-label" id="device-trigger-label">{% for id, label in devices %}{% if id == detected_platform %}{{ label }}{% endif %}{% endfor %}</span>
+                <svg class="custom-select__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="custom-select__dropdown" id="device-dropdown" role="listbox">
+                {% for id, label in devices %}
+                <button type="button" class="custom-select__option{% if id == detected_platform %} custom-select__option_selected{% endif %}" role="option" data-value="{{ id }}">{{ label }}</button>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-num">2</span>
+            <span class="step-content">Выберите приложение</span>
+          </div>
+          <div class="select-wrap">
+            <div class="custom-select" id="app-select" role="listbox" aria-label="Приложение" data-value="0">
+              <button type="button" class="custom-select__trigger" id="app-trigger" aria-haspopup="listbox" aria-expanded="false">
+                <span class="custom-select__trigger-label" id="app-trigger-label">—</span>
+                <svg class="custom-select__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="custom-select__dropdown" id="app-dropdown" role="listbox"></div>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-num">3</span>
+            <span class="step-content">Скачайте выбранное приложение (RU или EU версию при необходимости)</span>
+          </div>
+          <div class="step">
+            <span class="step-num">4</span>
+            <span class="step-content">Импортируйте профиль по ссылке</span>
+          </div>
+        </div>
+        <div class="btn-row">
+          <a id="btn-download" class="btn btn-secondary" href="#" target="_blank" rel="noopener">Скачать приложение</a>
+          <a id="btn-import" class="btn" href="#">Импортировать профиль</a>
+        </div>
+        <p id="app-empty" class="app-empty" style="display: none;">Для выбранного устройства нет приложений</p>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">Ручная установка</h2>
+        <div class="steps">
+          <div class="step">
+            <span class="step-num">1</span>
+            <span class="step-content">Выберите устройство и скачайте приложение по кнопке «Скачать приложение»</span>
+          </div>
+          <div class="step">
+            <span class="step-num">2</span>
+            <span class="step-content">Скопируйте ссылку подписки ниже</span>
+          </div>
+          <div class="step">
+            <span class="step-num">3</span>
+            <span class="step-content">Откройте приложение и найдите «URL подписки» или «Импорт по ссылке»</span>
+          </div>
+          <div class="step">
+            <span class="step-num">4</span>
+            <span class="step-content">Вставьте ссылку, сохраните профиль и обновите подписку</span>
+          </div>
+        </div>
+        <div class="manual-block">
+          <div class="url-box">
+            <input id="config-url" type="text" value="{{ config_url }}" readonly aria-label="Ссылка подписки">
+            <button type="button" class="btn btn-copy" id="btn-copy">Копировать</button>
+          </div>
+          <p id="copy-ok" class="copy-ok" aria-live="polite">Ссылка скопирована в буфер обмена</p>
+        </div>
+      </section>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="modal" id="renew-modal" aria-hidden="true">
+    <div class="modal__card">
+      <div class="modal__head">
+        <h3 class="modal__title">Выберите услугу для продления</h3>
+        <button type="button" class="btn btn-secondary" id="btn-close-renew">Закрыть</button>
+      </div>
+      <div class="service-list">
+        <div class="service-item__meta" id="renew-services-state">Загружаем услуги...</div>
+      </div>
+    </div>
+  </div>
+
+  {% if not sub_info or sub_info.status_key == 'active' %}
+  <script>
+    (function() {
+      const appsByPlatform = {{ apps_by_platform | tojson }};
+      const deviceSelectEl = document.getElementById('device-select');
+      const deviceTrigger = document.getElementById('device-trigger');
+      const deviceLabel = document.getElementById('device-trigger-label');
+      const deviceDropdown = document.getElementById('device-dropdown');
+      const appSelectEl = document.getElementById('app-select');
+      const appTrigger = document.getElementById('app-trigger');
+      const appLabel = document.getElementById('app-trigger-label');
+      const appDropdown = document.getElementById('app-dropdown');
+      const appSelectWrap = document.getElementById('app-select').closest('.select-wrap');
+      const btnDownload = document.getElementById('btn-download');
+      const btnImport = document.getElementById('btn-import');
+      const appEmpty = document.getElementById('app-empty');
+      const configUrlInput = document.getElementById('config-url');
+      const btnCopy = document.getElementById('btn-copy');
+      const copyOk = document.getElementById('copy-ok');
+
+      function openSelect(selectEl) {
+        document.querySelectorAll('.custom-select_open').forEach(function(el) {
+          if (el !== selectEl) el.classList.remove('custom-select_open');
+        });
+        selectEl.classList.toggle('custom-select_open');
+        const trigger = selectEl.querySelector('.custom-select__trigger');
+        trigger.setAttribute('aria-expanded', selectEl.classList.contains('custom-select_open'));
+      }
+
+      function closeSelect(selectEl) {
+        selectEl.classList.remove('custom-select_open');
+        selectEl.querySelector('.custom-select__trigger').setAttribute('aria-expanded', 'false');
+      }
+
+      function setupCustomSelect(selectEl, labelEl, onChoose) {
+        const trigger = selectEl.querySelector('.custom-select__trigger');
+        const dropdown = selectEl.querySelector('.custom-select__dropdown');
+        trigger.addEventListener('click', function(e) {
+          e.stopPropagation();
+          openSelect(selectEl);
+        });
+        dropdown.querySelectorAll('.custom-select__option').forEach(function(opt) {
+          opt.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const value = opt.getAttribute('data-value');
+            const text = opt.textContent.trim();
+            selectEl.setAttribute('data-value', value);
+            labelEl.textContent = text;
+            dropdown.querySelectorAll('.custom-select__option').forEach(function(o) { o.classList.remove('custom-select__option_selected'); });
+            opt.classList.add('custom-select__option_selected');
+            closeSelect(selectEl);
+            onChoose(value, text);
+          });
+        });
+      }
+
+      document.addEventListener('click', function() {
+        document.querySelectorAll('.custom-select_open').forEach(closeSelect);
+      });
+      deviceDropdown.addEventListener('click', function(e) { e.stopPropagation(); });
+      appDropdown.addEventListener('click', function(e) { e.stopPropagation(); });
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') document.querySelectorAll('.custom-select_open').forEach(closeSelect);
+      });
+
+      setupCustomSelect(deviceSelectEl, deviceLabel, function() {
+        fillApps();
+      });
+
+      if (!deviceLabel.textContent.trim()) {
+        var firstOpt = deviceDropdown.querySelector('.custom-select__option');
+        if (firstOpt) {
+          deviceLabel.textContent = firstOpt.textContent.trim();
+          deviceSelectEl.setAttribute('data-value', firstOpt.getAttribute('data-value'));
+        }
+      }
+
+      function fillApps() {
+        const platform = deviceSelectEl.getAttribute('data-value');
+        const apps = appsByPlatform[platform] || [];
+        appDropdown.innerHTML = '';
+        if (apps.length === 0) {
+          appSelectWrap.style.display = 'none';
+          appEmpty.style.display = 'block';
+          btnDownload.href = '#';
+          btnImport.href = '#';
+          return;
+        }
+        appSelectWrap.style.display = 'block';
+        appEmpty.style.display = 'none';
+        apps.forEach(function(app, i) {
+          const opt = document.createElement('button');
+          opt.type = 'button';
+          opt.className = 'custom-select__option' + (i === 0 ? ' custom-select__option_selected' : '');
+          opt.setAttribute('role', 'option');
+          opt.setAttribute('data-value', String(i));
+          opt.textContent = app.app_name;
+          opt.addEventListener('click', function(e) {
+            e.stopPropagation();
+            appSelectEl.setAttribute('data-value', String(i));
+            appLabel.textContent = app.app_name;
+            appDropdown.querySelectorAll('.custom-select__option').forEach(function(o) { o.classList.remove('custom-select__option_selected'); });
+            opt.classList.add('custom-select__option_selected');
+            closeSelect(appSelectEl);
+            updateButtons(app);
+          });
+          appDropdown.appendChild(opt);
+        });
+        appLabel.textContent = apps[0].app_name;
+        appSelectEl.setAttribute('data-value', '0');
+        updateButtons(apps[0]);
+      }
+
+      appTrigger.addEventListener('click', function(e) {
+        e.stopPropagation();
+        openSelect(appSelectEl);
+      });
+
+      function updateButtons(app) {
+        if (!app) return;
+        btnDownload.href = app.store_url;
+        btnImport.href = app.import_url;
+      }
+
+      fillApps();
+
+      btnCopy.addEventListener('click', function() {
+        configUrlInput.select();
+        configUrlInput.setSelectionRange(0, 99999);
+        navigator.clipboard.writeText(configUrlInput.value).then(function() {
+          copyOk.classList.add('visible');
+          setTimeout(function() { copyOk.classList.remove('visible'); }, 2500);
+        });
+      });
+
+    })();
+  </script>
+  {% endif %}
+  <script>
+    (function() {
+      const renewModal = document.getElementById('renew-modal');
+      const btnOpenRenew = document.getElementById('btn-open-renew');
+      const btnCloseRenew = document.getElementById('btn-close-renew');
+      const renewServicesState = document.getElementById('renew-services-state');
+      const renewServiceList = renewModal ? renewModal.querySelector('.service-list') : null;
+      if (!renewModal || !btnOpenRenew || !btnCloseRenew) return;
+
+      function renderRenewServices(services) {
+        if (!renewServiceList) return;
+        renewServiceList.innerHTML = '';
+
+        if (!services || services.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'service-item__meta';
+          empty.textContent = 'Доступных услуг пока нет.';
+          renewServiceList.appendChild(empty);
+          return;
+        }
+
+        services.forEach(function(service) {
+          const item = document.createElement('div');
+          item.className = 'service-item';
+          item.innerHTML =
+            '<div>' +
+            '<p class="service-item__name"></p>' +
+            '<p class="service-item__meta"></p>' +
+            '</div>' +
+            '<form method="post" action="/sub/{{ encrypted_part }}/payments/create">' +
+            '<input type="hidden" name="service_id" />' +
+            '<button class="btn" type="submit">Перейти к оплате</button>' +
+            '</form>';
+
+          item.querySelector('.service-item__name').textContent = service.name;
+          item.querySelector('.service-item__meta').textContent = service.duration_days + ' дн. — ' + service.price + ' ₽';
+          item.querySelector('input[name="service_id"]').value = String(service.service_id);
+          renewServiceList.appendChild(item);
+        });
+      }
+
+      async function loadRenewServices() {
+        if (!renewServicesState) return;
+        renewServicesState.textContent = 'Загружаем услуги...';
+        try {
+          const resp = await fetch('/sub/{{ encrypted_part }}/services', {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+          });
+          if (!resp.ok) throw new Error('bad_response');
+          const data = await resp.json();
+          renderRenewServices(data.services || []);
+        } catch (e) {
+          renewServiceList.innerHTML = '';
+          const err = document.createElement('div');
+          err.className = 'service-item__meta';
+          err.textContent = 'Не удалось загрузить услуги. Попробуйте еще раз.';
+          renewServiceList.appendChild(err);
+        }
+      }
+
+      function openRenewModal() {
+        renewModal.classList.add('open');
+        renewModal.setAttribute('aria-hidden', 'false');
+        loadRenewServices();
+      }
+
+      function closeRenewModal() {
+        renewModal.classList.remove('open');
+        renewModal.setAttribute('aria-hidden', 'true');
+      }
+
+      btnOpenRenew.addEventListener('click', openRenewModal);
+      btnCloseRenew.addEventListener('click', closeRenewModal);
+      renewModal.addEventListener('click', function(e) {
+        if (e.target === renewModal) closeRenewModal();
+      });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeRenewModal();
+      });
+    })();
+  </script>
+  <script>
+    (function() {
+      const btnSupport = document.getElementById('btn-support');
+      if (!btnSupport) return;
+
+      btnSupport.addEventListener('click', function(e) {
+        e.preventDefault();
+        const telegramId = btnSupport.getAttribute('data-telegram-id') || '—';
+        const subId = btnSupport.getAttribute('data-sub-id') || '—';
+        const deviceTriggerLabel = document.getElementById('device-trigger-label');
+        const deviceName = deviceTriggerLabel && deviceTriggerLabel.textContent
+          ? deviceTriggerLabel.textContent.trim()
+          : 'Не определено';
+
+        const text = [
+          'Здравствуйте!',
+          'Устройство: ' + deviceName,
+          'ID пользователя: ' + telegramId,
+          'ID подписки: ' + subId,
+          '',
+          'Опишите здесь ваш вопрос:'
+        ].join('\n');
+
+        const supportUrl = 'https://t.me/SkyDragonSupport?text=' + encodeURIComponent(text);
+        window.open(supportUrl, '_blank', 'noopener');
+      });
+    })();
+  </script>
+</body>
+</html>

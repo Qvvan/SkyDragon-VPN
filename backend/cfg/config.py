@@ -10,3 +10,5 @@ SUB_PORT = env.int("SUB_PORT", 2096)
 PORT_X_UI = env.int("PORT_X_UI", 443)
 # Путь панели (для подписки /path/sub/...), по умолчанию из env
 MY_SECRET_URL = env.str("MY_SECRET_URL", "mysecreturl")
+SHOP_ID = env.str("SHOP_ID", "")
+SHOP_API_TOKEN = env.str("SHOP_API_TOKEN", "")

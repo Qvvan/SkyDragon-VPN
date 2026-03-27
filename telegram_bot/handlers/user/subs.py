@@ -211,6 +211,12 @@ async def format_subscription_details(subscription):
         )
     config_link = await create_config_link(subscription.user_id, subscription.subscription_id)
 
+    instruction_link_text = (
+        f'<a href="{config_link}">Открыть инструкцию</a>'
+        if config_link
+        else "⚠️ Информация недоступна"
+    )
+
     return (
         "<b>📊 Информация о подписке</b>\n"
         f"├ <b>Создана:</b> <code>{created_at_msk.strftime('%d %B %Y, %H:%M:%S')} MSK</code>\n"
@@ -218,8 +224,8 @@ async def format_subscription_details(subscription):
         f"{subscription_status}"
         "<b>🏷 Автопродление</b>\n"
         f"└ {'✅ <code>Включено</code>' if subscription.auto_renewal else '❌ <code>Выключено</code>'}\n\n"
-        "<b>🔗 Ссылка активации</b>\n"
-        f"<code>{config_link if config_link else '⚠️ Информация недоступна'}</code>"
+        "<b>📘 Ссылка на инструкцию</b>\n"
+        f"{instruction_link_text}"
     )
 
 
