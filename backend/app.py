@@ -95,6 +95,7 @@ def _b64(text: str) -> str:
 
 # Короткое название подписки
 PROFILE_TITLE = "SkyDragon🐉"
+PUBLIC_BASE_URL = "https://skydragonvpn.ru"
 RU_MONTHS = (
     "янв", "фев", "мар", "апр", "май", "июн",
     "июл", "авг", "сен", "окт", "ноя", "дек",
@@ -128,33 +129,50 @@ APPS_BY_PLATFORM = {
         {
             "app_name": "Happ (RU App Store)",
             "store_url": "https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973",
-            "import_type": "direct",
+            "import_type": "route",
+            "import_app": "happ",
         },
         {
             "app_name": "Happ (EU/US App Store)",
             "store_url": "https://apps.apple.com/us/app/happ-proxy-utility/id6504287215",
-            "import_type": "direct",
+            "import_type": "route",
+            "import_app": "happ",
+        },
+        {
+            "app_name": "V2RayTun",
+            "store_url": "https://apps.apple.com/ru/app/v2raytun/id6476628951",
+            "import_type": "route",
+            "import_app": "v2raytun",
         }
     ],
     "android": [
         {
             "app_name": "Happ (Google Play)",
             "store_url": "https://play.google.com/store/apps/details?id=com.happproxy",
-            "import_type": "direct",
+            "import_type": "route",
+            "import_app": "happ",
+        },
+        {
+            "app_name": "V2RayTun",
+            "store_url": "https://play.google.com/store/apps/details?id=com.v2raytun.android&hl=ru",
+            "import_type": "route",
+            "import_app": "v2raytun",
         }
     ],
     "windows": [
         {
             "app_name": "Happ",
             "store_url": "https://github.com/Happ-proxy/happ-desktop/releases/latest/download/setup-Happ.x64.exe",
-            "import_type": "direct",
+            "import_type": "route",
+            "import_app": "happ",
         }
     ],
     "macos": [
         {
             "app_name": "Happ",
             "store_url": "https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973",
-            "import_type": "direct",
+            "import_type": "route",
+            "import_app": "happ",
         }
     ],
 }
@@ -205,6 +223,14 @@ def _to_import_url(import_type: str, config_url: str) -> str:
     if import_type == "v2raytun":
         return f"v2raytun://import/{config_url}"
     return config_url
+
+
+def _public_sub_url(encrypted_part: str) -> str:
+    return f"{PUBLIC_BASE_URL}/sub/{encrypted_part}"
+
+
+def _build_import_route_url(platform: str, app_name: str, encrypted_part: str) -> str:
+    return f"{PUBLIC_BASE_URL}/import/{platform}/{app_name}/{encrypted_part}"
 
 
 def _format_date_ru(value: Optional[datetime]) -> str:
@@ -355,7 +381,7 @@ async def get_subscription(
     subscription = await methods.get_subscription_by_user_and_sub_id(db, user_id, sub_id)
     is_active = _subscription_is_active(subscription)
     expire_unix = _expire_unix(subscription)
-    config_url = str(request.url)
+    config_url = _public_sub_url(encrypted_part)
     user_agent = request.headers.get("user-agent", "")
 
     if _is_browser_request(user_agent) and not _is_known_client_request(user_agent):
@@ -368,7 +394,11 @@ async def get_subscription(
                     {
                         "app_name": app_cfg["app_name"],
                         "store_url": app_cfg["store_url"],
-                        "import_url": _to_import_url(app_cfg["import_type"], config_url),
+                        "import_url": (
+                            _build_import_route_url(platform, app_cfg["import_app"], encrypted_part)
+                            if app_cfg["import_type"] == "route"
+                            else _to_import_url(app_cfg["import_type"], config_url)
+                        ),
                     }
                 )
             apps_by_platform[platform] = mapped_apps
@@ -520,20 +550,60 @@ async def get_subscription_list(encrypted_part: str, db: Session = Depends(get_d
 
 
 @app.get("/import/iphone/{encrypted_part}")
-async def get_subscription(encrypted_part: str):
-    redirect_url = f"v2raytun://import/https://skydragonvpn.ru/sub/{encrypted_part}"
+async def import_iphone_legacy(encrypted_part: str):
+    redirect_url = f"v2raytun://import/{_public_sub_url(encrypted_part)}"
 
     # Возвращаем редирект
     return RedirectResponse(url=redirect_url, status_code=302)
 
 
 @app.get("/import/android/{encrypted_part}")
-async def get_subscription(encrypted_part: str):
+async def import_android_legacy(encrypted_part: str):
     # Формируем ссылку для редиректа
-    redirect_url = f"v2raytun://import/https://skydragonvpn.ru/sub/{encrypted_part}"
+    redirect_url = f"v2raytun://import/{_public_sub_url(encrypted_part)}"
 
     # Возвращаем редирект
     return RedirectResponse(url=redirect_url, status_code=302)
+
+
+@app.get("/import/iphone/happ/{encrypted_part}")
+async def import_iphone_happ(encrypted_part: str):
+    return RedirectResponse(url=_public_sub_url(encrypted_part), status_code=302)
+
+
+@app.get("/import/android/happ/{encrypted_part}")
+async def import_android_happ(encrypted_part: str):
+    return RedirectResponse(url=_public_sub_url(encrypted_part), status_code=302)
+
+
+@app.get("/import/android/v2raytun/{encrypted_part}")
+async def import_android_v2raytun(encrypted_part: str):
+    return RedirectResponse(url=f"v2raytun://import/{_public_sub_url(encrypted_part)}", status_code=302)
+
+
+@app.get("/import/iphone/v2raytun/{encrypted_part}")
+async def import_iphone_v2raytun(encrypted_part: str):
+    return RedirectResponse(url=f"v2raytun://import/{_public_sub_url(encrypted_part)}", status_code=302)
+
+
+@app.get("/import/windows/happ/{encrypted_part}")
+async def import_windows_happ(encrypted_part: str):
+    return RedirectResponse(url=_public_sub_url(encrypted_part), status_code=302)
+
+
+@app.get("/import/windows/v2raytun/{encrypted_part}")
+async def import_windows_v2raytun(encrypted_part: str):
+    return RedirectResponse(url=f"v2raytun://import/{_public_sub_url(encrypted_part)}", status_code=302)
+
+
+@app.get("/import/macos/happ/{encrypted_part}")
+async def import_macos_happ(encrypted_part: str):
+    return RedirectResponse(url=_public_sub_url(encrypted_part), status_code=302)
+
+
+@app.get("/import/macos/v2raytun/{encrypted_part}")
+async def import_macos_v2raytun(encrypted_part: str):
+    return RedirectResponse(url=f"v2raytun://import/{_public_sub_url(encrypted_part)}", status_code=302)
 
 
 def encode_numbers(user_id: int, sub_id: int, secret_key: str = "my_secret_key") -> str:
