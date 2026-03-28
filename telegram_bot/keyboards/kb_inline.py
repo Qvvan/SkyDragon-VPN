@@ -7,6 +7,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from database.context_manager import DatabaseContextManager
+from handlers.services.create_config_link import create_config_link
 from logger.logging_config import logger
 from models.models import NameApp, Subscriptions
 
@@ -361,6 +362,13 @@ class InlineKeyboards:
                 subscription = await session_methods.subscription.get_subscription_by_id(subscription_id)
 
                 # Одни и те же кнопки и для активной, и для истёкшей подписки
+                if subscription:
+                    profile_url = await create_config_link(
+                        subscription.user_id,
+                        subscription_id,
+                    )
+                else:
+                    profile_url = "https://skydragonvpn.ru/"
                 keyboard.add(
                     InlineKeyboardButton(
                         text='⏳ Продлить',
@@ -371,10 +379,8 @@ class InlineKeyboards:
                         ).pack()),
                     InlineKeyboardButton(
                         text='📜 Инструкция',
-                        callback_data=SubscriptionCallbackFactory(
-                            action='get_guide_install_app',
-                            subscription_id=subscription_id,
-                        ).pack()),
+                        url=profile_url,
+                    ),
                     InlineKeyboardButton(
                         text="💰 История платежей",
                         callback_data="history_payments"
@@ -655,35 +661,30 @@ class InlineKeyboards:
         ])
 
     @staticmethod
-    async def get_menu_install_app(subscription_id) -> InlineKeyboardMarkup:
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+    async def get_menu_install_app(subscription_id: int, user_id: Optional[int] = None) -> InlineKeyboardMarkup:
+        """
+        Инструкция и импорт — на сайте профиля подписки (/sub/...).
+
+        Важно: передавайте user_id, если клавиатура строится сразу после создания подписки:
+        до commit() новая строка в другой сессии БД не видна, и без user_id получится ссылка на главную.
+        """
+        profile_url = "https://skydragonvpn.ru/"
+        if user_id is not None:
+            profile_url = await create_config_link(user_id, subscription_id)
+        else:
+            async with DatabaseContextManager() as session_methods:
+                try:
+                    sub = await session_methods.subscription.get_subscription_by_id(subscription_id)
+                    if sub:
+                        profile_url = await create_config_link(sub["user_id"], subscription_id)
+                except Exception as e:
+                    await logger.log_error("get_menu_install_app: не удалось собрать ссылку профиля", e)
+        return InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="Android 📱",
-                    callback_data=SubscriptionCallbackFactory(
-                        action='Android',
-                        subscription_id=subscription_id,
-                    ).pack()),
-                InlineKeyboardButton(
-                    text="iPhone 🍏",
-                    callback_data=SubscriptionCallbackFactory(
-                        action='iPhone',
-                        subscription_id=subscription_id,
-                    ).pack())
-            ],
-            [
-                InlineKeyboardButton(
-                    text="Windows 💻",
-                    callback_data=SubscriptionCallbackFactory(
-                        action='Windows',
-                        subscription_id=subscription_id,
-                    ).pack()),
-                InlineKeyboardButton(
-                    text="MacOS 💻",
-                    callback_data=SubscriptionCallbackFactory(
-                        action='MacOS',
-                        subscription_id=subscription_id,
-                    ).pack())
+                    text="📘 Инструкция и подключение",
+                    url=profile_url,
+                )
             ],
             [
                 InlineKeyboardButton(
@@ -691,7 +692,6 @@ class InlineKeyboards:
                     callback_data=f"view_details_{subscription_id}")
             ],
         ])
-        return keyboard
 
     @staticmethod
     async def user_info(user_id, ban, trial):

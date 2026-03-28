@@ -181,10 +181,14 @@ class SubscriptionsServiceCard:
 
     @staticmethod
     async def send_success_response(bot: Bot, user_id: int, subscription):
-        await bot.send_message(chat_id=user_id,
-                               text=LEXICON_RU["choose_device"],
-                               reply_markup=await InlineKeyboards.get_menu_install_app(subscription.subscription_id)
-                               )
+        await bot.send_message(
+            chat_id=user_id,
+            text=LEXICON_RU["choose_device"],
+            reply_markup=await InlineKeyboards.get_menu_install_app(
+                subscription.subscription_id,
+                user_id=user_id,
+            ),
+        )
 
     @staticmethod
     async def process_referral_bonus(user_id: int, username: str, bot):

@@ -33,8 +33,16 @@ async def back_to_device_selection(
 
     subscription_id = callback_data.subscription_id
     await callback_query.message.edit_text(
-        text="Выбери своё устройство",
-        reply_markup=await InlineKeyboards.get_menu_install_app(subscription_id)
+        text=(
+            "📘 Откройте ссылку ниже — там пошаговая инструкция и импорт подписки "
+            "под ваше устройство.\n\n"
+            "Если у вас осталось старое сообщение с выбором Android/iPhone — "
+            "те кнопки по-прежнему работают."
+        ),
+        reply_markup=await InlineKeyboards.get_menu_install_app(
+            subscription_id,
+            user_id=callback_query.from_user.id,
+        )
     )
 
 
