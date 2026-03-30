@@ -394,6 +394,36 @@ class PanelGateway:
 
         return False
 
+    async def delete_client(self, port: int, client_id: str) -> bool:
+        """
+        Удаляет клиента из инбаунда на сервере по указанному порту.
+        Внутри:
+        - находит inbound по порту
+        - вызывает POST /panel/api/inbounds/{inbound_id}/delClient/{client_id}
+        """
+        try:
+            http_client = self._get_http_client()
+            inbound = await http_client.get_inbound_by_port(port)
+            if not inbound:
+                # Если inbound не найден — считаем, что удалять нечего
+                return True
+
+            inbound_id = inbound.get("id")
+            if not inbound_id:
+                return False
+
+            return await http_client.delete_client(inbound_id=inbound_id, client_id=client_id)
+        except HttpServerUnavailableError as e:
+            await logger.warning(
+                f"HTTPS недоступен для {self._server.server_ip}: {e}"
+            )
+        except Exception as e:
+            await logger.warning(
+                f"Ошибка при удалении клиента на сервере {self._server.server_ip}: {type(e).__name__}: {e}"
+            )
+
+        return False
+
     async def close(self) -> None:
         """
         Отпускает ссылки на клиентов. HTTP-клиент из кэша не закрываем —

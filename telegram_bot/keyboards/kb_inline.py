@@ -756,6 +756,15 @@ class InlineKeyboards:
             ],
             [
                 InlineKeyboardButton(
+                    text="Перевыпустить подписку",
+                    callback_data=ChangeUserSubCallback(
+                        action='reissue_sub',
+                        subscription_id=sub.subscription_id,
+                        user_id=user_id
+                    ).pack())
+            ],
+            [
+                InlineKeyboardButton(
                     text="Выключить автопродление",
                     callback_data=ChangeUserSubCallback(
                         action='change_expire_sub',

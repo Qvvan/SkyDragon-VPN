@@ -1,6 +1,7 @@
 """HTTP клиент для работы с 3x-ui панелью через новую API"""
 import asyncio
 import json
+from urllib.parse import quote
 from typing import Any
 
 import aiohttp
@@ -472,6 +473,28 @@ class XuiPanelHttpClient:
                 return False
         except Exception as e:
             await logger.error(f"Исключение при обновлении статуса клиента {client_id}", e)
+            return False
+
+    async def delete_client(self, inbound_id: int, client_id: str) -> bool:
+        """
+        Удаляет клиента из инбаунда.
+
+        3x-ui API (client deletion):
+        POST /panel/api/inbounds/{inbound_id}/delClient/{client_id}
+        """
+        endpoint = f"/panel/api/inbounds/{inbound_id}/delClient/{quote(client_id, safe='')}"
+        try:
+            response = await self.post(endpoint)
+            if response.get("success"):
+                await logger.info(f"Клиент {client_id} удалён из инбаунда {inbound_id}")
+                return True
+            # 3x-ui иногда возвращает msg без success=true
+            await logger.warning(
+                f"Не удалось удалить клиента {client_id} из инбаунда {inbound_id}: {response.get('msg')}"
+            )
+            return False
+        except Exception as e:
+            await logger.error(f"Исключение при удалении клиента {client_id} (inbound={inbound_id})", e)
             return False
 
     async def close(self) -> None:
