@@ -70,6 +70,8 @@ class Gift(StatesGroup):
 class GiveSub(StatesGroup):
     waiting_username = State()
     waiting_duration_days = State()
+    waiting_issue_mode = State()
+    waiting_notification_preference = State()
 
 
 class SendMessageUser(StatesGroup):
