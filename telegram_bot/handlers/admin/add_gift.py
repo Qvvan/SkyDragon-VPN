@@ -86,11 +86,11 @@ async def process_issue_mode(message: types.Message, state: FSMContext):
 
     await state.update_data(issue_mode=issue_mode)
     await message.answer(
-            "Отправить уведомление пользователю?\n\n"
-            "Введите: да / нет",
-            reply_markup=await InlineKeyboards.cancel()
-        )
-        await state.set_state(GiveSub.waiting_notification_preference)
+        "Отправить уведомление пользователю?\n\n"
+        "Введите: да / нет",
+        reply_markup=await InlineKeyboards.cancel()
+    )
+    await state.set_state(GiveSub.waiting_notification_preference)
 
 
 @router.message(GiveSub.waiting_notification_preference)
