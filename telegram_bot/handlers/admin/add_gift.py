@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta
 
 from aiogram import Router, types
@@ -9,6 +10,7 @@ from config_data.config import ADMIN_IDS
 from database.context_manager import DatabaseContextManager
 from filters.admin import IsAdmin
 from handlers.services.extend_latest_subscription import extend_user_subscription
+from handlers.services.key_operations_background import create_keys_background
 from keyboards.kb_inline import InlineKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
@@ -157,6 +159,23 @@ async def process_notification_preference(message: types.Message, state: FSMCont
                 status="gift"
             )
             await session_methods.session.commit()
+            subscription_id = getattr(subscription, "subscription_id", None)
+            if subscription_id is None and isinstance(subscription, dict):
+                subscription_id = subscription.get("subscription_id")
+            if subscription_id:
+                asyncio.create_task(
+                    create_keys_background(
+                        user_id=user_id,
+                        username=user.username or "",
+                        subscription_id=subscription_id,
+                        expiry_days=0,
+                    )
+                )
+            else:
+                await logger.warning(
+                    f"Не удалось определить subscription_id для пользователя ID: {user_id}. "
+                    "Автоматическое создание ключей пропущено."
+                )
 
             if notify_user:
                 try:
@@ -187,6 +206,7 @@ async def process_notification_preference(message: types.Message, state: FSMCont
                 f"Дней: {duration_days}\n"
                 f"Режим выдачи: {'новая подписка' if issue_mode == 'new' else 'продление'}\n"
                 f"Уведомление: {'да' if notify_user else 'нет'}\n"
+                f"Создание ключей: {'запущено' if subscription_id else 'пропущено'}\n"
                 f"Профиль создан: {'да' if user_was_created else 'нет'}"
             )
             result_mode_text = "Создана новая отдельная подписка." if issue_mode == "new" else "Подписка продлена."
