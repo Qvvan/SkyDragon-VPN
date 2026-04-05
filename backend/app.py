@@ -21,7 +21,6 @@ from cfg.config import (
     CRYPTO_KEY,
     HAPP_NEW_URL,
     HAPP_PROVIDER_ID,
-    HAPP_SUB_INFO_BUTTON_LINK,
     PUBLIC_BASE_URL,
     SHOP_ID,
     SHOP_API_TOKEN,
@@ -249,18 +248,27 @@ APPS_BY_PLATFORM = {
     ],
 }
 
-ANNOUNCE_EXPIRED = "Подписка истекла. Нажмите, чтобы продлить. Если подписка оплачена, но статус ещё «истекла», нажмите кнопку 🔁."
-ANNOUNCE_NOT_FOUND = "Подписка удалена или не найдена. Нажмите, чтобы оформить новую. Если подписка оплачена, но статус ещё «истекла», нажмите кнопку 🔁."
+# Короткие хвосты для нижнего announce (время МСК добавляется в коде).
+ANNOUNCE_EXPIRED_TAIL = (
+    "Уже оплатили? Нажмите 🔁 у подписки и включайте VPN. Если ещё нет — продлите кнопкой выше."
+)
+ANNOUNCE_NOT_FOUND_TAIL = (
+    "Похоже, ссылка устарела. Загляните в бота — выдадим новую, и всё снова заработает."
+)
 
-# sub-info: как у WhyPN — plain UTF-8 в теле; кнопка ≤25 символов (док Happ).
+# sub-info: plain UTF-8; текст до ~200 символов; кнопка ≤25 (док Happ).
 SUB_INFO_COLOR = "blue"
 SUB_INFO_ACTIVE = (
-    "Поддержка SkyDragon работает 24/7. Напишите нам, если у вас что-то не работает"
+    "Нажмите кнопку 🕝 справа сверху — покажется задержка. Чем меньше ms, тем лучше скорость."
 )
-SUB_INFO_BUTTON_ACTIVE = "Написать в поддержку 💬"
-SUB_INFO_EXPIRED = "Срок подписки закончился. Продлите на странице профиля, чтобы снова пользоваться VPN."
+SUB_INFO_BUTTON_ACTIVE = "Продлить подписку"
+SUB_INFO_EXPIRED = (
+    "Срок подписки подошёл к концу. Оплатили? Нажмите 🔁 у этой подписки, чуть подождите — и можно включать VPN."
+)
 SUB_INFO_BUTTON_EXPIRED = "Продлить подписку"
-SUB_INFO_NOT_FOUND = "Подписка не найдена. Оформите новую в боте или откройте страницу профиля."
+SUB_INFO_NOT_FOUND = (
+    "Такой подписки нет или ссылка снята. Не страшно — откройте бота и возьмите свежую ссылку."
+)
 SUB_INFO_BUTTON_NOT_FOUND = "Открыть страницу"
 
 
@@ -526,8 +534,7 @@ def _build_subscription_body(
 
     if state == "active":
         announce_plain = (
-            f"Обновлено {msk_time} МСК. Продление — на странице подписки.\n"
-            "Потяните вниз, чтобы получить актуальный список серверов."
+            f"Обновлено {msk_time} МСК. Выберите сервер с наименьшим пингом — с ним чаще всего лучше скорость."
         )
         profile_title_body = PROFILE_TITLE_BODY_ACTIVE
         meta_head = [
@@ -538,7 +545,7 @@ def _build_subscription_body(
         ]
         announce_url = profile_url
     elif state == "expired":
-        announce_plain = f"{ANNOUNCE_EXPIRED}\nВремя проверки: {msk_time} МСК."
+        announce_plain = f"{msk_time} МСК. {ANNOUNCE_EXPIRED_TAIL}"
         profile_title_body = f"{PROFILE_TITLE_BODY_ACTIVE} — Истекла"
         meta_head = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
@@ -548,7 +555,7 @@ def _build_subscription_body(
         ]
         announce_url = profile_url
     else:
-        announce_plain = f"{ANNOUNCE_NOT_FOUND}\nПроверено: {msk_time} МСК."
+        announce_plain = f"{msk_time} МСК. {ANNOUNCE_NOT_FOUND_TAIL}"
         profile_title_body = f"{PROFILE_TITLE_BODY_ACTIVE} — Не найдена"
         meta_head = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
@@ -711,7 +718,7 @@ async def get_subscription(
         keys,
         state="active",
         profile_url=config_url,
-        sub_info_button_link=HAPP_SUB_INFO_BUTTON_LINK,
+        sub_info_button_link=config_url,
         msk_time=msk_time,
         provider_id=HAPP_PROVIDER_ID,
     )
