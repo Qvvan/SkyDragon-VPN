@@ -4,8 +4,9 @@ import hashlib
 from pathlib import Path
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
+from zoneinfo import ZoneInfo
 from urllib.parse import quote, unquote
 
 from cryptography.fernet import Fernet
@@ -118,7 +119,7 @@ def _subscription_download_headers(
     profile_title_plain: str,
     expire_unix: int,
     announce_plain: str,
-    body_bytes: bytes,
+    response_body_bytes: bytes,
 ) -> dict[str, str]:
     """Заголовки ответа подписки (Happ: Support-Url — поддержка, Profile-Web-Page-Url — продление/лендинг)."""
     safe_name = "SkyDragonVPN.txt"
@@ -133,7 +134,7 @@ def _subscription_download_headers(
         "X-Subscription-Title": _b64(profile_title_plain),
         "Content-Disposition": f'inline; filename="{safe_name}"',
         "Cache-Control": "private, no-store",
-        "Content-Length": str(len(body_bytes)),
+        "Content-Length": str(len(response_body_bytes)),
     }
     if announce_plain.strip():
         headers["Announce"] = _b64(announce_plain)
@@ -232,21 +233,44 @@ APPS_BY_PLATFORM = {
     ],
 }
 
-# Нижний announce дублирует sub-info и выглядит мелко — для активной подписки не добавляем (см. _build_subscription_body).
-ANNOUNCE_ACTIVE = ""
 ANNOUNCE_EXPIRED = "Подписка истекла. Нажмите, чтобы продлить. Если подписка оплачена, но статус ещё «истекла», нажмите кнопку 🔁."
 ANNOUNCE_NOT_FOUND = "Подписка удалена или не найдена. Нажмите, чтобы оформить новую. Если подписка оплачена, но статус ещё «истекла», нажмите кнопку 🔁."
 
-# Блок sub-info в Happ (крупная плашка). Текст/кнопка — UTF-8 через base64: (как в доке Happ для announce).
+# sub-info: как у WhyPN — в теле подписки plain UTF-8 (не base64:). Кнопка ≤25 символов (док Happ).
 SUB_INFO_COLOR = "blue"
 SUB_INFO_ACTIVE = (
-    "Поддержка SkyDragon на связи 24/7. Напишите нам, если что-то не работает — поможем разобраться."
+    "Поддержка SkyDragon работает 24/7. Напишите нам, если что-то не работает. "
+    "Продлить подписку — на странице профиля (иконка ссылки слева)."
 )
-SUB_INFO_BUTTON_ACTIVE = "Написать в поддержку"
-SUB_INFO_EXPIRED = "Срок подписки закончился. Продлите, чтобы снова пользоваться VPN."
+SUB_INFO_BUTTON_ACTIVE = "Написать в поддержку 💬"
+SUB_INFO_EXPIRED = "Срок подписки закончился. Продлите на странице профиля, чтобы снова пользоваться VPN."
 SUB_INFO_BUTTON_EXPIRED = "Продлить подписку"
-SUB_INFO_NOT_FOUND = "Подписка не найдена. Оформите новую в боте или напишите в поддержку."
-SUB_INFO_BUTTON_NOT_FOUND = "Оформить в боте"
+SUB_INFO_NOT_FOUND = "Подписка не найдена. Оформите новую в боте или откройте страницу профиля."
+SUB_INFO_BUTTON_NOT_FOUND = "Открыть страницу"
+
+
+def _now_msk_time_str() -> str:
+    """Метка времени для анонса: московское время, как в примере WhyPN."""
+    try:
+        return datetime.now(ZoneInfo("Europe/Moscow")).strftime("%d.%m.%Y %H:%M")
+    except Exception:
+        msk = timezone(timedelta(hours=3))
+        return datetime.now(msk).strftime("%d.%m.%Y %H:%M")
+
+
+def _happ_subscription_extra_meta_lines() -> list[str]:
+    """Доп. поля в духе WhyPN / Happ (без providerid и new-url — это их инфраструктура)."""
+    return [
+        "#subscription-auto-update-open-enable: 0",
+        "#subscriptions-collapse: 0",
+        "#hide-settings: 1",
+        "#ping-type tcp",
+    ]
+
+
+def _outer_base64_payload(inner_utf8: str) -> bytes:
+    """Happ при импорте ожидает тело ответа как base64 от UTF-8 текста подписки."""
+    return base64.b64encode(inner_utf8.encode("utf-8"))
 
 
 def _is_known_client_request(user_agent: Optional[str]) -> bool:
@@ -455,49 +479,53 @@ def _build_subscription_body(
     state: Literal["active", "expired", "not_found"],
     profile_url: str,
     support_url: str,
-) -> str:
-    """Тело подписки Happ: plain text (см. happ.su dev-docs), не внешний base64. sub-info — крупная плашка."""
+    msk_time: str,
+) -> tuple[str, str]:
+    """
+    Внутренний текст подписки (как у WhyPN): sub-info и кнопка — plain UTF-8 в строках;
+    только #announce — base64:. Возвращает (inner_plain, announce_plain для HTTP-заголовка Announce).
+    """
+    extra = _happ_subscription_extra_meta_lines()
     if state == "active":
-        announce_url = profile_url
+        announce_plain = (
+            f"Обновлено {msk_time} МСК. Продление — на странице подписки.\n"
+            "Потяните вниз, чтобы получить актуальный список серверов."
+        )
         meta = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
-            f"#sub-info-text: {_b64(SUB_INFO_ACTIVE)}",
-            f"#sub-info-button-text: {_b64(SUB_INFO_BUTTON_ACTIVE)}",
+            f"#sub-info-text: {SUB_INFO_ACTIVE}",
+            f"#sub-info-button-text: {SUB_INFO_BUTTON_ACTIVE}",
             f"#sub-info-button-link: {support_url}",
+            *extra,
             f"#profile-title: {PROFILE_TITLE}",
         ]
-        announce = ANNOUNCE_ACTIVE
-    elif state == "expired":
         announce_url = profile_url
+    elif state == "expired":
+        announce_plain = f"{ANNOUNCE_EXPIRED}\nВремя проверки: {msk_time} МСК."
         meta = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
-            f"#sub-info-text: {_b64(SUB_INFO_EXPIRED)}",
-            f"#sub-info-button-text: {_b64(SUB_INFO_BUTTON_EXPIRED)}",
+            f"#sub-info-text: {SUB_INFO_EXPIRED}",
+            f"#sub-info-button-text: {SUB_INFO_BUTTON_EXPIRED}",
             f"#sub-info-button-link: {profile_url}",
+            *extra,
             f"#profile-title: {PROFILE_TITLE} — Истекла",
         ]
-        announce = ANNOUNCE_EXPIRED
-    else:
         announce_url = profile_url
+    else:
+        announce_plain = f"{ANNOUNCE_NOT_FOUND}\nПроверено: {msk_time} МСК."
         meta = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
-            f"#sub-info-text: {_b64(SUB_INFO_NOT_FOUND)}",
-            f"#sub-info-button-text: {_b64(SUB_INFO_BUTTON_NOT_FOUND)}",
+            f"#sub-info-text: {SUB_INFO_NOT_FOUND}",
+            f"#sub-info-button-text: {SUB_INFO_BUTTON_NOT_FOUND}",
             f"#sub-info-button-link: {profile_url}",
+            *extra,
             f"#profile-title: {PROFILE_TITLE} — Не найдена",
         ]
-        announce = ANNOUNCE_NOT_FOUND
+        announce_url = profile_url
 
-    lines = meta + [""] + keys
-    if announce.strip():
-        lines.extend(
-            [
-                "",
-                f"#announce: {_b64(announce)}",
-                f"#announce-url: {announce_url}",
-            ]
-        )
-    return "\n".join(lines)
+    announce_block = _b64(announce_plain)
+    lines = meta + [""] + keys + ["", f"#announce: {announce_block}", f"#announce-url: {announce_url}"]
+    return "\n".join(lines), announce_plain
 
 
 @app.get("/sub/{encrypted_part}")
@@ -562,22 +590,24 @@ async def get_subscription(
             f"vless://{stub_uuid}@127.0.0.1:8443"
             "?type=tcp&encryption=none&security=reality#Подписка не найдена"
         )
-        body = _build_subscription_body(
+        msk_time = _now_msk_time_str()
+        inner, announce_plain = _build_subscription_body(
             [stub_key],
             state="not_found",
             profile_url=config_url,
             support_url=TELEGRAM_SUPPORT_URL,
+            msk_time=msk_time,
         )
-        body_bytes = body.encode("utf-8")
+        response_bytes = _outer_base64_payload(inner)
         headers = _subscription_download_headers(
             profile_page_url=config_url,
             support_url=TELEGRAM_SUPPORT_URL,
             profile_title_plain=f"{PROFILE_TITLE} — Не найдена",
             expire_unix=0,
-            announce_plain=ANNOUNCE_NOT_FOUND,
-            body_bytes=body_bytes,
+            announce_plain=announce_plain,
+            response_body_bytes=response_bytes,
         )
-        return Response(content=body_bytes, headers=headers)
+        return Response(content=response_bytes, headers=headers)
 
     # Подписка есть, но истекла
     if not is_active:
@@ -586,22 +616,24 @@ async def get_subscription(
             f"vless://{stub_uuid}@127.0.0.1:8443"
             "?type=tcp&encryption=none&security=reality#ИСТЕКЛА😢"
         )
-        body = _build_subscription_body(
+        msk_time = _now_msk_time_str()
+        inner, announce_plain = _build_subscription_body(
             [stub_key],
             state="expired",
             profile_url=config_url,
             support_url=TELEGRAM_SUPPORT_URL,
+            msk_time=msk_time,
         )
-        body_bytes = body.encode("utf-8")
+        response_bytes = _outer_base64_payload(inner)
         headers = _subscription_download_headers(
             profile_page_url=config_url,
             support_url=TELEGRAM_SUPPORT_URL,
             profile_title_plain=PROFILE_TITLE,
             expire_unix=expire_unix,
-            announce_plain=ANNOUNCE_EXPIRED,
-            body_bytes=body_bytes,
+            announce_plain=announce_plain,
+            response_body_bytes=response_bytes,
         )
-        return Response(content=body_bytes, headers=headers)
+        return Response(content=response_bytes, headers=headers)
 
     encoded_sub_id = encode_numbers(user_id, sub_id)
     servers = await methods.get_server(db)
@@ -628,23 +660,25 @@ async def get_subscription(
     external_keys = [k for keys_list in external_results for k in keys_list]
     keys = [k for key_list in server_results for k in key_list] + external_keys
     keys = [_sanitize_proxy_uri_line(k) for k in keys]
-    body = _build_subscription_body(
+    msk_time = _now_msk_time_str()
+    inner, announce_plain = _build_subscription_body(
         keys,
         state="active",
         profile_url=config_url,
         support_url=TELEGRAM_SUPPORT_URL,
+        msk_time=msk_time,
     )
-    body_bytes = body.encode("utf-8")
+    response_bytes = _outer_base64_payload(inner)
 
     headers = _subscription_download_headers(
         profile_page_url=config_url,
         support_url=TELEGRAM_SUPPORT_URL,
         profile_title_plain=PROFILE_TITLE,
         expire_unix=expire_unix,
-        announce_plain=ANNOUNCE_ACTIVE,
-        body_bytes=body_bytes,
+        announce_plain=announce_plain,
+        response_body_bytes=response_bytes,
     )
-    return Response(content=body_bytes, headers=headers)
+    return Response(content=response_bytes, headers=headers)
 
 
 @app.get("/sub/{encrypted_part}/list")
