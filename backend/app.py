@@ -129,7 +129,8 @@ def _subscription_download_headers(
         "Profile-Web-Page-Url": config_url,
         "Announce": _b64(announce_plain),
         "Announce-Url": config_url,
-        "X-Subscription-Title": profile_title_plain,
+        # HTTP-заголовки — только latin-1; эмодзи в названии — через base64 (как Profile-Title)
+        "X-Subscription-Title": _b64(profile_title_plain),
         "Content-Disposition": f'inline; filename="{safe_name}"',
         "Cache-Control": "private, no-store",
         "Content-Length": str(len(encoded_subscription)),
