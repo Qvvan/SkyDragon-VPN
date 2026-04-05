@@ -806,23 +806,32 @@ async def import_iphone_v2raytun(encrypted_part: str):
     return RedirectResponse(url=f"v2raytun://import/{_public_sub_url(encrypted_part)}", status_code=302)
 
 
-@app.get("/import/windows/happ/{encrypted_part}")
+def _normalize_import_encrypted_part(raw: str) -> str:
+    """Токен из path: убрать лишние слэши (редко для Fernet, но безопасно для :path)."""
+    return (raw or "").strip().strip("/")
+
+
+@app.get("/import/windows/happ/{encrypted_part:path}")
 async def import_windows_happ(encrypted_part: str):
+    encrypted_part = _normalize_import_encrypted_part(encrypted_part)
     return RedirectResponse(url=_happ_add_subscription_deeplink(encrypted_part), status_code=302)
 
 
-@app.get("/import/windows/v2raytun/{encrypted_part}")
+@app.get("/import/windows/v2raytun/{encrypted_part:path}")
 async def import_windows_v2raytun(encrypted_part: str):
+    encrypted_part = _normalize_import_encrypted_part(encrypted_part)
     return RedirectResponse(url=f"v2raytun://import/{_public_sub_url(encrypted_part)}", status_code=302)
 
 
-@app.get("/import/macos/happ/{encrypted_part}")
+@app.get("/import/macos/happ/{encrypted_part:path}")
 async def import_macos_happ(encrypted_part: str):
+    encrypted_part = _normalize_import_encrypted_part(encrypted_part)
     return RedirectResponse(url=_happ_add_subscription_deeplink(encrypted_part), status_code=302)
 
 
-@app.get("/import/macos/v2raytun/{encrypted_part}")
+@app.get("/import/macos/v2raytun/{encrypted_part:path}")
 async def import_macos_v2raytun(encrypted_part: str):
+    encrypted_part = _normalize_import_encrypted_part(encrypted_part)
     return RedirectResponse(url=f"v2raytun://import/{_public_sub_url(encrypted_part)}", status_code=302)
 
 
