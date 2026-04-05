@@ -39,7 +39,6 @@ services:
       - .env
     ports:
       - "12345:12345"
-    # В dev — один worker и --reload, доступ на localhost:12345 для теста ручек
     command: [
       "uvicorn", "app:app",
       "--host", "0.0.0.0",

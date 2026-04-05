@@ -1,10 +1,7 @@
 # Тестовый стенд: test.skydragonbot.ru (HTTPS :443)
 # docker compose -f docker-compose.staging.yml --env-file .env.staging up -d
-# На хосте до запуска: certbot certonly --nginx -d test.skydragonbot.ru (или webroot)
-# PUBLIC_BASE_URL=https://test.skydragonbot.ru в .env.staging
-
-name: skydragon-staging
-
+# У БД в сети есть алиас telegram-db — тот же DB_HOST, что и на проде.
+# PUBLIC_BASE_URL=https://test.skydragonbot.ru
 services:
   telegram-bot:
     build:
@@ -72,7 +69,7 @@ services:
       - ./nginx.staging.conf:/etc/nginx/conf.d/default.conf:ro
       - ./frontend:/app/frontend:ro
     networks:
-      - bot-network-staging
+       - bot-network-staging
 
 volumes:
   postgres_data_staging:
