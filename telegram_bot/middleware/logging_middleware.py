@@ -5,6 +5,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import Message, CallbackQuery
 from aiogram.types import Update
 
+from config_data.config import TELEGRAM_SUPPORT_URL
 from database.context_manager import DatabaseContextManager
 from database.methods.users import LogicError
 from logger.logging_config import logger
@@ -24,8 +25,7 @@ class MessageLoggingMiddleware(BaseMiddleware):
             await last_visit(user_id, username)
             ban_user = await check_ban(user_id)
             if ban_user is not None:
-                support_user_id = "SkyDragonSupport"
-                support_link = f"t.me/{support_user_id}"
+                support_link = TELEGRAM_SUPPORT_URL.removeprefix("https://").removeprefix("http://")
                 if ban_user.ban:
                     return await event.answer("К сожалению, вы забанены. Пожалуйста, свяжитесь с технической поддержкой\n"
                                               f"{support_link}")
@@ -48,8 +48,7 @@ class CallbackLoggingMiddleware(BaseMiddleware):
             await last_visit(user_id, username)
             ban_user = await check_ban(user_id)
             if ban_user is not None:
-                support_user_id = "SkyDragonSupport"
-                support_link = f"t.me/{support_user_id}"
+                support_link = TELEGRAM_SUPPORT_URL.removeprefix("https://").removeprefix("http://")
                 if ban_user.ban:
                     return await event.answer("К сожалению, вы забанены. Пожалуйста, свяжитесь с технической поддаржкой\n"
                                               f"{support_link}")

@@ -7,6 +7,13 @@ DSN = env.str("DSN")
 
 CRYPTO_KEY = env.str("CRYPTO_KEY")
 
+# Совпадает с backend/cfg/config.py — ссылки в боте и в подписке должны указывать на тот же стенд.
+PUBLIC_BASE_URL = env.str("PUBLIC_BASE_URL", "https://skydragonvpn.ru").rstrip("/")
+TELEGRAM_BOT_URL = env.str("TELEGRAM_BOT_URL", "https://t.me/SkyDragonVPNBot").rstrip("/")
+TELEGRAM_SUPPORT_URL = env.str("TELEGRAM_SUPPORT_URL", "https://t.me/SkyDragonSupport").rstrip("/")
+TELEGRAM_SUPPORT_USERNAME = env.str("TELEGRAM_SUPPORT_USERNAME", "SkyDragonSupport")
+TELEGRAM_YOOKASSA_RETURN_URL = env.str("TELEGRAM_YOOKASSA_RETURN_URL", "").strip() or TELEGRAM_BOT_URL
+
 ADMIN_IDS = [int(admin) for admin in env.list('ADMIN_IDS')]
 
 BOT_TOKEN = env.str("BOT_TOKEN")

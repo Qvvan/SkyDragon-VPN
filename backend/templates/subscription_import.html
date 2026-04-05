@@ -716,26 +716,26 @@
     <div class="quick-links quick-links--support">
       <a
         class="btn btn-support-247"
-        href="https://t.me/SkyDragonSupport"
+        href="{{ telegram_support_url }}"
         target="_blank"
         rel="noopener"
       >Поддержка 24/7 в Telegram</a>
       <a
         class="btn btn-secondary"
         id="btn-support"
-        href="https://t.me/SkyDragonSupport"
+        href="{{ telegram_support_url }}"
         target="_blank"
         rel="noopener"
         data-telegram-id="{{ telegram_user_id }}"
         data-sub-id="{{ subscription_id }}"
       >Написать в техподдержку</a>
-      <a class="btn" href="https://t.me/SkyDragonVPNBot?start=1" target="_blank" rel="noopener">Купить новую в боте</a>
+      <a class="btn" href="{{ telegram_bot_start_1_url }}" target="_blank" rel="noopener">Купить новую в боте</a>
     </div>
     {% else %}
     <div class="quick-links quick-links--support">
       <a
         class="btn btn-support-247"
-        href="https://t.me/SkyDragonSupport"
+        href="{{ telegram_support_url }}"
         target="_blank"
         rel="noopener"
       >Поддержка 24/7 в Telegram</a>
@@ -743,13 +743,13 @@
       <a
         class="btn btn-secondary"
         id="btn-support"
-        href="https://t.me/SkyDragonSupport"
+        href="{{ telegram_support_url }}"
         target="_blank"
         rel="noopener"
         data-telegram-id="{{ telegram_user_id }}"
         data-sub-id="{{ subscription_id }}"
       >Написать в техподдержку</a>
-      <a class="btn" href="https://t.me/SkyDragonVPNBot?start=1" target="_blank" rel="noopener">Перейти в бота</a>
+      <a class="btn" href="{{ telegram_bot_start_1_url }}" target="_blank" rel="noopener">Перейти в бота</a>
     </div>
     {% endif %}
 
@@ -1184,7 +1184,7 @@
           'Опишите здесь ваш вопрос:'
         ].join('\n');
 
-        const supportUrl = 'https://t.me/SkyDragonSupport?text=' + encodeURIComponent(text);
+        const supportUrl = {{ telegram_support_url | tojson }} + '?text=' + encodeURIComponent(text);
         window.open(supportUrl, '_blank', 'noopener');
       });
     })();

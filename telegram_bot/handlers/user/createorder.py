@@ -3,6 +3,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
+from config_data.config import TELEGRAM_YOOKASSA_RETURN_URL
 from database.context_manager import DatabaseContextManager
 from handlers.services.card_service import create_payment
 from keyboards.kb_inline import InlineKeyboards, BACK_BTN, ServiceCallbackFactory, StatusPay, StarsPayCallbackFactory, DefaultCallback
@@ -174,7 +175,7 @@ async def stars_pay(callback_query: CallbackQuery, callback_data: StarsPayCallba
             payment_data = await create_payment(
                 amount=service.price,
                 description=f"Оплата за услугу: {service.name}",
-                return_url="https://t.me/SkyDragonVPNBot",
+                return_url=TELEGRAM_YOOKASSA_RETURN_URL,
                 service_id=service_id,
                 service_type=status_pay.value,
                 user_id=callback_query.from_user.id,

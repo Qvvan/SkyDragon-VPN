@@ -6,6 +6,7 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from config_data.config import PUBLIC_BASE_URL, TELEGRAM_SUPPORT_URL
 from database.context_manager import DatabaseContextManager
 from handlers.services.create_config_link import create_config_link
 from logger.logging_config import logger
@@ -306,16 +307,15 @@ class InlineKeyboards:
 
     @staticmethod
     async def get_support(callback_data: str = None, user_id: Optional[int] = None) -> InlineKeyboardMarkup:
-        support_user_id = "SkyDragonSupport"
         if user_id is not None:
             support_text = (
                 "Здравствуйте!\n"
                 f"Telegram ID пользователя: {user_id}\n\n"
                 "Опишите ваш вопрос:"
             )
-            support_link = f"https://t.me/{support_user_id}?text={quote(support_text)}"
+            support_link = f"{TELEGRAM_SUPPORT_URL}?text={quote(support_text)}"
         else:
-            support_link = f"https://t.me/{support_user_id}"
+            support_link = TELEGRAM_SUPPORT_URL
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [
@@ -368,7 +368,7 @@ class InlineKeyboards:
                         subscription_id,
                     )
                 else:
-                    profile_url = "https://skydragonvpn.ru/"
+                    profile_url = f"{PUBLIC_BASE_URL}/"
                 keyboard.add(
                     InlineKeyboardButton(
                         text='⏳ Продлить',
@@ -668,7 +668,7 @@ class InlineKeyboards:
         Важно: передавайте user_id, если клавиатура строится сразу после создания подписки:
         до commit() новая строка в другой сессии БД не видна, и без user_id получится ссылка на главную.
         """
-        profile_url = "https://skydragonvpn.ru/"
+        profile_url = f"{PUBLIC_BASE_URL}/"
         if user_id is not None:
             profile_url = await create_config_link(user_id, subscription_id)
         else:

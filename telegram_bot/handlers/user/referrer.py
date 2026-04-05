@@ -5,6 +5,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 
+from config_data.config import TELEGRAM_BOT_URL
 from database.context_manager import DatabaseContextManager
 from keyboards.kb_inline import InlineKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
@@ -65,7 +66,7 @@ async def show_referrals(callback: CallbackQuery):
 @router.callback_query(lambda c: c.data == "get_invite_link")
 async def send_invite_link(callback: CallbackQuery):
     user_id = callback.from_user.id
-    referral_link = f"https://t.me/SkyDragonVPNBot?start={user_id}"
+    referral_link = f"{TELEGRAM_BOT_URL}?start={user_id}"
     invite_text = LEXICON_RU['invite'].format(referral_link=referral_link)
 
     await callback.message.edit_text(

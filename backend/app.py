@@ -16,7 +16,13 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import RedirectResponse
 from starlette.templating import Jinja2Templates
 
-from cfg.config import CRYPTO_KEY, SHOP_ID, SHOP_API_TOKEN
+from cfg.config import (
+    CRYPTO_KEY,
+    PUBLIC_BASE_URL,
+    SHOP_ID,
+    SHOP_API_TOKEN,
+    TELEGRAM_YOOKASSA_RETURN_URL,
+)
 from db import methods
 from db.db import get_db
 from sub_fetcher import get_sub_from_server, fetch_external_subscription_keys
@@ -26,7 +32,6 @@ EXTERNAL_SUB_URLS = [
     "https://sp.vpnlider.online/ndKFYzNwuk2ryHba",
     "https://link.1cdn.lol/QKLZy",
 ]
-BOT_URL_EXPIRED = "https://t.me/SkyDragonVPNBot?start=1"
 SUB_STATUS_ACTIVE = "активная"
 
 app = FastAPI()
@@ -44,6 +49,18 @@ app.add_middleware(
 )
 
 cipher = Fernet(CRYPTO_KEY)
+
+
+def _subscription_landing_template_extra() -> dict:
+    """Ссылки на Telegram и публичный сайт для Jinja (без хардкода домена)."""
+    from cfg.config import TELEGRAM_BOT_START_1, TELEGRAM_BOT_URL, TELEGRAM_SUPPORT_URL
+
+    return {
+        "telegram_support_url": TELEGRAM_SUPPORT_URL,
+        "telegram_bot_url": TELEGRAM_BOT_URL,
+        "telegram_bot_start_1_url": TELEGRAM_BOT_START_1,
+        "public_base_url": PUBLIC_BASE_URL,
+    }
 
 
 def _decode_sub_to_keys(base64_text: str, server_ip: str, server_name: str) -> list[str]:
@@ -121,7 +138,6 @@ def _subscription_download_headers(
 
 # Короткое название подписки
 PROFILE_TITLE = "SkyDragon🐉"
-PUBLIC_BASE_URL = "https://skydragonvpn.ru"
 RU_MONTHS = (
     "янв", "фев", "мар", "апр", "май", "июн",
     "июл", "авг", "сен", "окт", "ноя", "дек",
@@ -405,7 +421,7 @@ async def _create_yookassa_payment(
         "description": f"Оплата за услугу: {service_name}",
         "confirmation": {
             "type": "redirect",
-            "return_url": "https://t.me/SkyDragonVPNBot",
+            "return_url": TELEGRAM_YOOKASSA_RETURN_URL,
         },
         "metadata": {
             "service_id": service_id,
@@ -521,6 +537,7 @@ async def get_subscription(
                 "apps_by_platform": apps_by_platform,
                 "sub_info": _build_sub_info(subscription),
                 "services_for_renewal": services_for_renewal,
+                **_subscription_landing_template_extra(),
             },
         )
 

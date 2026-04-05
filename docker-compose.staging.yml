@@ -1,0 +1,82 @@
+# Тестовый стенд: test.skydragonbot.ru (HTTPS :443)
+# docker compose -f docker-compose.staging.yml --env-file .env.staging up -d
+# На хосте до запуска: certbot certonly --nginx -d test.skydragonbot.ru (или webroot)
+# PUBLIC_BASE_URL=https://test.skydragonbot.ru в .env.staging
+
+name: skydragon-staging
+
+services:
+  telegram-bot:
+    build:
+      context: ./telegram_bot
+      dockerfile: Dockerfile
+    container_name: telegram-bot-staging
+    restart: unless-stopped
+    env_file:
+      - .env.staging
+    depends_on:
+      - db
+    command: python main.py
+    networks:
+      - bot-network-staging
+
+  db:
+    image: postgres:16.2
+    container_name: telegram-db-staging
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data_staging:/var/lib/postgresql/data
+    ports:
+      - "${STAGING_DB_PORT:-5443}:5432"
+    networks:
+      - bot-network-staging
+
+  fastapi:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fastapi_app_staging
+    restart: unless-stopped
+    env_file:
+      - .env.staging
+    ports:
+      - "${STAGING_API_PORT:-12346}:12345"
+    command: [
+      "uvicorn", "app:app",
+      "--host", "0.0.0.0",
+      "--port", "12345",
+      "--workers", "2",
+      "--loop", "uvloop",
+      "--http", "httptools",
+      "--access-log",
+      "--timeout-keep-alive", "5"
+    ]
+    networks:
+      - bot-network-staging
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx_server_staging
+    restart: unless-stopped
+    depends_on:
+      - fastapi
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./nginx.staging.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend:/app/frontend:ro
+    networks:
+      - bot-network-staging
+
+volumes:
+  postgres_data_staging:
+
+networks:
+  bot-network-staging:
+    driver: bridge
