@@ -66,6 +66,21 @@
       color: var(--text-muted);
       margin: 0;
     }
+    .header--instruction-first {
+      margin-bottom: 0;
+    }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
     .grid {
       display: grid;
       gap: 1.75rem;
@@ -602,25 +617,28 @@
         align-items: center;
       }
     }
-    .btn-support-247 {
-      width: 100%;
-      justify-content: center;
-      text-align: center;
-      padding: 1rem 1.35rem;
-      font-size: 1.05rem;
-      font-weight: 600;
-      background: linear-gradient(145deg, #10b981, #059669);
-      border: 1px solid rgba(16, 185, 129, 0.55);
-      box-shadow: 0 6px 28px rgba(16, 185, 129, 0.22);
-      color: #fff;
+    .instruction-hero {
+      margin-bottom: 2rem;
+      padding: 1.5rem 1.35rem 1.75rem;
+      background: linear-gradient(165deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.02));
+      border: 1px solid rgba(59, 130, 246, 0.22);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      animation: fadeUp 0.5s ease-out 0.05s both;
     }
-    .btn-support-247:hover {
-      filter: brightness(1.07);
-      transform: translateY(-1px);
-      box-shadow: 0 8px 32px rgba(16, 185, 129, 0.28);
+    .instruction-hero__title {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
     }
-    @media (min-width: 640px) {
-      .btn-support-247 { width: auto; min-width: 260px; }
+    .instruction-hero__lead {
+      margin: 0 0 1.5rem 0;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+      max-width: 54ch;
     }
     .renew-action-row {
       margin-bottom: 1rem;
@@ -700,7 +718,7 @@
 </head>
 <body>
   <div class="page">
-    <header class="header">
+    <header class="header{% if sub_info and sub_info.status_key == 'active' %} header--instruction-first{% endif %}">
       {% if not sub_info %}
       <h1>Подписка не найдена</h1>
       <p>Такой подписки нет в системе или она была удалена. Необходимо оформить новую подписку.</p>
@@ -708,18 +726,21 @@
       <h1>Подписка неактивна</h1>
       <p>Нажмите, чтобы продлить подписку. Если уже оплатили, но статус не обновился — нажмите кнопку 🔁 в приложении.</p>
       {% else %}
-      <h1>Импорт подписки</h1>
-      <p>Если VPN работает нестабильно, смените страну подключения. Для продления нажмите кнопку ниже.</p>
+      <h1 class="sr-only">Ваша подписка SkyDragon VPN</h1>
       {% endif %}
     </header>
+
     {% if not sub_info %}
+    <section class="renewal-card">
+      <svg class="renewal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="9" y1="9" x2="15" y2="15"/>
+        <line x1="15" y1="9" x2="9" y2="15"/>
+      </svg>
+      <h2>Что сделать</h2>
+      <p>Эта ссылка больше не действует или подписка удалена. Оформите новую в боте — там выдадут свежую ссылку. Если нужна помощь, напишите в поддержку кнопкой ниже.</p>
+    </section>
     <div class="quick-links quick-links--support">
-      <a
-        class="btn btn-support-247"
-        href="{{ telegram_support_url }}"
-        target="_blank"
-        rel="noopener"
-      >Поддержка 24/7 в Telegram</a>
       <a
         class="btn btn-secondary"
         id="btn-support"
@@ -731,14 +752,20 @@
       >Написать в техподдержку</a>
       <a class="btn" href="{{ telegram_bot_start_1_url }}" target="_blank" rel="noopener">Купить новую в боте</a>
     </div>
-    {% else %}
+    {% elif sub_info and sub_info.status_key != 'active' %}
+    <section class="renewal-card">
+      <svg class="renewal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <h2>Как снова включить VPN</h2>
+      <p>Срок подписки закончился. Нажмите «Продлить в профиле» или кнопку продления ниже. Уже оплатили? В приложении нажмите 🔁 у этой подписки и подождите обновления.</p>
+      <a class="btn-renewal" href="{{ config_url }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Продлить в профиле
+      </a>
+    </section>
     <div class="quick-links quick-links--support">
-      <a
-        class="btn btn-support-247"
-        href="{{ telegram_support_url }}"
-        target="_blank"
-        rel="noopener"
-      >Поддержка 24/7 в Telegram</a>
       <button type="button" class="btn" id="btn-open-renew">Продлить подписку</button>
       <a
         class="btn btn-secondary"
@@ -751,9 +778,6 @@
       >Написать в техподдержку</a>
       <a class="btn" href="{{ telegram_bot_start_1_url }}" target="_blank" rel="noopener">Перейти в бота</a>
     </div>
-    {% endif %}
-
-    {% if sub_info %}
     <section class="sub-info">
       <div class="sub-info__header">
         <h2 class="sub-info__title">{{ sub_info.service_name }}</h2>
@@ -820,33 +844,11 @@
         </div>
       </div>
     </section>
-    {% endif %}
-
-    {% if not sub_info %}
-    <section class="renewal-card">
-      <svg class="renewal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="9" y1="9" x2="15" y2="15"/>
-        <line x1="15" y1="9" x2="9" y2="15"/>
-      </svg>
-      <h2>Подписка отсутствует</h2>
-      <p>Похоже, эта подписка была удалена или ссылка больше неактуальна. Оформите новую подписку через бота или напишите в поддержку.</p>
-    </section>
-    {% elif sub_info and sub_info.status_key != 'active' %}
-    <section class="renewal-card">
-      <svg class="renewal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"/>
-        <polyline points="12 6 12 12 16 14"/>
-      </svg>
-      <h2>Срок подписки истёк</h2>
-      <p>Чтобы продолжить пользоваться VPN, продлите подписку в профиле. Если уже оплатили, но статус ещё «истекла», нажмите кнопку 🔁 в приложении.</p>
-      <a class="btn-renewal" href="{{ config_url }}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        Продлить в профиле
-      </a>
-    </section>
     {% else %}
-    <div class="grid">
+    <section class="instruction-hero" aria-labelledby="instruction-title">
+      <h2 class="instruction-hero__title" id="instruction-title">Как подключить VPN</h2>
+      <p class="instruction-hero__lead">Сначала выберите устройство и приложение в левом блоке, при необходимости скачайте его и нажмите «Импортировать профиль». Справа — ссылка для ручной вставки в приложение, если так удобнее.</p>
+      <div class="grid">
       <section class="card">
         <h2 class="card-title">Быстрая установка</h2>
         <div class="steps">
@@ -925,6 +927,86 @@
         </div>
       </section>
     </div>
+    </section>
+    <section class="sub-info">
+      <div class="sub-info__header">
+        <h2 class="sub-info__title">{{ sub_info.service_name }}</h2>
+        <span class="sub-badge sub-badge--{{ sub_info.status_key }}">
+          <span class="sub-badge__dot"></span>
+          {{ sub_info.status }}
+        </span>
+      </div>
+      <div class="sub-info__grid">
+        <div class="sub-field">
+          <span class="sub-field__label">Тариф</span>
+          <span class="sub-field__value">
+            {% if sub_info.service_name == "Пробный период" %}
+            Пробный период — {{ sub_info.price }}
+            {% else %}
+            {{ sub_info.duration_days }} дн. — {{ sub_info.price }}
+            {% endif %}
+          </span>
+        </div>
+        <div class="sub-field">
+          <span class="sub-field__label">Источник</span>
+          <span class="sub-field__value">{{ sub_info.source }}</span>
+        </div>
+        <div class="sub-field">
+          <span class="sub-field__label">Автопродление</span>
+          {% if sub_info.auto_renewal %}
+          <span class="auto-renewal-badge auto-renewal-badge--on">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Включено
+          </span>
+          <div class="auto-renewal-actions">
+            <form method="post" action="/sub/{{ encrypted_part }}/auto-renewal/disable">
+              <button class="btn btn-danger" type="submit">Выключить автопродление</button>
+            </form>
+          </div>
+          {% else %}
+          <span class="auto-renewal-badge auto-renewal-badge--off">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Выключено
+          </span>
+          <div class="auto-renewal-actions">
+            <form method="post" action="/sub/{{ encrypted_part }}/auto-renewal/enable">
+              <button class="btn btn-success" type="submit">Включить автопродление</button>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+        <div class="sub-field">
+          <span class="sub-field__label">Дата покупки</span>
+          <span class="sub-field__value">{{ sub_info.start_date }}</span>
+        </div>
+        <div class="sub-field">
+          <span class="sub-field__label">Действует до</span>
+          <span class="sub-field__value sub-field__value--accent">{{ sub_info.end_date }}</span>
+        </div>
+        <div class="sub-field">
+          <span class="sub-field__label">Осталось</span>
+          <span class="sub-field__value {% if sub_info.days_remaining <= 3 %}sub-field__value--warn{% elif sub_info.days_remaining > 3 %}sub-field__value--success{% endif %}">
+            {{ sub_info.days_remaining }}
+            {% if sub_info.days_remaining == 1 %}день
+            {% elif sub_info.days_remaining >= 2 and sub_info.days_remaining <= 4 %}дня
+            {% else %}дней{% endif %}
+          </span>
+        </div>
+      </div>
+    </section>
+    <div class="quick-links quick-links--support">
+      <button type="button" class="btn" id="btn-open-renew">Продлить подписку</button>
+      <a
+        class="btn btn-secondary"
+        id="btn-support"
+        href="{{ telegram_support_url }}"
+        target="_blank"
+        rel="noopener"
+        data-telegram-id="{{ telegram_user_id }}"
+        data-sub-id="{{ subscription_id }}"
+      >Написать в техподдержку</a>
+      <a class="btn" href="{{ telegram_bot_start_1_url }}" target="_blank" rel="noopener">Перейти в бота</a>
+    </div>
     {% endif %}
   </div>
 
@@ -940,7 +1022,7 @@
     </div>
   </div>
 
-  {% if not sub_info or sub_info.status_key == 'active' %}
+  {% if sub_info and sub_info.status_key == 'active' %}
   <script>
     (function() {
       const appsByPlatform = {{ apps_by_platform | tojson }};
