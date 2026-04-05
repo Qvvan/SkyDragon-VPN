@@ -1,23 +1,30 @@
-FROM python:3.11-slim
+FROM python:3.12.7-slim-bookworm AS builder
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=0 \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
-    openssh-client \
-    && rm -rf /var/lib/apt/lists/*
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --locked --no-install-project --no-dev
 
-# Создаем директорию для SSH ключей
-RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh
+COPY . /app
 
-COPY requirements.txt /app/
+FROM python:3.12.7-slim-bookworm
 
-RUN pip install --no-cache-dir -r requirements.txt
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-RUN apt-get update && apt-get install -y iputils-ping
+WORKDIR /app
 
-COPY . /app/
+COPY --from=builder /app /app
+
+ENV PATH="/app/.venv/bin:$PATH"
 
 CMD ["python", "main.py"]
