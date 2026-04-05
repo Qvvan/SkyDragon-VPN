@@ -6,7 +6,7 @@ import re
 import uuid
 from datetime import datetime, timezone
 from typing import Literal, Optional
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 from cryptography.fernet import Fernet
 from fastapi import FastAPI, Response, Depends, Request
@@ -21,6 +21,7 @@ from cfg.config import (
     PUBLIC_BASE_URL,
     SHOP_ID,
     SHOP_API_TOKEN,
+    TELEGRAM_SUPPORT_URL,
     TELEGRAM_YOOKASSA_RETURN_URL,
 )
 from db import methods
@@ -112,29 +113,32 @@ def _b64(text: str) -> str:
 
 def _subscription_download_headers(
     *,
-    config_url: str,
+    profile_page_url: str,
+    support_url: str,
     profile_title_plain: str,
     expire_unix: int,
     announce_plain: str,
-    encoded_subscription: str,
+    body_bytes: bytes,
 ) -> dict[str, str]:
-    """Заголовки ответа подписки: страница профиля/продления на нашем домене (Happ открывает по Support-Url / Profile-Web-Page-Url)."""
+    """Заголовки ответа подписки (Happ: Support-Url — поддержка, Profile-Web-Page-Url — продление/лендинг)."""
     safe_name = "SkyDragonVPN.txt"
-    return {
+    headers: dict[str, str] = {
         "Content-Type": "text/plain; charset=utf-8",
         "Profile-Title": _b64(profile_title_plain),
         "Profile-Update-Interval": "1",
         "Subscription-Userinfo": _build_userinfo(expire=expire_unix),
-        "Support-Url": config_url,
-        "Profile-Web-Page-Url": config_url,
-        "Announce": _b64(announce_plain),
-        "Announce-Url": config_url,
+        "Support-Url": support_url,
+        "Profile-Web-Page-Url": profile_page_url,
         # HTTP-заголовки — только latin-1; эмодзи в названии — через base64 (как Profile-Title)
         "X-Subscription-Title": _b64(profile_title_plain),
         "Content-Disposition": f'inline; filename="{safe_name}"',
         "Cache-Control": "private, no-store",
-        "Content-Length": str(len(encoded_subscription)),
+        "Content-Length": str(len(body_bytes)),
     }
+    if announce_plain.strip():
+        headers["Announce"] = _b64(announce_plain)
+        headers["Announce-Url"] = profile_page_url
+    return headers
 
 
 # Короткое название подписки
@@ -228,17 +232,21 @@ APPS_BY_PLATFORM = {
     ],
 }
 
-ANNOUNCE_ACTIVE = "Если VPN работает нестабильно, смените страну подключения. Для продления нажмите сюда."
+# Нижний announce дублирует sub-info и выглядит мелко — для активной подписки не добавляем (см. _build_subscription_body).
+ANNOUNCE_ACTIVE = ""
 ANNOUNCE_EXPIRED = "Подписка истекла. Нажмите, чтобы продлить. Если подписка оплачена, но статус ещё «истекла», нажмите кнопку 🔁."
 ANNOUNCE_NOT_FOUND = "Подписка удалена или не найдена. Нажмите, чтобы оформить новую. Если подписка оплачена, но статус ещё «истекла», нажмите кнопку 🔁."
 
+# Блок sub-info в Happ (крупная плашка). Текст/кнопка — UTF-8 через base64: (как в доке Happ для announce).
 SUB_INFO_COLOR = "blue"
-SUB_INFO_ACTIVE = "Если VPN работает нестабильно, смените страну подключения. Продление — на странице подписки."
-SUB_INFO_BUTTON_ACTIVE = "Продлить подписку"
-SUB_INFO_EXPIRED = "Подписка истекла. Нажмите, чтобы продлить."
-SUB_INFO_BUTTON_EXPIRED = "Нажмите, чтобы продлить"
-SUB_INFO_NOT_FOUND = "Подписка удалена или не найдена. Нажмите, чтобы оформить новую."
-SUB_INFO_BUTTON_NOT_FOUND = "Оформить новую подписку"
+SUB_INFO_ACTIVE = (
+    "Поддержка SkyDragon на связи 24/7. Напишите нам, если что-то не работает — поможем разобраться."
+)
+SUB_INFO_BUTTON_ACTIVE = "Написать в поддержку"
+SUB_INFO_EXPIRED = "Срок подписки закончился. Продлите, чтобы снова пользоваться VPN."
+SUB_INFO_BUTTON_EXPIRED = "Продлить подписку"
+SUB_INFO_NOT_FOUND = "Подписка не найдена. Оформите новую в боте или напишите в поддержку."
+SUB_INFO_BUTTON_NOT_FOUND = "Оформить в боте"
 
 
 def _is_known_client_request(user_agent: Optional[str]) -> bool:
@@ -446,15 +454,16 @@ def _build_subscription_body(
     *,
     state: Literal["active", "expired", "not_found"],
     profile_url: str,
+    support_url: str,
 ) -> str:
-    """Собирает тело подписки: #-мета сверху, ключи, #announce и #announce-url в конце."""
+    """Тело подписки Happ: plain text (см. happ.su dev-docs), не внешний base64. sub-info — крупная плашка."""
     if state == "active":
         announce_url = profile_url
         meta = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
-            f"#sub-info-text: {SUB_INFO_ACTIVE}",
-            f"#sub-info-button-text: {SUB_INFO_BUTTON_ACTIVE}",
-            f"#sub-info-button-link: {profile_url}",
+            f"#sub-info-text: {_b64(SUB_INFO_ACTIVE)}",
+            f"#sub-info-button-text: {_b64(SUB_INFO_BUTTON_ACTIVE)}",
+            f"#sub-info-button-link: {support_url}",
             f"#profile-title: {PROFILE_TITLE}",
         ]
         announce = ANNOUNCE_ACTIVE
@@ -462,8 +471,8 @@ def _build_subscription_body(
         announce_url = profile_url
         meta = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
-            f"#sub-info-text: {SUB_INFO_EXPIRED}",
-            f"#sub-info-button-text: {SUB_INFO_BUTTON_EXPIRED}",
+            f"#sub-info-text: {_b64(SUB_INFO_EXPIRED)}",
+            f"#sub-info-button-text: {_b64(SUB_INFO_BUTTON_EXPIRED)}",
             f"#sub-info-button-link: {profile_url}",
             f"#profile-title: {PROFILE_TITLE} — Истекла",
         ]
@@ -472,18 +481,22 @@ def _build_subscription_body(
         announce_url = profile_url
         meta = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
-            f"#sub-info-text: {SUB_INFO_NOT_FOUND}",
-            f"#sub-info-button-text: {SUB_INFO_BUTTON_NOT_FOUND}",
+            f"#sub-info-text: {_b64(SUB_INFO_NOT_FOUND)}",
+            f"#sub-info-button-text: {_b64(SUB_INFO_BUTTON_NOT_FOUND)}",
             f"#sub-info-button-link: {profile_url}",
             f"#profile-title: {PROFILE_TITLE} — Не найдена",
         ]
         announce = ANNOUNCE_NOT_FOUND
 
-    lines = meta + [""] + keys + [
-        "",
-        f"#announce: {_b64(announce)}",
-        f"#announce-url: {announce_url}",
-    ]
+    lines = meta + [""] + keys
+    if announce.strip():
+        lines.extend(
+            [
+                "",
+                f"#announce: {_b64(announce)}",
+                f"#announce-url: {announce_url}",
+            ]
+        )
     return "\n".join(lines)
 
 
@@ -549,16 +562,22 @@ async def get_subscription(
             f"vless://{stub_uuid}@127.0.0.1:8443"
             "?type=tcp&encryption=none&security=reality#Подписка не найдена"
         )
-        body = _build_subscription_body([stub_key], state="not_found", profile_url=config_url)
-        encoded_subscription = base64.b64encode(body.encode()).decode()
+        body = _build_subscription_body(
+            [stub_key],
+            state="not_found",
+            profile_url=config_url,
+            support_url=TELEGRAM_SUPPORT_URL,
+        )
+        body_bytes = body.encode("utf-8")
         headers = _subscription_download_headers(
-            config_url=config_url,
+            profile_page_url=config_url,
+            support_url=TELEGRAM_SUPPORT_URL,
             profile_title_plain=f"{PROFILE_TITLE} — Не найдена",
             expire_unix=0,
             announce_plain=ANNOUNCE_NOT_FOUND,
-            encoded_subscription=encoded_subscription,
+            body_bytes=body_bytes,
         )
-        return Response(content=encoded_subscription, headers=headers)
+        return Response(content=body_bytes, headers=headers)
 
     # Подписка есть, но истекла
     if not is_active:
@@ -567,16 +586,22 @@ async def get_subscription(
             f"vless://{stub_uuid}@127.0.0.1:8443"
             "?type=tcp&encryption=none&security=reality#ИСТЕКЛА😢"
         )
-        body = _build_subscription_body([stub_key], state="expired", profile_url=config_url)
-        encoded_subscription = base64.b64encode(body.encode()).decode()
+        body = _build_subscription_body(
+            [stub_key],
+            state="expired",
+            profile_url=config_url,
+            support_url=TELEGRAM_SUPPORT_URL,
+        )
+        body_bytes = body.encode("utf-8")
         headers = _subscription_download_headers(
-            config_url=config_url,
+            profile_page_url=config_url,
+            support_url=TELEGRAM_SUPPORT_URL,
             profile_title_plain=PROFILE_TITLE,
             expire_unix=expire_unix,
             announce_plain=ANNOUNCE_EXPIRED,
-            encoded_subscription=encoded_subscription,
+            body_bytes=body_bytes,
         )
-        return Response(content=encoded_subscription, headers=headers)
+        return Response(content=body_bytes, headers=headers)
 
     encoded_sub_id = encode_numbers(user_id, sub_id)
     servers = await methods.get_server(db)
@@ -603,17 +628,23 @@ async def get_subscription(
     external_keys = [k for keys_list in external_results for k in keys_list]
     keys = [k for key_list in server_results for k in key_list] + external_keys
     keys = [_sanitize_proxy_uri_line(k) for k in keys]
-    body = _build_subscription_body(keys, state="active", profile_url=config_url)
-    encoded_subscription = base64.b64encode(body.encode()).decode()
+    body = _build_subscription_body(
+        keys,
+        state="active",
+        profile_url=config_url,
+        support_url=TELEGRAM_SUPPORT_URL,
+    )
+    body_bytes = body.encode("utf-8")
 
     headers = _subscription_download_headers(
-        config_url=config_url,
+        profile_page_url=config_url,
+        support_url=TELEGRAM_SUPPORT_URL,
         profile_title_plain=PROFILE_TITLE,
         expire_unix=expire_unix,
         announce_plain=ANNOUNCE_ACTIVE,
-        encoded_subscription=encoded_subscription,
+        body_bytes=body_bytes,
     )
-    return Response(content=encoded_subscription, headers=headers)
+    return Response(content=body_bytes, headers=headers)
 
 
 @app.get("/sub/{encrypted_part}/list")
@@ -728,9 +759,10 @@ def encode_numbers(user_id: int, sub_id: int, secret_key: str = "my_secret_key")
 
 
 def decrypt_part(encrypted_data: str) -> str:
-    """Дешифрует данные."""
-    decrypted_data = cipher.decrypt(encrypted_data.encode())
-    return decrypted_data.decode('utf-8')
+    """Дешифрует токен из URL (Fernet). Учитываем unquote и + → пробел у части прокси/клиентов."""
+    normalized = unquote((encrypted_data or "").strip()).replace(" ", "+")
+    decrypted_data = cipher.decrypt(normalized.encode())
+    return decrypted_data.decode("utf-8")
 
 
 @app.post("/sub/{encrypted_part}/auto-renewal/disable")
