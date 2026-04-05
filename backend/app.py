@@ -19,9 +19,11 @@ from starlette.templating import Jinja2Templates
 
 from cfg.config import (
     CRYPTO_KEY,
+    HAPP_PROVIDER_ID,
     PUBLIC_BASE_URL,
     SHOP_ID,
     SHOP_API_TOKEN,
+    SUBSCRIPTION_USERINFO_TOTAL_BYTES,
     TELEGRAM_SUPPORT_URL,
     TELEGRAM_YOOKASSA_RETURN_URL,
 )
@@ -108,8 +110,10 @@ def _build_userinfo(upload: int = 0, download: int = 0, total: int = 0, expire: 
 
 
 def _b64(text: str) -> str:
-    """Текст в base64 для заголовков (profile-title, announce)."""
-    return f"base64:{base64.b64encode(text.encode('utf-8')).decode('ascii')}"
+    """UTF-8 → base64:... одной строкой (без переносов в payload) для Happ и HTTP-заголовков."""
+    normalized = (text or "").replace("\r\n", "\n").replace("\r", "\n")
+    payload = base64.b64encode(normalized.encode("utf-8")).decode("ascii")
+    return f"base64:{payload}"
 
 
 def _subscription_download_headers(
@@ -118,16 +122,23 @@ def _subscription_download_headers(
     support_url: str,
     profile_title_plain: str,
     expire_unix: int,
+    traffic_total_bytes: int,
     announce_plain: str,
     response_body_bytes: bytes,
+    provider_id: str,
 ) -> dict[str, str]:
-    """Заголовки ответа подписки (Happ: Support-Url — поддержка, Profile-Web-Page-Url — продление/лендинг)."""
+    """Заголовки ответа подписки (Happ: Providerid + Support-Url + userinfo с total для шкалы трафика)."""
     safe_name = "SkyDragonVPN.txt"
     headers: dict[str, str] = {
         "Content-Type": "text/plain; charset=utf-8",
         "Profile-Title": _b64(profile_title_plain),
         "Profile-Update-Interval": "1",
-        "Subscription-Userinfo": _build_userinfo(expire=expire_unix),
+        "Subscription-Userinfo": _build_userinfo(
+            upload=0,
+            download=0,
+            total=traffic_total_bytes,
+            expire=expire_unix,
+        ),
         "Support-Url": support_url,
         "Profile-Web-Page-Url": profile_page_url,
         # HTTP-заголовки — только latin-1; эмодзи в названии — через base64 (как Profile-Title)
@@ -136,6 +147,8 @@ def _subscription_download_headers(
         "Cache-Control": "private, no-store",
         "Content-Length": str(len(response_body_bytes)),
     }
+    if provider_id.strip():
+        headers["Providerid"] = provider_id.strip()
     if announce_plain.strip():
         headers["Announce"] = _b64(announce_plain)
         headers["Announce-Url"] = profile_page_url
@@ -259,7 +272,7 @@ def _now_msk_time_str() -> str:
 
 
 def _happ_subscription_extra_meta_lines() -> list[str]:
-    """Доп. поля в духе WhyPN / Happ (без providerid и new-url — это их инфраструктура)."""
+    """Доп. поля в духе WhyPN / Happ (#providerid задаётся отдельно сразу после sub-info)."""
     return [
         "#subscription-auto-update-open-enable: 0",
         "#subscriptions-collapse: 0",
@@ -480,12 +493,16 @@ def _build_subscription_body(
     profile_url: str,
     support_url: str,
     msk_time: str,
+    provider_id: str,
 ) -> tuple[str, str]:
     """
-    Внутренний текст подписки (как у WhyPN): sub-info и кнопка — plain UTF-8 в строках;
-    только #announce — base64:. Возвращает (inner_plain, announce_plain для HTTP-заголовка Announce).
+    Внутренний текст подписки (как у WhyPN): sub-info plain UTF-8; #announce — base64:.
+    Без #providerid в теле Happ не включает Advanced Announcements (док happ-proxy).
     """
     extra = _happ_subscription_extra_meta_lines()
+    prov = provider_id.strip()
+    provider_line = [f"#providerid {prov}"] if prov else []
+
     if state == "active":
         announce_plain = (
             f"Обновлено {msk_time} МСК. Продление — на странице подписки.\n"
@@ -496,6 +513,7 @@ def _build_subscription_body(
             f"#sub-info-text: {SUB_INFO_ACTIVE}",
             f"#sub-info-button-text: {SUB_INFO_BUTTON_ACTIVE}",
             f"#sub-info-button-link: {support_url}",
+            *provider_line,
             *extra,
             f"#profile-title: {PROFILE_TITLE}",
         ]
@@ -507,6 +525,7 @@ def _build_subscription_body(
             f"#sub-info-text: {SUB_INFO_EXPIRED}",
             f"#sub-info-button-text: {SUB_INFO_BUTTON_EXPIRED}",
             f"#sub-info-button-link: {profile_url}",
+            *provider_line,
             *extra,
             f"#profile-title: {PROFILE_TITLE} — Истекла",
         ]
@@ -518,6 +537,7 @@ def _build_subscription_body(
             f"#sub-info-text: {SUB_INFO_NOT_FOUND}",
             f"#sub-info-button-text: {SUB_INFO_BUTTON_NOT_FOUND}",
             f"#sub-info-button-link: {profile_url}",
+            *provider_line,
             *extra,
             f"#profile-title: {PROFILE_TITLE} — Не найдена",
         ]
@@ -597,6 +617,7 @@ async def get_subscription(
             profile_url=config_url,
             support_url=TELEGRAM_SUPPORT_URL,
             msk_time=msk_time,
+            provider_id=HAPP_PROVIDER_ID,
         )
         response_bytes = _outer_base64_payload(inner)
         headers = _subscription_download_headers(
@@ -604,8 +625,10 @@ async def get_subscription(
             support_url=TELEGRAM_SUPPORT_URL,
             profile_title_plain=f"{PROFILE_TITLE} — Не найдена",
             expire_unix=0,
+            traffic_total_bytes=0,
             announce_plain=announce_plain,
             response_body_bytes=response_bytes,
+            provider_id=HAPP_PROVIDER_ID,
         )
         return Response(content=response_bytes, headers=headers)
 
@@ -623,6 +646,7 @@ async def get_subscription(
             profile_url=config_url,
             support_url=TELEGRAM_SUPPORT_URL,
             msk_time=msk_time,
+            provider_id=HAPP_PROVIDER_ID,
         )
         response_bytes = _outer_base64_payload(inner)
         headers = _subscription_download_headers(
@@ -630,8 +654,10 @@ async def get_subscription(
             support_url=TELEGRAM_SUPPORT_URL,
             profile_title_plain=PROFILE_TITLE,
             expire_unix=expire_unix,
+            traffic_total_bytes=SUBSCRIPTION_USERINFO_TOTAL_BYTES,
             announce_plain=announce_plain,
             response_body_bytes=response_bytes,
+            provider_id=HAPP_PROVIDER_ID,
         )
         return Response(content=response_bytes, headers=headers)
 
@@ -667,6 +693,7 @@ async def get_subscription(
         profile_url=config_url,
         support_url=TELEGRAM_SUPPORT_URL,
         msk_time=msk_time,
+        provider_id=HAPP_PROVIDER_ID,
     )
     response_bytes = _outer_base64_payload(inner)
 
@@ -675,8 +702,10 @@ async def get_subscription(
         support_url=TELEGRAM_SUPPORT_URL,
         profile_title_plain=PROFILE_TITLE,
         expire_unix=expire_unix,
+        traffic_total_bytes=SUBSCRIPTION_USERINFO_TOTAL_BYTES,
         announce_plain=announce_plain,
         response_body_bytes=response_bytes,
+        provider_id=HAPP_PROVIDER_ID,
     )
     return Response(content=response_bytes, headers=headers)
 

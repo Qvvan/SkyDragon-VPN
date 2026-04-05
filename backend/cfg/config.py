@@ -20,3 +20,8 @@ PORT_X_UI = env.int("PORT_X_UI", 443)
 MY_SECRET_URL = env.str("MY_SECRET_URL", "mysecreturl")
 SHOP_ID = env.str("SHOP_ID", "")
 SHOP_API_TOKEN = env.str("SHOP_API_TOKEN", "")
+
+# Happ: Advanced Announcements (#sub-info-*) требуют Provider ID с happ-proxy.com
+HAPP_PROVIDER_ID = env.str("HAPP_PROVIDER_ID", "jHgJdo4s").strip()
+# Шкала трафика в Happ (байты): при total=0 клиент часто не рисует шкалу; по умолчанию 1 ТиБ как «безлимит»
+SUBSCRIPTION_USERINFO_TOTAL_BYTES = env.int("SUBSCRIPTION_USERINFO_TOTAL_BYTES", 1099511627776)
