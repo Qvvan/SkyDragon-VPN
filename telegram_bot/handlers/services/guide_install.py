@@ -2,6 +2,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 
+from config_data.config import PUBLIC_BASE_URL
 from database.context_manager import DatabaseContextManager
 from handlers.services.create_config_link import create_config_link
 from keyboards.kb_inline import InlineKeyboards, SubscriptionCallbackFactory, InstallProfileCallbackFactory
@@ -107,7 +108,8 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Inst
                 return
 
             part_link = encrypt_part(str(sub.user_id) + "|" + str(subscription_id))
-            url = f"skydragonvpn.ru/import/{name_device.lower()}/{part_link }"
+            slug = "iphone" if name_device == "iPhone" else "android"
+            url = f"{PUBLIC_BASE_URL}/import/{slug}/happ/{part_link}"
         except Exception as e:
             await logger.log_error(f"При получении подписки что-то пошло не так: {e}")
 

@@ -1,16 +1,35 @@
-FROM tiangolo/uvicorn-gunicorn-fastapi:python3.9
+# syntax=docker/dockerfile:1
+# Сборка: DOCKER_BUILDKIT=1 docker build ...
+FROM python:3.12.7-slim-bookworm AS builder
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=0 \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY requirements.txt /app/
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --locked --no-install-project --no-dev
 
-RUN pip install --no-cache-dir -r requirements.txt
+COPY . /app
 
-COPY . /app/
+FROM python:3.12.7-slim-bookworm
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "12345", "--reload"]
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY --from=builder /app /app
+
+ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 12345
+
+# Без --reload; в compose задаётся workers / reload для dev
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "12345"]

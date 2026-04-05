@@ -8,7 +8,7 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
     KeyboardButtonRequestUsers, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from config_data.config import ADMIN_IDS
+from config_data.config import ADMIN_IDS, TELEGRAM_YOOKASSA_RETURN_URL
 from database.context_manager import DatabaseContextManager
 from handlers.services.card_service import create_payment
 from keyboards.kb_inline import InlineKeyboards, BACK_BTN, MAIN_MENU_BTN, MAIN_MENU_CB
@@ -167,7 +167,7 @@ async def handle_gift_payment(callback_query: CallbackQuery, callback_data: Gift
             payment_data = await create_payment(
                 amount=service.price,
                 description=f"Подарочная подписка: {service.name}",
-                return_url="https://t.me/SkyDragonVPNBot",
+                return_url=TELEGRAM_YOOKASSA_RETURN_URL,
                 service_id=service_id,
                 service_type="gift",
                 user_id=sender_user_id,

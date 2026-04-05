@@ -4,9 +4,10 @@ import hashlib
 from pathlib import Path
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
-from urllib.parse import quote
+from zoneinfo import ZoneInfo
+from urllib.parse import quote, unquote
 
 from cryptography.fernet import Fernet
 from fastapi import FastAPI, Response, Depends, Request
@@ -16,18 +17,26 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import RedirectResponse
 from starlette.templating import Jinja2Templates
 
-from cfg.config import CRYPTO_KEY, SHOP_ID, SHOP_API_TOKEN
+from cfg.config import (
+    CRYPTO_KEY,
+    HAPP_NEW_URL,
+    HAPP_PROVIDER_ID,
+    PUBLIC_BASE_URL,
+    SHOP_ID,
+    SHOP_API_TOKEN,
+    SUBSCRIPTION_USERINFO_TOTAL_BYTES,
+    TELEGRAM_SUPPORT_URL,
+    TELEGRAM_YOOKASSA_RETURN_URL,
+)
 from db import methods
 from db.db import get_db
 from sub_fetcher import get_sub_from_server, fetch_external_subscription_keys
 
-SUPPORT_URL_ACTIVE = "https://t.me/SkyDragonSupport"
 # Внешние подписки: ключи добавляются к нашим (таймаут 3 сек каждый)
 EXTERNAL_SUB_URLS = [
     "https://sp.vpnlider.online/ndKFYzNwuk2ryHba",
     "https://link.1cdn.lol/QKLZy",
 ]
-BOT_URL_EXPIRED = "https://t.me/SkyDragonVPNBot?start=1"
 SUB_STATUS_ACTIVE = "активная"
 
 app = FastAPI()
@@ -45,6 +54,18 @@ app.add_middleware(
 )
 
 cipher = Fernet(CRYPTO_KEY)
+
+
+def _subscription_landing_template_extra() -> dict:
+    """Ссылки на Telegram и публичный сайт для Jinja (без хардкода домена)."""
+    from cfg.config import TELEGRAM_BOT_START_1, TELEGRAM_BOT_URL, TELEGRAM_SUPPORT_URL
+
+    return {
+        "telegram_support_url": TELEGRAM_SUPPORT_URL,
+        "telegram_bot_url": TELEGRAM_BOT_URL,
+        "telegram_bot_start_1_url": TELEGRAM_BOT_START_1,
+        "public_base_url": PUBLIC_BASE_URL,
+    }
 
 
 def _decode_sub_to_keys(base64_text: str, server_ip: str, server_name: str) -> list[str]:
@@ -90,13 +111,54 @@ def _build_userinfo(upload: int = 0, download: int = 0, total: int = 0, expire: 
 
 
 def _b64(text: str) -> str:
-    """Текст в base64 для заголовков (profile-title, announce)."""
-    return f"base64:{base64.b64encode(text.encode('utf-8')).decode('ascii')}"
+    """UTF-8 → base64:... одной строкой (без переносов в payload) для Happ и HTTP-заголовков."""
+    normalized = (text or "").replace("\r\n", "\n").replace("\r", "\n")
+    payload = base64.b64encode(normalized.encode("utf-8")).decode("ascii")
+    return f"base64:{payload}"
 
 
-# Короткое название подписки
+def _subscription_download_headers(
+    *,
+    profile_page_url: str,
+    support_url: str,
+    profile_title_plain: str,
+    expire_unix: int,
+    traffic_total_bytes: int,
+    announce_plain: str,
+    response_body_bytes: bytes,
+    provider_id: str,
+) -> dict[str, str]:
+    """Заголовки ответа подписки (Happ: Providerid + Support-Url + userinfo с total для шкалы трафика)."""
+    safe_name = "SkyDragonVPN.txt"
+    headers: dict[str, str] = {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Profile-Title": _b64(profile_title_plain),
+        "Profile-Update-Interval": "1",
+        "Subscription-Userinfo": _build_userinfo(
+            upload=0,
+            download=0,
+            total=traffic_total_bytes,
+            expire=expire_unix,
+        ),
+        "Support-Url": support_url,
+        "Profile-Web-Page-Url": profile_page_url,
+        # HTTP-заголовки — только latin-1; эмодзи в названии — через base64 (как Profile-Title)
+        "X-Subscription-Title": _b64(profile_title_plain),
+        "Content-Disposition": f'inline; filename="{safe_name}"',
+        "Cache-Control": "private, no-store",
+        "Content-Length": str(len(response_body_bytes)),
+    }
+    if provider_id.strip():
+        headers["Providerid"] = provider_id.strip()
+    if announce_plain.strip():
+        headers["Announce"] = _b64(announce_plain)
+        headers["Announce-Url"] = profile_page_url
+    return headers
+
+
+# Заголовки HTTP / короткое имя; в теле подписки для Happ — с префиксом 🚀 как у WhyPN
 PROFILE_TITLE = "SkyDragon🐉"
-PUBLIC_BASE_URL = "https://skydragonvpn.ru"
+PROFILE_TITLE_BODY_ACTIVE = "🚀 SkyDragon🐉"
 RU_MONTHS = (
     "янв", "фев", "мар", "апр", "май", "июн",
     "июл", "авг", "сен", "окт", "ноя", "дек",
@@ -107,6 +169,14 @@ CLIENT_USER_AGENTS = (
     "happ",
     "hiddify",
     "v2raytun",
+    "v2rayng",
+    "nekobox",
+    "sing-box",
+    "singbox",
+    "clash",
+    "clashmeta",
+    "flyfrog",  # Happ Desktop (FlyFrog LLC)
+    "happ-proxy",
 )
 
 BROWSER_USER_AGENTS = (
@@ -178,17 +248,71 @@ APPS_BY_PLATFORM = {
     ],
 }
 
-ANNOUNCE_ACTIVE = "Если VPN работает нестабильно, смените страну подключения. Для продления нажмите сюда."
-ANNOUNCE_EXPIRED = "Подписка истекла. Нажмите, чтобы продлить. Если подписка оплачена, но статус ещё «истекла», нажмите кнопку 🔁."
-ANNOUNCE_NOT_FOUND = "Подписка удалена или не найдена. Нажмите, чтобы оформить новую. Если подписка оплачена, но статус ещё «истекла», нажмите кнопку 🔁."
+# Короткие хвосты для нижнего announce (время МСК добавляется в коде).
+ANNOUNCE_EXPIRED_TAIL = (
+    "Уже оплатили? Нажмите 🔁 у подписки и включайте VPN. Если ещё нет — продлите кнопкой выше."
+)
+ANNOUNCE_NOT_FOUND_TAIL = (
+    "Похоже, ссылка устарела. Загляните в бота — выдадим новую, и всё снова заработает."
+)
 
+# sub-info: plain UTF-8; текст до ~200 символов; кнопка ≤25 (док Happ).
 SUB_INFO_COLOR = "blue"
-SUB_INFO_ACTIVE = "Если VPN работает нестабильно, смените страну подключения."
-SUB_INFO_BUTTON_ACTIVE = "Для продления нажмите сюда"
-SUB_INFO_EXPIRED = "Подписка истекла. Нажмите, чтобы продлить."
-SUB_INFO_BUTTON_EXPIRED = "Нажмите, чтобы продлить"
-SUB_INFO_NOT_FOUND = "Подписка удалена или не найдена. Нажмите, чтобы оформить новую."
-SUB_INFO_BUTTON_NOT_FOUND = "Оформить новую подписку"
+SUB_INFO_ACTIVE = (
+    "Нажмите кнопку ⏱️ справа сверху, чтобы проверить скорость соединения. Чем меньше ms — тем лучше."
+)
+SUB_INFO_BUTTON_ACTIVE = "Продлить подписку"
+SUB_INFO_EXPIRED = (
+    "Срок подписки подошёл к концу. Оплатили? Нажмите 🔁 у этой подписки, чуть подождите — и можно включать VPN."
+)
+SUB_INFO_BUTTON_EXPIRED = "Продлить подписку"
+SUB_INFO_NOT_FOUND = (
+    "Такой подписки нет или ссылка снята. Не страшно — откройте бота и возьмите свежую ссылку."
+)
+SUB_INFO_BUTTON_NOT_FOUND = "Открыть страницу"
+
+
+def _now_msk_time_str() -> str:
+    """Метка времени для анонса: московское время, как в примере WhyPN."""
+    try:
+        return datetime.now(ZoneInfo("Europe/Moscow")).strftime("%d.%m.%Y %H:%M")
+    except Exception:
+        msk = timezone(timedelta(hours=3))
+        return datetime.now(msk).strftime("%d.%m.%Y %H:%M")
+
+
+def _happ_new_url_line(profile_url: str) -> list[str]:
+    """#new-url — зеркало; если HAPP_NEW_URL пусто, подставляем URL этой подписки."""
+    u = (HAPP_NEW_URL or "").strip() or profile_url
+    return [f"#new-url {u}"] if u else []
+
+
+def _happ_meta_block_like_whypn(*, profile_url: str, provider_id: str, profile_title_line: str) -> list[str]:
+    """
+    Порядок как у WhyPN: sub-info → providerid → new-url → auto-update → hwid → collapse
+    → profile-title → hide-settings → ping-type
+    """
+    prov = provider_id.strip()
+    lines: list[str] = []
+    if prov:
+        lines.append(f"#providerid {prov}")
+    lines.extend(_happ_new_url_line(profile_url))
+    lines.extend(
+        [
+            "#subscription-auto-update-open-enable: 0",
+            "#subscription-always-hwid-enable: 1",
+            "#subscriptions-collapse: 0",
+            f"#profile-title: {profile_title_line}",
+            "#hide-settings: 1",
+            "#ping-type tcp",
+        ]
+    )
+    return lines
+
+
+def _outer_base64_payload(inner_utf8: str) -> bytes:
+    """Happ при импорте ожидает тело ответа как base64 от UTF-8 текста подписки."""
+    return base64.b64encode(inner_utf8.encode("utf-8"))
 
 
 def _is_known_client_request(user_agent: Optional[str]) -> bool:
@@ -196,6 +320,68 @@ def _is_known_client_request(user_agent: Optional[str]) -> bool:
         return False
     ua = user_agent.lower()
     return any(client_ua in ua for client_ua in CLIENT_USER_AGENTS)
+
+
+def _accept_prefers_html(accept: Optional[str]) -> bool:
+    """Первый тип в Accept — text/html (типичный переход из браузера). *//* и text/plain — нет."""
+    if not accept or not accept.strip():
+        return False
+    first = accept.split(",")[0].strip().split(";")[0].strip().lower()
+    return first in ("text/html", "application/xhtml+xml")
+
+
+def _force_raw_subscription(request: Request) -> bool:
+    q = request.query_params
+    return q.get("raw") in ("1", "true", "yes") or q.get("format") in ("raw", "subscription")
+
+
+def _force_web_landing(request: Request) -> bool:
+    """Явно открыть HTML-страницу (например, очень старый браузер без Sec-Fetch-Dest)."""
+    return request.query_params.get("web") in ("1", "true", "yes")
+
+
+def _should_return_html_landing(request: Request) -> bool:
+    """
+    HTML-лендинг только для реальной навигации вкладки (Sec-Fetch-Dest: document).
+    Happ Desktop шлёт Chrome-like UA и иногда Accept с text/html, но без Sec-Fetch — ему нужен base64.
+    """
+    if _force_raw_subscription(request):
+        return False
+    ua = request.headers.get("user-agent", "")
+    accept = request.headers.get("accept")
+    if _force_web_landing(request):
+        return _is_browser_request(ua) and _accept_prefers_html(accept)
+    if _is_known_client_request(ua):
+        return False
+    if not _is_browser_request(ua):
+        return False
+    if not _accept_prefers_html(accept):
+        return False
+    dest_raw = request.headers.get("sec-fetch-dest")
+    if dest_raw is None:
+        # Встроенный браузер Telegram часто без Sec-Fetch-* — показываем лендинг
+        if "telegram" in ua.lower():
+            return True
+        return False
+    dest = dest_raw.lower()
+    mode = (request.headers.get("sec-fetch-mode") or "").lower()
+    if dest == "empty" or mode == "cors":
+        return False
+    return dest in ("document", "iframe", "frame")
+
+
+def _sanitize_proxy_uri_line(line: str) -> str:
+    """Убирает пустой sni= в query (у части клиентов ломает разбор URI)."""
+    if "://" not in line or line.startswith("#"):
+        return line
+    main, sep, fragment = line.partition("#")
+    cleaned = re.sub(r"([?&])sni=(?=[&#]|$)", r"\1", main)
+    cleaned = re.sub(r"\?&+", "?", cleaned)
+    cleaned = re.sub(r"&&+", "&", cleaned)
+    cleaned = cleaned.rstrip("?&")
+    if fragment:
+        return f"{cleaned}#{fragment}"
+    return cleaned
 
 
 def _detect_platform_from_ua(user_agent: Optional[str]) -> str:
@@ -232,11 +418,14 @@ def _public_sub_url(encrypted_part: str) -> str:
 
 def _happ_add_subscription_deeplink(encrypted_part: str) -> str:
     """
-    В Happ: «Добавить конфигурацию» — happ://add/{url}
-    URL подписки кодируем, чтобы : и / не ломали разбор схемы.
+    happ://add/{url} — добавление подписки в Happ.
+
+    Раньше весь URL кодировался (safe=''), из‑за этого в приложении на Win/Mac
+    отображалось https%3A%2F%2F…. Оставляем читаемыми :, / и = (padding в токене);
+    остальное кодируем по необходимости.
     """
     sub_url = _public_sub_url(encrypted_part)
-    return f"happ://add/{quote(sub_url, safe='')}"
+    return f"happ://add/{quote(sub_url, safe=':/=')}"
 
 
 def _build_import_route_url(platform: str, app_name: str, encrypted_part: str) -> str:
@@ -310,7 +499,7 @@ async def _create_yookassa_payment(
         "description": f"Оплата за услугу: {service_name}",
         "confirmation": {
             "type": "redirect",
-            "return_url": "https://t.me/SkyDragonVPNBot",
+            "return_url": TELEGRAM_YOOKASSA_RETURN_URL,
         },
         "metadata": {
             "service_id": service_id,
@@ -334,45 +523,56 @@ def _build_subscription_body(
     *,
     state: Literal["active", "expired", "not_found"],
     profile_url: str,
-) -> str:
-    """Собирает тело подписки: #-мета сверху, ключи, #announce и #announce-url в конце."""
+    sub_info_button_link: str,
+    msk_time: str,
+    provider_id: str,
+) -> tuple[str, str]:
+    """
+    Внутренний текст подписки: порядок #мета как у WhyPN; sub-info plain UTF-8; #announce — base64:.
+    """
+    prov = provider_id.strip()
+
     if state == "active":
-        announce_url = profile_url
-        meta = [
+        announce_plain = (
+            f"Обновлено {msk_time} МСК. Выберите сервер с наименьшим пингом — с ним чаще всего лучше скорость."
+        )
+        profile_title_body = PROFILE_TITLE_BODY_ACTIVE
+        meta_head = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
             f"#sub-info-text: {SUB_INFO_ACTIVE}",
             f"#sub-info-button-text: {SUB_INFO_BUTTON_ACTIVE}",
-            f"#sub-info-button-link: {profile_url}",
-            f"#profile-title: {PROFILE_TITLE}",
+            f"#sub-info-button-link: {sub_info_button_link}",
         ]
-        announce = ANNOUNCE_ACTIVE
-    elif state == "expired":
         announce_url = profile_url
-        meta = [
+    elif state == "expired":
+        announce_plain = f"{msk_time} МСК. {ANNOUNCE_EXPIRED_TAIL}"
+        profile_title_body = f"{PROFILE_TITLE_BODY_ACTIVE} — Истекла"
+        meta_head = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
             f"#sub-info-text: {SUB_INFO_EXPIRED}",
             f"#sub-info-button-text: {SUB_INFO_BUTTON_EXPIRED}",
-            f"#sub-info-button-link: {profile_url}",
-            f"#profile-title: {PROFILE_TITLE} — Истекла",
+            f"#sub-info-button-link: {sub_info_button_link}",
         ]
-        announce = ANNOUNCE_EXPIRED
-    else:
         announce_url = profile_url
-        meta = [
+    else:
+        announce_plain = f"{msk_time} МСК. {ANNOUNCE_NOT_FOUND_TAIL}"
+        profile_title_body = f"{PROFILE_TITLE_BODY_ACTIVE} — Не найдена"
+        meta_head = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
             f"#sub-info-text: {SUB_INFO_NOT_FOUND}",
             f"#sub-info-button-text: {SUB_INFO_BUTTON_NOT_FOUND}",
-            f"#sub-info-button-link: {profile_url}",
-            f"#profile-title: {PROFILE_TITLE} — Не найдена",
+            f"#sub-info-button-link: {sub_info_button_link}",
         ]
-        announce = ANNOUNCE_NOT_FOUND
+        announce_url = profile_url
 
-    lines = meta + [""] + keys + [
-        "",
-        f"#announce: {_b64(announce)}",
-        f"#announce-url: {announce_url}",
-    ]
-    return "\n".join(lines)
+    meta = meta_head + _happ_meta_block_like_whypn(
+        profile_url=profile_url,
+        provider_id=prov,
+        profile_title_line=profile_title_body,
+    )
+    announce_block = _b64(announce_plain)
+    lines = meta + [""] + keys + ["", f"#announce: {announce_block}", f"#announce-url: {announce_url}"]
+    return "\n".join(lines), announce_plain
 
 
 @app.get("/sub/{encrypted_part}")
@@ -394,7 +594,7 @@ async def get_subscription(
     config_url = _public_sub_url(encrypted_part)
     user_agent = request.headers.get("user-agent", "")
 
-    if _is_browser_request(user_agent) and not _is_known_client_request(user_agent):
+    if _should_return_html_landing(request):
         detected_platform = _detect_platform_from_ua(user_agent)
         apps_by_platform = {}
         for platform, apps in APPS_BY_PLATFORM.items():
@@ -426,6 +626,7 @@ async def get_subscription(
                 "apps_by_platform": apps_by_platform,
                 "sub_info": _build_sub_info(subscription),
                 "services_for_renewal": services_for_renewal,
+                **_subscription_landing_template_extra(),
             },
         )
 
@@ -436,19 +637,27 @@ async def get_subscription(
             f"vless://{stub_uuid}@127.0.0.1:8443"
             "?type=tcp&encryption=none&security=reality#Подписка не найдена"
         )
-        body = _build_subscription_body([stub_key], state="not_found", profile_url=config_url)
-        encoded_subscription = base64.b64encode(body.encode()).decode()
-        headers = {
-            "Content-Type": "text/plain; charset=utf-8",
-            "Profile-Title": _b64(f"{PROFILE_TITLE} — Не найдена"),
-            "Profile-Update-Interval": "1",
-            "Subscription-Userinfo": _build_userinfo(expire=0),
-            "Support-Url": config_url,
-            "Announce": _b64(ANNOUNCE_NOT_FOUND),
-            "Announce-Url": config_url,
-            "Content-Length": str(len(encoded_subscription)),
-        }
-        return Response(content=encoded_subscription, headers=headers)
+        msk_time = _now_msk_time_str()
+        inner, announce_plain = _build_subscription_body(
+            [stub_key],
+            state="not_found",
+            profile_url=config_url,
+            sub_info_button_link=config_url,
+            msk_time=msk_time,
+            provider_id=HAPP_PROVIDER_ID,
+        )
+        response_bytes = _outer_base64_payload(inner)
+        headers = _subscription_download_headers(
+            profile_page_url=config_url,
+            support_url=TELEGRAM_SUPPORT_URL,
+            profile_title_plain=f"{PROFILE_TITLE} — Не найдена",
+            expire_unix=0,
+            traffic_total_bytes=0,
+            announce_plain=announce_plain,
+            response_body_bytes=response_bytes,
+            provider_id=HAPP_PROVIDER_ID,
+        )
+        return Response(content=response_bytes, headers=headers)
 
     # Подписка есть, но истекла
     if not is_active:
@@ -457,19 +666,27 @@ async def get_subscription(
             f"vless://{stub_uuid}@127.0.0.1:8443"
             "?type=tcp&encryption=none&security=reality#ИСТЕКЛА😢"
         )
-        body = _build_subscription_body([stub_key], state="expired", profile_url=config_url)
-        encoded_subscription = base64.b64encode(body.encode()).decode()
-        headers = {
-            "Content-Type": "text/plain; charset=utf-8",
-            "Profile-Title": _b64(PROFILE_TITLE),
-            "Profile-Update-Interval": "1",
-            "Subscription-Userinfo": _build_userinfo(expire=expire_unix),
-            "Support-Url": config_url,
-            "Announce": _b64(ANNOUNCE_EXPIRED),
-            "Announce-Url": config_url,
-            "Content-Length": str(len(encoded_subscription)),
-        }
-        return Response(content=encoded_subscription, headers=headers)
+        msk_time = _now_msk_time_str()
+        inner, announce_plain = _build_subscription_body(
+            [stub_key],
+            state="expired",
+            profile_url=config_url,
+            sub_info_button_link=config_url,
+            msk_time=msk_time,
+            provider_id=HAPP_PROVIDER_ID,
+        )
+        response_bytes = _outer_base64_payload(inner)
+        headers = _subscription_download_headers(
+            profile_page_url=config_url,
+            support_url=TELEGRAM_SUPPORT_URL,
+            profile_title_plain=PROFILE_TITLE,
+            expire_unix=expire_unix,
+            traffic_total_bytes=SUBSCRIPTION_USERINFO_TOTAL_BYTES,
+            announce_plain=announce_plain,
+            response_body_bytes=response_bytes,
+            provider_id=HAPP_PROVIDER_ID,
+        )
+        return Response(content=response_bytes, headers=headers)
 
     encoded_sub_id = encode_numbers(user_id, sub_id)
     servers = await methods.get_server(db)
@@ -495,20 +712,29 @@ async def get_subscription(
     )
     external_keys = [k for keys_list in external_results for k in keys_list]
     keys = [k for key_list in server_results for k in key_list] + external_keys
-    body = _build_subscription_body(keys, state="active", profile_url=config_url)
-    encoded_subscription = base64.b64encode(body.encode()).decode()
+    keys = [_sanitize_proxy_uri_line(k) for k in keys]
+    msk_time = _now_msk_time_str()
+    inner, announce_plain = _build_subscription_body(
+        keys,
+        state="active",
+        profile_url=config_url,
+        sub_info_button_link=config_url,
+        msk_time=msk_time,
+        provider_id=HAPP_PROVIDER_ID,
+    )
+    response_bytes = _outer_base64_payload(inner)
 
-    headers = {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Profile-Title": _b64(PROFILE_TITLE),
-        "Profile-Update-Interval": "1",
-        "Subscription-Userinfo": _build_userinfo(expire=expire_unix),
-        "Support-Url": config_url,
-        "Announce": _b64(ANNOUNCE_ACTIVE),
-        "Announce-Url": config_url,
-        "Content-Length": str(len(encoded_subscription)),
-    }
-    return Response(content=encoded_subscription, headers=headers)
+    headers = _subscription_download_headers(
+        profile_page_url=config_url,
+        support_url=TELEGRAM_SUPPORT_URL,
+        profile_title_plain=PROFILE_TITLE,
+        expire_unix=expire_unix,
+        traffic_total_bytes=SUBSCRIPTION_USERINFO_TOTAL_BYTES,
+        announce_plain=announce_plain,
+        response_body_bytes=response_bytes,
+        provider_id=HAPP_PROVIDER_ID,
+    )
+    return Response(content=response_bytes, headers=headers)
 
 
 @app.get("/sub/{encrypted_part}/list")
@@ -561,19 +787,13 @@ async def get_subscription_list(encrypted_part: str, db: Session = Depends(get_d
 
 @app.get("/import/iphone/{encrypted_part}")
 async def import_iphone_legacy(encrypted_part: str):
-    redirect_url = f"v2raytun://import/{_public_sub_url(encrypted_part)}"
-
-    # Возвращаем редирект
-    return RedirectResponse(url=redirect_url, status_code=302)
+    """Короткая ссылка из бота: импорт в Happ (как на iOS/Android с /happ/)."""
+    return RedirectResponse(url=_happ_add_subscription_deeplink(encrypted_part), status_code=302)
 
 
 @app.get("/import/android/{encrypted_part}")
 async def import_android_legacy(encrypted_part: str):
-    # Формируем ссылку для редиректа
-    redirect_url = f"v2raytun://import/{_public_sub_url(encrypted_part)}"
-
-    # Возвращаем редирект
-    return RedirectResponse(url=redirect_url, status_code=302)
+    return RedirectResponse(url=_happ_add_subscription_deeplink(encrypted_part), status_code=302)
 
 
 @app.get("/import/iphone/happ/{encrypted_part}")
@@ -629,9 +849,10 @@ def encode_numbers(user_id: int, sub_id: int, secret_key: str = "my_secret_key")
 
 
 def decrypt_part(encrypted_data: str) -> str:
-    """Дешифрует данные."""
-    decrypted_data = cipher.decrypt(encrypted_data.encode())
-    return decrypted_data.decode('utf-8')
+    """Дешифрует токен из URL (Fernet). Учитываем unquote и + → пробел у части прокси/клиентов."""
+    normalized = unquote((encrypted_data or "").strip()).replace(" ", "+")
+    decrypted_data = cipher.decrypt(normalized.encode())
+    return decrypted_data.decode("utf-8")
 
 
 @app.post("/sub/{encrypted_part}/auto-renewal/disable")
