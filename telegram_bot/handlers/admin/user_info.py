@@ -154,8 +154,10 @@ async def handle_user_subscriptions(callback_query: CallbackQuery, callback_data
                     f"📶 <b>Статус:</b> {'🟢 <b>Активна</b>' if sub.status == SubscriptionStatusEnum.ACTIVE else '🔴 <b>Истекла</b>'}\n"
                     f"🏷 <b>Автопродление:</b> {'✅ Да' if sub.auto_renewal else '❌ Нет'}\n"
                     f"🔑 <b>Конфиг:</b> <code>{config_link}</code>\n"
-                    f"📲 <b>Для айфона:</b> <code>https://skydragonvpn.ru/import/iphone/{part_link}</code>\n"
-                    f"📲 <b>Для андроида:</b> <code>https://skydragonvpn.ru/import/android/{part_link}</code>\n"
+                    f"📲 <b>Happ (iPhone):</b> <code>https://skydragonvpn.ru/import/iphone/happ/{part_link}</code>\n"
+                    f"📲 <b>Happ (Android):</b> <code>https://skydragonvpn.ru/import/android/happ/{part_link}</code>\n"
+                    f"📲 <b>V2RayTun (iPhone):</b> <code>https://skydragonvpn.ru/import/iphone/v2raytun/{part_link}</code>\n"
+                    f"📲 <b>V2RayTun (Android):</b> <code>https://skydragonvpn.ru/import/android/v2raytun/{part_link}</code>\n"
                     f"📅 <b>Начало:</b> {sub.start_date.strftime('%Y-%m-%d %H:%M')}\n"
                     f"📅 <b>Конец:</b> {sub.end_date.strftime('%Y-%m-%d %H:%M')}\n"
                 )

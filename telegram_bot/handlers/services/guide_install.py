@@ -107,7 +107,8 @@ async def get_install_android(callback_query: CallbackQuery, callback_data: Inst
                 return
 
             part_link = encrypt_part(str(sub.user_id) + "|" + str(subscription_id))
-            url = f"skydragonvpn.ru/import/{name_device.lower()}/{part_link }"
+            slug = "iphone" if name_device == "iPhone" else "android"
+            url = f"https://skydragonvpn.ru/import/{slug}/happ/{part_link}"
         except Exception as e:
             await logger.log_error(f"При получении подписки что-то пошло не так: {e}")
 

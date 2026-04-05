@@ -21,7 +21,6 @@ from db import methods
 from db.db import get_db
 from sub_fetcher import get_sub_from_server, fetch_external_subscription_keys
 
-SUPPORT_URL_ACTIVE = "https://t.me/SkyDragonSupport"
 # Внешние подписки: ключи добавляются к нашим (таймаут 3 сек каждый)
 EXTERNAL_SUB_URLS = [
     "https://sp.vpnlider.online/ndKFYzNwuk2ryHba",
@@ -94,6 +93,32 @@ def _b64(text: str) -> str:
     return f"base64:{base64.b64encode(text.encode('utf-8')).decode('ascii')}"
 
 
+def _subscription_download_headers(
+    *,
+    config_url: str,
+    profile_title_plain: str,
+    expire_unix: int,
+    announce_plain: str,
+    encoded_subscription: str,
+) -> dict[str, str]:
+    """Заголовки ответа подписки: страница профиля/продления на нашем домене (Happ открывает по Support-Url / Profile-Web-Page-Url)."""
+    safe_name = "SkyDragonVPN.txt"
+    return {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Profile-Title": _b64(profile_title_plain),
+        "Profile-Update-Interval": "1",
+        "Subscription-Userinfo": _build_userinfo(expire=expire_unix),
+        "Support-Url": config_url,
+        "Profile-Web-Page-Url": config_url,
+        "Announce": _b64(announce_plain),
+        "Announce-Url": config_url,
+        "X-Subscription-Title": profile_title_plain,
+        "Content-Disposition": f'inline; filename="{safe_name}"',
+        "Cache-Control": "private, no-store",
+        "Content-Length": str(len(encoded_subscription)),
+    }
+
+
 # Короткое название подписки
 PROFILE_TITLE = "SkyDragon🐉"
 PUBLIC_BASE_URL = "https://skydragonvpn.ru"
@@ -107,6 +132,14 @@ CLIENT_USER_AGENTS = (
     "happ",
     "hiddify",
     "v2raytun",
+    "v2rayng",
+    "nekobox",
+    "sing-box",
+    "singbox",
+    "clash",
+    "clashmeta",
+    "flyfrog",  # Happ Desktop (FlyFrog LLC)
+    "happ-proxy",
 )
 
 BROWSER_USER_AGENTS = (
@@ -183,8 +216,8 @@ ANNOUNCE_EXPIRED = "Подписка истекла. Нажмите, чтобы 
 ANNOUNCE_NOT_FOUND = "Подписка удалена или не найдена. Нажмите, чтобы оформить новую. Если подписка оплачена, но статус ещё «истекла», нажмите кнопку 🔁."
 
 SUB_INFO_COLOR = "blue"
-SUB_INFO_ACTIVE = "Если VPN работает нестабильно, смените страну подключения."
-SUB_INFO_BUTTON_ACTIVE = "Для продления нажмите сюда"
+SUB_INFO_ACTIVE = "Если VPN работает нестабильно, смените страну подключения. Продление — на странице подписки."
+SUB_INFO_BUTTON_ACTIVE = "Продлить подписку"
 SUB_INFO_EXPIRED = "Подписка истекла. Нажмите, чтобы продлить."
 SUB_INFO_BUTTON_EXPIRED = "Нажмите, чтобы продлить"
 SUB_INFO_NOT_FOUND = "Подписка удалена или не найдена. Нажмите, чтобы оформить новую."
@@ -196,6 +229,68 @@ def _is_known_client_request(user_agent: Optional[str]) -> bool:
         return False
     ua = user_agent.lower()
     return any(client_ua in ua for client_ua in CLIENT_USER_AGENTS)
+
+
+def _accept_prefers_html(accept: Optional[str]) -> bool:
+    """Первый тип в Accept — text/html (типичный переход из браузера). *//* и text/plain — нет."""
+    if not accept or not accept.strip():
+        return False
+    first = accept.split(",")[0].strip().split(";")[0].strip().lower()
+    return first in ("text/html", "application/xhtml+xml")
+
+
+def _force_raw_subscription(request: Request) -> bool:
+    q = request.query_params
+    return q.get("raw") in ("1", "true", "yes") or q.get("format") in ("raw", "subscription")
+
+
+def _force_web_landing(request: Request) -> bool:
+    """Явно открыть HTML-страницу (например, очень старый браузер без Sec-Fetch-Dest)."""
+    return request.query_params.get("web") in ("1", "true", "yes")
+
+
+def _should_return_html_landing(request: Request) -> bool:
+    """
+    HTML-лендинг только для реальной навигации вкладки (Sec-Fetch-Dest: document).
+    Happ Desktop шлёт Chrome-like UA и иногда Accept с text/html, но без Sec-Fetch — ему нужен base64.
+    """
+    if _force_raw_subscription(request):
+        return False
+    ua = request.headers.get("user-agent", "")
+    accept = request.headers.get("accept")
+    if _force_web_landing(request):
+        return _is_browser_request(ua) and _accept_prefers_html(accept)
+    if _is_known_client_request(ua):
+        return False
+    if not _is_browser_request(ua):
+        return False
+    if not _accept_prefers_html(accept):
+        return False
+    dest_raw = request.headers.get("sec-fetch-dest")
+    if dest_raw is None:
+        # Встроенный браузер Telegram часто без Sec-Fetch-* — показываем лендинг
+        if "telegram" in ua.lower():
+            return True
+        return False
+    dest = dest_raw.lower()
+    mode = (request.headers.get("sec-fetch-mode") or "").lower()
+    if dest == "empty" or mode == "cors":
+        return False
+    return dest in ("document", "iframe", "frame")
+
+
+def _sanitize_proxy_uri_line(line: str) -> str:
+    """Убирает пустой sni= в query (у части клиентов ломает разбор URI)."""
+    if "://" not in line or line.startswith("#"):
+        return line
+    main, sep, fragment = line.partition("#")
+    cleaned = re.sub(r"([?&])sni=(?=[&#]|$)", r"\1", main)
+    cleaned = re.sub(r"\?&+", "?", cleaned)
+    cleaned = re.sub(r"&&+", "&", cleaned)
+    cleaned = cleaned.rstrip("?&")
+    if fragment:
+        return f"{cleaned}#{fragment}"
+    return cleaned
 
 
 def _detect_platform_from_ua(user_agent: Optional[str]) -> str:
@@ -394,7 +489,7 @@ async def get_subscription(
     config_url = _public_sub_url(encrypted_part)
     user_agent = request.headers.get("user-agent", "")
 
-    if _is_browser_request(user_agent) and not _is_known_client_request(user_agent):
+    if _should_return_html_landing(request):
         detected_platform = _detect_platform_from_ua(user_agent)
         apps_by_platform = {}
         for platform, apps in APPS_BY_PLATFORM.items():
@@ -438,16 +533,13 @@ async def get_subscription(
         )
         body = _build_subscription_body([stub_key], state="not_found", profile_url=config_url)
         encoded_subscription = base64.b64encode(body.encode()).decode()
-        headers = {
-            "Content-Type": "text/plain; charset=utf-8",
-            "Profile-Title": _b64(f"{PROFILE_TITLE} — Не найдена"),
-            "Profile-Update-Interval": "1",
-            "Subscription-Userinfo": _build_userinfo(expire=0),
-            "Support-Url": config_url,
-            "Announce": _b64(ANNOUNCE_NOT_FOUND),
-            "Announce-Url": config_url,
-            "Content-Length": str(len(encoded_subscription)),
-        }
+        headers = _subscription_download_headers(
+            config_url=config_url,
+            profile_title_plain=f"{PROFILE_TITLE} — Не найдена",
+            expire_unix=0,
+            announce_plain=ANNOUNCE_NOT_FOUND,
+            encoded_subscription=encoded_subscription,
+        )
         return Response(content=encoded_subscription, headers=headers)
 
     # Подписка есть, но истекла
@@ -459,16 +551,13 @@ async def get_subscription(
         )
         body = _build_subscription_body([stub_key], state="expired", profile_url=config_url)
         encoded_subscription = base64.b64encode(body.encode()).decode()
-        headers = {
-            "Content-Type": "text/plain; charset=utf-8",
-            "Profile-Title": _b64(PROFILE_TITLE),
-            "Profile-Update-Interval": "1",
-            "Subscription-Userinfo": _build_userinfo(expire=expire_unix),
-            "Support-Url": config_url,
-            "Announce": _b64(ANNOUNCE_EXPIRED),
-            "Announce-Url": config_url,
-            "Content-Length": str(len(encoded_subscription)),
-        }
+        headers = _subscription_download_headers(
+            config_url=config_url,
+            profile_title_plain=PROFILE_TITLE,
+            expire_unix=expire_unix,
+            announce_plain=ANNOUNCE_EXPIRED,
+            encoded_subscription=encoded_subscription,
+        )
         return Response(content=encoded_subscription, headers=headers)
 
     encoded_sub_id = encode_numbers(user_id, sub_id)
@@ -495,19 +584,17 @@ async def get_subscription(
     )
     external_keys = [k for keys_list in external_results for k in keys_list]
     keys = [k for key_list in server_results for k in key_list] + external_keys
+    keys = [_sanitize_proxy_uri_line(k) for k in keys]
     body = _build_subscription_body(keys, state="active", profile_url=config_url)
     encoded_subscription = base64.b64encode(body.encode()).decode()
 
-    headers = {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Profile-Title": _b64(PROFILE_TITLE),
-        "Profile-Update-Interval": "1",
-        "Subscription-Userinfo": _build_userinfo(expire=expire_unix),
-        "Support-Url": config_url,
-        "Announce": _b64(ANNOUNCE_ACTIVE),
-        "Announce-Url": config_url,
-        "Content-Length": str(len(encoded_subscription)),
-    }
+    headers = _subscription_download_headers(
+        config_url=config_url,
+        profile_title_plain=PROFILE_TITLE,
+        expire_unix=expire_unix,
+        announce_plain=ANNOUNCE_ACTIVE,
+        encoded_subscription=encoded_subscription,
+    )
     return Response(content=encoded_subscription, headers=headers)
 
 
@@ -561,19 +648,13 @@ async def get_subscription_list(encrypted_part: str, db: Session = Depends(get_d
 
 @app.get("/import/iphone/{encrypted_part}")
 async def import_iphone_legacy(encrypted_part: str):
-    redirect_url = f"v2raytun://import/{_public_sub_url(encrypted_part)}"
-
-    # Возвращаем редирект
-    return RedirectResponse(url=redirect_url, status_code=302)
+    """Короткая ссылка из бота: импорт в Happ (как на iOS/Android с /happ/)."""
+    return RedirectResponse(url=_happ_add_subscription_deeplink(encrypted_part), status_code=302)
 
 
 @app.get("/import/android/{encrypted_part}")
 async def import_android_legacy(encrypted_part: str):
-    # Формируем ссылку для редиректа
-    redirect_url = f"v2raytun://import/{_public_sub_url(encrypted_part)}"
-
-    # Возвращаем редирект
-    return RedirectResponse(url=redirect_url, status_code=302)
+    return RedirectResponse(url=_happ_add_subscription_deeplink(encrypted_part), status_code=302)
 
 
 @app.get("/import/iphone/happ/{encrypted_part}")
