@@ -19,7 +19,9 @@ from starlette.templating import Jinja2Templates
 
 from cfg.config import (
     CRYPTO_KEY,
+    HAPP_NEW_URL,
     HAPP_PROVIDER_ID,
+    HAPP_SUB_INFO_BUTTON_LINK,
     PUBLIC_BASE_URL,
     SHOP_ID,
     SHOP_API_TOKEN,
@@ -155,8 +157,9 @@ def _subscription_download_headers(
     return headers
 
 
-# Короткое название подписки
+# Заголовки HTTP / короткое имя; в теле подписки для Happ — с префиксом 🚀 как у WhyPN
 PROFILE_TITLE = "SkyDragon🐉"
+PROFILE_TITLE_BODY_ACTIVE = "🚀 SkyDragon🐉"
 RU_MONTHS = (
     "янв", "фев", "мар", "апр", "май", "июн",
     "июл", "авг", "сен", "окт", "ноя", "дек",
@@ -249,11 +252,10 @@ APPS_BY_PLATFORM = {
 ANNOUNCE_EXPIRED = "Подписка истекла. Нажмите, чтобы продлить. Если подписка оплачена, но статус ещё «истекла», нажмите кнопку 🔁."
 ANNOUNCE_NOT_FOUND = "Подписка удалена или не найдена. Нажмите, чтобы оформить новую. Если подписка оплачена, но статус ещё «истекла», нажмите кнопку 🔁."
 
-# sub-info: как у WhyPN — в теле подписки plain UTF-8 (не base64:). Кнопка ≤25 символов (док Happ).
+# sub-info: как у WhyPN — plain UTF-8 в теле; кнопка ≤25 символов (док Happ).
 SUB_INFO_COLOR = "blue"
 SUB_INFO_ACTIVE = (
-    "Поддержка SkyDragon работает 24/7. Напишите нам, если что-то не работает. "
-    "Продлить подписку — на странице профиля (иконка ссылки слева)."
+    "Поддержка SkyDragon работает 24/7. Напишите нам, если у вас что-то не работает"
 )
 SUB_INFO_BUTTON_ACTIVE = "Написать в поддержку 💬"
 SUB_INFO_EXPIRED = "Срок подписки закончился. Продлите на странице профиля, чтобы снова пользоваться VPN."
@@ -271,14 +273,33 @@ def _now_msk_time_str() -> str:
         return datetime.now(msk).strftime("%d.%m.%Y %H:%M")
 
 
-def _happ_subscription_extra_meta_lines() -> list[str]:
-    """Доп. поля в духе WhyPN / Happ (#providerid задаётся отдельно сразу после sub-info)."""
-    return [
-        "#subscription-auto-update-open-enable: 0",
-        "#subscriptions-collapse: 0",
-        "#hide-settings: 1",
-        "#ping-type tcp",
-    ]
+def _happ_new_url_line(profile_url: str) -> list[str]:
+    """#new-url — зеркало; если HAPP_NEW_URL пусто, подставляем URL этой подписки."""
+    u = (HAPP_NEW_URL or "").strip() or profile_url
+    return [f"#new-url {u}"] if u else []
+
+
+def _happ_meta_block_like_whypn(*, profile_url: str, provider_id: str, profile_title_line: str) -> list[str]:
+    """
+    Порядок как у WhyPN: sub-info → providerid → new-url → auto-update → hwid → collapse
+    → profile-title → hide-settings → ping-type
+    """
+    prov = provider_id.strip()
+    lines: list[str] = []
+    if prov:
+        lines.append(f"#providerid {prov}")
+    lines.extend(_happ_new_url_line(profile_url))
+    lines.extend(
+        [
+            "#subscription-auto-update-open-enable: 0",
+            "#subscription-always-hwid-enable: 1",
+            "#subscriptions-collapse: 0",
+            f"#profile-title: {profile_title_line}",
+            "#hide-settings: 1",
+            "#ping-type tcp",
+        ]
+    )
+    return lines
 
 
 def _outer_base64_payload(inner_utf8: str) -> bytes:
@@ -491,58 +512,54 @@ def _build_subscription_body(
     *,
     state: Literal["active", "expired", "not_found"],
     profile_url: str,
-    support_url: str,
+    sub_info_button_link: str,
     msk_time: str,
     provider_id: str,
 ) -> tuple[str, str]:
     """
-    Внутренний текст подписки (как у WhyPN): sub-info plain UTF-8; #announce — base64:.
-    Без #providerid в теле Happ не включает Advanced Announcements (док happ-proxy).
+    Внутренний текст подписки: порядок #мета как у WhyPN; sub-info plain UTF-8; #announce — base64:.
     """
-    extra = _happ_subscription_extra_meta_lines()
     prov = provider_id.strip()
-    provider_line = [f"#providerid {prov}"] if prov else []
 
     if state == "active":
         announce_plain = (
             f"Обновлено {msk_time} МСК. Продление — на странице подписки.\n"
             "Потяните вниз, чтобы получить актуальный список серверов."
         )
-        meta = [
+        profile_title_body = PROFILE_TITLE_BODY_ACTIVE
+        meta_head = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
             f"#sub-info-text: {SUB_INFO_ACTIVE}",
             f"#sub-info-button-text: {SUB_INFO_BUTTON_ACTIVE}",
-            f"#sub-info-button-link: {support_url}",
-            *provider_line,
-            *extra,
-            f"#profile-title: {PROFILE_TITLE}",
+            f"#sub-info-button-link: {sub_info_button_link}",
         ]
         announce_url = profile_url
     elif state == "expired":
         announce_plain = f"{ANNOUNCE_EXPIRED}\nВремя проверки: {msk_time} МСК."
-        meta = [
+        profile_title_body = f"{PROFILE_TITLE_BODY_ACTIVE} — Истекла"
+        meta_head = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
             f"#sub-info-text: {SUB_INFO_EXPIRED}",
             f"#sub-info-button-text: {SUB_INFO_BUTTON_EXPIRED}",
-            f"#sub-info-button-link: {profile_url}",
-            *provider_line,
-            *extra,
-            f"#profile-title: {PROFILE_TITLE} — Истекла",
+            f"#sub-info-button-link: {sub_info_button_link}",
         ]
         announce_url = profile_url
     else:
         announce_plain = f"{ANNOUNCE_NOT_FOUND}\nПроверено: {msk_time} МСК."
-        meta = [
+        profile_title_body = f"{PROFILE_TITLE_BODY_ACTIVE} — Не найдена"
+        meta_head = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
             f"#sub-info-text: {SUB_INFO_NOT_FOUND}",
             f"#sub-info-button-text: {SUB_INFO_BUTTON_NOT_FOUND}",
-            f"#sub-info-button-link: {profile_url}",
-            *provider_line,
-            *extra,
-            f"#profile-title: {PROFILE_TITLE} — Не найдена",
+            f"#sub-info-button-link: {sub_info_button_link}",
         ]
         announce_url = profile_url
 
+    meta = meta_head + _happ_meta_block_like_whypn(
+        profile_url=profile_url,
+        provider_id=prov,
+        profile_title_line=profile_title_body,
+    )
     announce_block = _b64(announce_plain)
     lines = meta + [""] + keys + ["", f"#announce: {announce_block}", f"#announce-url: {announce_url}"]
     return "\n".join(lines), announce_plain
@@ -615,7 +632,7 @@ async def get_subscription(
             [stub_key],
             state="not_found",
             profile_url=config_url,
-            support_url=TELEGRAM_SUPPORT_URL,
+            sub_info_button_link=config_url,
             msk_time=msk_time,
             provider_id=HAPP_PROVIDER_ID,
         )
@@ -644,7 +661,7 @@ async def get_subscription(
             [stub_key],
             state="expired",
             profile_url=config_url,
-            support_url=TELEGRAM_SUPPORT_URL,
+            sub_info_button_link=config_url,
             msk_time=msk_time,
             provider_id=HAPP_PROVIDER_ID,
         )
@@ -691,7 +708,7 @@ async def get_subscription(
         keys,
         state="active",
         profile_url=config_url,
-        support_url=TELEGRAM_SUPPORT_URL,
+        sub_info_button_link=HAPP_SUB_INFO_BUTTON_LINK,
         msk_time=msk_time,
         provider_id=HAPP_PROVIDER_ID,
     )

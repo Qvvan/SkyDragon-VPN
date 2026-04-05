@@ -23,5 +23,11 @@ SHOP_API_TOKEN = env.str("SHOP_API_TOKEN", "")
 
 # Happ: Advanced Announcements (#sub-info-*) требуют Provider ID с happ-proxy.com
 HAPP_PROVIDER_ID = env.str("HAPP_PROVIDER_ID", "jHgJdo4s").strip()
+# Альтернативный URL подписки для #new-url (CDN и т.д.). Пусто — в тело подставится URL этой же подписки.
+HAPP_NEW_URL = env.str("HAPP_NEW_URL", "").strip()
+# Кнопка sub-info (как ?start=help_happ у WhyPN)
+HAPP_SUB_INFO_BUTTON_LINK = env.str("HAPP_SUB_INFO_BUTTON_LINK", "").strip() or (
+    f"{TELEGRAM_SUPPORT_URL}?start=help_happ"
+)
 # Шкала трафика в Happ (байты): при total=0 клиент часто не рисует шкалу; по умолчанию 1 ТиБ как «безлимит»
 SUBSCRIPTION_USERINFO_TOTAL_BYTES = env.int("SUBSCRIPTION_USERINFO_TOTAL_BYTES", 1099511627776)
