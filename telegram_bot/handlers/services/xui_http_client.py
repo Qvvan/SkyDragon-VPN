@@ -318,7 +318,16 @@ class XuiPanelHttpClient:
             if obj is None:
                 return []
             if isinstance(obj, str):
-                obj = json.loads(obj)
+                raw_obj = obj.strip()
+                if not raw_obj:
+                    return []
+                try:
+                    obj = json.loads(raw_obj)
+                except json.JSONDecodeError:
+                    await logger.warning(
+                        f"clientIps вернул не-JSON для {client_id[:50]}: {raw_obj[:120]}"
+                    )
+                    return []
             if isinstance(obj, list):
                 ips: list[str] = []
                 for x in obj:
