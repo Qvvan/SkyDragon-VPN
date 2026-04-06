@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta
 
 from aiogram import Router, types
@@ -9,6 +10,7 @@ from config_data.config import ADMIN_IDS
 from database.context_manager import DatabaseContextManager
 from filters.admin import IsAdmin
 from handlers.services.extend_latest_subscription import extend_user_subscription
+from handlers.services.key_operations_background import create_keys_background, update_keys_background
 from keyboards.kb_inline import InlineKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
@@ -128,10 +130,14 @@ async def process_notification_preference(message: types.Message, state: FSMCont
         async with DatabaseContextManager() as session_methods:
             user = await session_methods.users.get_user(user_id)
             user_was_created = False
+            had_subscriptions_before_issue = False
             if not user:
                 user = Users(user_id=user_id, username=None)
                 if await session_methods.users.add_user(user):
                     user_was_created = True
+            else:
+                existing_subs = await session_methods.subscription.get_subscription(user_id)
+                had_subscriptions_before_issue = bool(existing_subs)
 
             if issue_mode == "new":
                 subscription = await session_methods.subscription.create_sub(
@@ -189,6 +195,28 @@ async def process_notification_preference(message: types.Message, state: FSMCont
                 f"Уведомление: {'да' if notify_user else 'нет'}\n"
                 f"Профиль создан: {'да' if user_was_created else 'нет'}"
             )
+
+            # Для админской выдачи важно синхронизировать ключи сразу после коммита подписки:
+            # - новая подписка или продление без существующей подписки -> создание ключей
+            # - продление существующей подписки -> включение/обновление ключей
+            if issue_mode == "new" or not had_subscriptions_before_issue:
+                asyncio.create_task(
+                    create_keys_background(
+                        user_id=user_id,
+                        username=user.username or "",
+                        subscription_id=subscription.subscription_id,
+                        expiry_days=0,
+                    )
+                )
+            else:
+                asyncio.create_task(
+                    update_keys_background(
+                        user_id=user_id,
+                        subscription_id=subscription.subscription_id,
+                        status=True,
+                    )
+                )
+
             result_mode_text = "Создана новая отдельная подписка." if issue_mode == "new" else "Подписка продлена."
             if user_was_created:
                 await message.answer(
