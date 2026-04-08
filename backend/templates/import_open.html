@@ -130,6 +130,11 @@
       width: 100%;
       justify-content: center;
     }
+    .download-hint {
+      margin: 0.15rem 0 0.05rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
     .manual {
       margin-top: 0.9rem;
       border-top: 1px dashed var(--border);
@@ -182,16 +187,22 @@
         <p>Тогда используйте ручную установку:</p>
         <ol class="steps-list">
           <li>Нажмите <strong>Скачать</strong> и установите Happ.</li>
-          <li>Откройте ручную установку кнопкой ниже.</li>
-          <li>Скопируйте ссылку и вставьте ее в импорт в приложении.</li>
+          <li>Скопируйте ссылку ниже.</li>
+          <li>Вставьте ее в импорт в приложении.</li>
         </ol>
         <div class="download-list">
-          {% if apps_for_platform and apps_for_platform[0] %}
-          <a class="btn btn-secondary" href="{{ apps_for_platform[0].store_url }}" target="_blank" rel="noopener">Скачать</a>
+          {% if apps_for_platform %}
+          {% if apps_for_platform|length > 1 %}
+          <p class="download-hint">Выберите один вариант: RU или EU</p>
           {% endif %}
-          <button id="btn-manual-toggle" class="btn btn-secondary" type="button">Ручная установка</button>
+          {% for app in apps_for_platform %}
+          <a class="btn btn-secondary" href="{{ app.store_url }}" target="_blank" rel="noopener">
+            Скачать{% if apps_for_platform|length > 1 %} {% if "RU" in app.app_name %}RU{% else %}EU{% endif %}{% endif %}
+          </a>
+          {% endfor %}
+          {% endif %}
         </div>
-        <section class="manual" id="manual-block">
+        <section class="manual visible" id="manual-block">
           <div class="url-box">
             <input id="config-url" type="text" value="{{ manual_config_url }}" readonly>
             <button type="button" id="btn-copy" class="btn">Копировать ссылку</button>
@@ -205,8 +216,6 @@
     (function () {
       const deepLinkUrl = {{ deeplink_url | tojson }};
       const btnOpen = document.getElementById('btn-open');
-      const btnManualToggle = document.getElementById('btn-manual-toggle');
-      const manualBlock = document.getElementById('manual-block');
       const btnCopy = document.getElementById('btn-copy');
       const configUrl = document.getElementById('config-url');
       const copyOk = document.getElementById('copy-ok');
@@ -217,9 +226,6 @@
 
       setTimeout(tryOpen, 150);
       btnOpen.addEventListener('click', tryOpen);
-      btnManualToggle.addEventListener('click', function () {
-        manualBlock.classList.toggle('visible');
-      });
 
       btnCopy.addEventListener('click', function () {
         const text = configUrl.value;

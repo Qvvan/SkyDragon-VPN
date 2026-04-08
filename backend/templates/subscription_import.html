@@ -736,6 +736,11 @@
       padding-left: 1rem;
       padding-right: 1rem;
     }
+    .download-hint {
+      margin: 0.2rem 0 0.25rem;
+      font-size: 0.82rem;
+      color: var(--text-soft);
+    }
     .other-device {
       margin-top: 1rem;
       border: 1px solid var(--border);
@@ -1068,7 +1073,14 @@
           </div>
           <div class="btn-row" style="margin-top:0.35rem;">
             {% if primary_platform.apps %}
-            <a class="btn btn-secondary" href="{{ primary_platform.apps[0].store_url }}" target="_blank" rel="noopener">Скачать</a>
+            {% if primary_platform.apps|length > 1 %}
+            <p class="download-hint">Выберите один вариант: RU или EU</p>
+            {% endif %}
+            {% for app in primary_platform.apps %}
+            <a class="btn btn-secondary" href="{{ app.store_url }}" target="_blank" rel="noopener">
+              Скачать{% if primary_platform.apps|length > 1 %} {% if "RU" in app.app_name %}RU{% else %}EU{% endif %}{% endif %}
+            </a>
+            {% endfor %}
             {% endif %}
           </div>
           <div class="step">
@@ -1089,7 +1101,14 @@
               <div class="alt-platform__title">{{ alt.label }}</div>
               <div class="btn-row" style="margin-top:0;">
                 {% if alt.apps %}
-                <a class="btn btn-secondary" href="{{ alt.apps[0].store_url }}" target="_blank" rel="noopener">Скачать</a>
+                {% if alt.apps|length > 1 %}
+                <p class="download-hint">Выберите один вариант: RU или EU</p>
+                {% endif %}
+                {% for app in alt.apps %}
+                <a class="btn btn-secondary" href="{{ app.store_url }}" target="_blank" rel="noopener">
+                  Скачать{% if alt.apps|length > 1 %} {% if "RU" in app.app_name %}RU{% else %}EU{% endif %}{% endif %}
+                </a>
+                {% endfor %}
                 <a class="btn" href="{{ alt.apps[0].import_url }}">Импортировать</a>
                 {% endif %}
               </div>
