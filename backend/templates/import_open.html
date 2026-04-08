@@ -144,15 +144,15 @@
 <body>
   <main class="card">
     <section class="hero">
-      <h1>Пробуем открыть приложение на {{ platform_label }}</h1>
-      <p>Если приложение не открылось автоматически, нажмите кнопку еще раз. Ниже есть ручной режим и установка приложения.</p>
+      <h1>Открываем приложение</h1>
+      <p>1. Нажмите «Импортировать». 2. Если не сработало, откройте ручной режим ниже.</p>
     </section>
 
     <section class="layout">
       <section class="panel">
         <h2 class="panel-title">Запуск приложения</h2>
         <div class="btn-row">
-          <button id="btn-open" class="btn" type="button">{{ open_app_label }}</button>
+          <button id="btn-open" class="btn" type="button">Импортировать</button>
           <a class="btn btn-secondary" href="{{ telegram_support_url }}" target="_blank" rel="noopener">Техподдержка</a>
         </div>
         <div class="btn-row">
@@ -179,7 +179,7 @@
         <p>Если приложения нет или оно не настроено, установите его и вернитесь к импорту.</p>
         <div class="download-list">
           {% for app in apps_for_platform %}
-          <a class="btn btn-secondary" href="{{ app.store_url }}" target="_blank" rel="noopener">Скачать {{ app.app_name }}</a>
+          <a class="btn btn-secondary" href="{{ app.store_url }}" target="_blank" rel="noopener">Скачать</a>
           {% endfor %}
         </div>
       </section>

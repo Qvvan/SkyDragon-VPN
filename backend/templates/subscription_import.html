@@ -701,13 +701,40 @@
       margin-top: 0.95rem;
       padding: 0.95rem;
       border: 1px solid rgba(59, 130, 246, 0.25);
-      background: rgba(59, 130, 246, 0.08);
+      background: linear-gradient(160deg, rgba(59, 130, 246, 0.14), rgba(59, 130, 246, 0.04));
       border-radius: var(--radius-sm);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
     }
     .install-caption {
-      font-size: 0.82rem;
+      font-size: 0.84rem;
       color: var(--text-soft);
       margin: 0 0 0.6rem 0;
+    }
+    .download-grid {
+      display: grid;
+      gap: 0.65rem;
+      margin-top: 0.75rem;
+    }
+    .download-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+      padding: 0.75rem 0.8rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: rgba(17, 21, 29, 0.8);
+    }
+    .download-item__name {
+      font-size: 0.86rem;
+      color: var(--text-muted);
+      margin: 0;
+      max-width: 60%;
+    }
+    .download-item .btn {
+      min-width: 9rem;
+      padding-left: 1rem;
+      padding-right: 1rem;
     }
     .other-device {
       margin-top: 1rem;
@@ -1039,9 +1066,12 @@
             <span class="step-num">1</span>
             <span class="step-content">Скачайте приложение для {{ primary_platform.label }}</span>
           </div>
-          <div class="btn-row">
+          <div class="download-grid">
             {% for app in primary_platform.apps %}
-            <a class="btn btn-secondary" href="{{ app.store_url }}" target="_blank" rel="noopener">{{ app.app_name }}</a>
+            <div class="download-item">
+              <p class="download-item__name">{{ app.app_name }}</p>
+              <a class="btn btn-secondary" href="{{ app.store_url }}" target="_blank" rel="noopener">Скачать</a>
+            </div>
             {% endfor %}
           </div>
           <div class="step">
@@ -1050,10 +1080,10 @@
           </div>
         </div>
         <div class="quick-install-actions">
-          <p class="install-caption">Импорт для {{ primary_platform.label }} один и тот же, независимо от версии приложения.</p>
+          <p class="install-caption">Шаг 2. Нажмите кнопку, чтобы импортировать профиль в приложение.</p>
           <div class="btn-row" style="margin-top:0;">
             {% if primary_platform.apps %}
-            <a class="btn" href="{{ primary_platform.apps[0].import_url }}">Импортировать профиль</a>
+            <a class="btn" href="{{ primary_platform.apps[0].import_url }}">Импортировать</a>
             {% endif %}
           </div>
         </div>
@@ -1063,12 +1093,17 @@
             {% for alt in alternative_platforms %}
             <div class="alt-platform">
               <div class="alt-platform__title">{{ alt.label }}</div>
-              <div class="btn-row" style="margin-top:0;">
+              <div class="download-grid" style="margin-top:0;">
                 {% for app in alt.apps %}
-                <a class="btn btn-secondary" href="{{ app.store_url }}" target="_blank" rel="noopener">Скачать {{ app.app_name }}</a>
+                <div class="download-item">
+                  <p class="download-item__name">{{ app.app_name }}</p>
+                  <a class="btn btn-secondary" href="{{ app.store_url }}" target="_blank" rel="noopener">Скачать</a>
+                </div>
                 {% endfor %}
+              </div>
+              <div class="btn-row" style="margin-top:0.6rem;">
                 {% if alt.apps %}
-                <a class="btn" href="{{ alt.apps[0].import_url }}">Импортировать профиль</a>
+                <a class="btn" href="{{ alt.apps[0].import_url }}">Импортировать</a>
                 {% endif %}
               </div>
             </div>
