@@ -4,44 +4,85 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Открытие приложения</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #060708;
-      --card: #12151a;
-      --border: #2a2f38;
-      --text: #eef0f4;
-      --muted: #9aa3b2;
-      --accent: #3b82f6;
-      --accent-hover: #2563eb;
-      --radius: 12px;
+      --bg: #07090d;
+      --bg-soft: #0f131b;
+      --card: rgba(14, 19, 27, 0.85);
+      --border: #273243;
+      --text: #eef3ff;
+      --muted: #9ba9c4;
+      --accent: #4f8cff;
+      --accent-hover: #3e73d8;
+      --ok: #10b981;
+      --radius: 14px;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      font-family: "Onest", "Segoe UI", sans-serif;
       color: var(--text);
-      background: var(--bg);
+      background:
+        radial-gradient(circle at 15% 10%, rgba(79, 140, 255, 0.24), transparent 40%),
+        radial-gradient(circle at 85% 90%, rgba(16, 185, 129, 0.12), transparent 35%),
+        var(--bg);
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 1rem;
+      padding: 1.2rem;
     }
     .card {
-      width: min(760px, 100%);
+      width: min(900px, 100%);
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 1.25rem;
+      box-shadow: 0 24px 50px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(8px);
+      padding: 1.2rem;
     }
-    h1 { margin: 0 0 0.5rem 0; font-size: 1.2rem; }
-    p { margin: 0 0 0.8rem 0; color: var(--muted); }
-    .btn-row { display: flex; gap: 0.7rem; flex-wrap: wrap; margin-top: 0.8rem; }
+    .hero {
+      margin-bottom: 1rem;
+      padding: 1rem;
+      border: 1px solid rgba(79, 140, 255, 0.35);
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(79, 140, 255, 0.16), rgba(79, 140, 255, 0.04));
+    }
+    h1 {
+      margin: 0 0 0.55rem 0;
+      font-family: "Manrope", "Onest", sans-serif;
+      font-size: clamp(1.15rem, 2.2vw, 1.45rem);
+      letter-spacing: -0.02em;
+    }
+    p { margin: 0 0 0.8rem 0; color: var(--muted); line-height: 1.55; }
+    .layout {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: 1.2fr 1fr;
+    }
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--bg-soft);
+      padding: 0.95rem;
+      min-height: 100%;
+    }
+    .panel-title {
+      margin: 0 0 0.75rem 0;
+      font-size: 1rem;
+      font-family: "Manrope", "Onest", sans-serif;
+      letter-spacing: -0.02em;
+    }
+    .btn-row { display: flex; gap: 0.65rem; flex-wrap: wrap; margin-top: 0.6rem; }
     .btn {
       border: none;
-      border-radius: 10px;
+      border-radius: 11px;
       padding: 0.7rem 1rem;
-      font-size: 0.93rem;
+      font-size: 0.9rem;
+      font-weight: 600;
       cursor: pointer;
       text-decoration: none;
       color: #fff;
@@ -50,16 +91,38 @@
       align-items: center;
       justify-content: center;
       min-height: 44px;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    }
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(79, 140, 255, 0.25);
     }
     .btn-secondary {
-      background: #1a1e25;
+      background: #161d2a;
       border: 1px solid var(--border);
       color: var(--text);
     }
-    .download-list { margin-top: 0.8rem; display: grid; gap: 0.55rem; }
-    .hint { margin-top: 1rem; }
-    .manual { margin-top: 1rem; border-top: 1px dashed var(--border); padding-top: 1rem; display: none; }
+    .btn-secondary:hover {
+      box-shadow: none;
+      filter: brightness(1.07);
+    }
+    .download-list { margin-top: 0.75rem; display: grid; gap: 0.55rem; }
+    .manual {
+      margin-top: 0.9rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.9rem;
+      display: none;
+    }
     .manual.visible { display: block; }
+    .manual-steps {
+      margin: 0;
+      padding-left: 1.15rem;
+      color: var(--muted);
+    }
+    .manual-steps li {
+      margin-bottom: 0.45rem;
+      line-height: 1.5;
+    }
     .url-box { display: flex; gap: 0.55rem; flex-wrap: wrap; margin-top: 0.6rem; }
     .url-box input {
       flex: 1 1 14rem;
@@ -71,37 +134,55 @@
       font-family: ui-monospace, Consolas, monospace;
       font-size: 0.78rem;
     }
-    .copy-ok { color: #10b981; margin-top: 0.45rem; font-size: 0.85rem; display: none; }
+    .copy-ok { color: var(--ok); margin-top: 0.45rem; font-size: 0.85rem; display: none; }
     .copy-ok.visible { display: block; }
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
   <main class="card">
-    <h1>Пробуем открыть приложение на {{ platform_label }}</h1>
-    <p>Если приложение не открылось автоматически, нажмите кнопку повторно.</p>
-    <div class="btn-row">
-      <button id="btn-open" class="btn" type="button">{{ open_app_label }}</button>
-      <a class="btn btn-secondary" href="{{ telegram_support_url }}" target="_blank" rel="noopener">Техподдержка</a>
-    </div>
+    <section class="hero">
+      <h1>Пробуем открыть приложение на {{ platform_label }}</h1>
+      <p>Если приложение не открылось автоматически, нажмите кнопку еще раз. Ниже есть ручной режим и установка приложения.</p>
+    </section>
 
-    <div class="hint">
-      <button id="btn-manual-toggle" class="btn btn-secondary" type="button">Если не переходит в приложение — ручной режим</button>
-    </div>
+    <section class="layout">
+      <section class="panel">
+        <h2 class="panel-title">Запуск приложения</h2>
+        <div class="btn-row">
+          <button id="btn-open" class="btn" type="button">{{ open_app_label }}</button>
+          <a class="btn btn-secondary" href="{{ telegram_support_url }}" target="_blank" rel="noopener">Техподдержка</a>
+        </div>
+        <div class="btn-row">
+          <button id="btn-manual-toggle" class="btn btn-secondary" type="button">Если не переходит в приложение — ручной режим</button>
+        </div>
+        <section class="manual" id="manual-block">
+          <h3 class="panel-title" style="font-size:0.95rem;margin-bottom:0.55rem;">Ручная установка</h3>
+          <ol class="manual-steps">
+            <li>Скопируйте ссылку подписки.</li>
+            <li>Откройте приложение VPN.</li>
+            <li>Выберите «Импорт по ссылке» или «Импорт из буфера».</li>
+            <li>Вставьте ссылку и сохраните профиль.</li>
+          </ol>
+          <div class="url-box">
+            <input id="config-url" type="text" value="{{ manual_config_url }}" readonly>
+            <button type="button" id="btn-copy" class="btn btn-secondary">Копировать ссылку</button>
+          </div>
+          <div id="copy-ok" class="copy-ok">Ссылка скопирована.</div>
+        </section>
+      </section>
 
-    <div class="download-list">
-      {% for app in apps_for_platform %}
-      <a class="btn btn-secondary" href="{{ app.store_url }}" target="_blank" rel="noopener">Скачать {{ app.app_name }}</a>
-      {% endfor %}
-    </div>
-
-    <section class="manual" id="manual-block">
-      <h2 style="font-size:1rem;margin:0 0 0.5rem 0;">Ручная установка</h2>
-      <p>1. Скопируйте ссылку ниже. 2. Откройте приложение. 3. Выберите импорт по ссылке/из буфера и вставьте ее.</p>
-      <div class="url-box">
-        <input id="config-url" type="text" value="{{ manual_config_url }}" readonly>
-        <button type="button" id="btn-copy" class="btn btn-secondary">Копировать ссылку</button>
-      </div>
-      <div id="copy-ok" class="copy-ok">Ссылка скопирована.</div>
+      <section class="panel">
+        <h2 class="panel-title">Скачать приложение</h2>
+        <p>Если приложения нет или оно не настроено, установите его и вернитесь к импорту.</p>
+        <div class="download-list">
+          {% for app in apps_for_platform %}
+          <a class="btn btn-secondary" href="{{ app.store_url }}" target="_blank" rel="noopener">Скачать {{ app.app_name }}</a>
+          {% endfor %}
+        </div>
+      </section>
     </section>
   </main>
   <script>

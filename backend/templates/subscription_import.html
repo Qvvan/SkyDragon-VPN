@@ -697,6 +697,54 @@
       line-height: 1.58;
       max-width: 58ch;
     }
+    .quick-install-actions {
+      margin-top: 0.95rem;
+      padding: 0.95rem;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      background: rgba(59, 130, 246, 0.08);
+      border-radius: var(--radius-sm);
+    }
+    .install-caption {
+      font-size: 0.82rem;
+      color: var(--text-soft);
+      margin: 0 0 0.6rem 0;
+    }
+    .other-device {
+      margin-top: 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.01);
+      overflow: hidden;
+    }
+    .other-device summary {
+      list-style: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 0.8rem 0.95rem;
+      border-bottom: 1px solid transparent;
+    }
+    .other-device summary::-webkit-details-marker { display: none; }
+    .other-device[open] summary {
+      color: var(--text);
+      border-bottom-color: var(--border);
+    }
+    .other-device__body {
+      padding: 0.8rem 0.95rem 0.2rem;
+    }
+    .alt-platform {
+      margin-bottom: 0.8rem;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-input);
+    }
+    .alt-platform__title {
+      font-size: 0.9rem;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+      font-weight: 600;
+    }
     .renew-action-row {
       margin-bottom: 1rem;
     }
@@ -1001,22 +1049,27 @@
             <span class="step-content">Импортируйте профиль в приложение</span>
           </div>
         </div>
-        <div class="btn-row">
-          {% for app in primary_platform.apps %}
-          <a class="btn" href="{{ app.import_url }}">Импортировать в {{ app.app_name }}</a>
-          {% endfor %}
+        <div class="quick-install-actions">
+          <p class="install-caption">Импорт для {{ primary_platform.label }} один и тот же, независимо от версии приложения.</p>
+          <div class="btn-row" style="margin-top:0;">
+            {% if primary_platform.apps %}
+            <a class="btn" href="{{ primary_platform.apps[0].import_url }}">Импортировать профиль</a>
+            {% endif %}
+          </div>
         </div>
-        <details style="margin-top: 1rem;">
-          <summary style="cursor:pointer;color:var(--text-muted);">Это другое устройство</summary>
-          <div style="margin-top:0.75rem;">
+        <details class="other-device">
+          <summary>Это другое устройство</summary>
+          <div class="other-device__body">
             {% for alt in alternative_platforms %}
-            <div style="margin-bottom:0.85rem;padding:0.75rem;border:1px solid var(--border);border-radius:var(--radius-sm);">
-              <div style="font-size:0.9rem;color:var(--text);margin-bottom:0.45rem;">{{ alt.label }}</div>
+            <div class="alt-platform">
+              <div class="alt-platform__title">{{ alt.label }}</div>
               <div class="btn-row" style="margin-top:0;">
                 {% for app in alt.apps %}
                 <a class="btn btn-secondary" href="{{ app.store_url }}" target="_blank" rel="noopener">Скачать {{ app.app_name }}</a>
-                <a class="btn" href="{{ app.import_url }}">Импорт</a>
                 {% endfor %}
+                {% if alt.apps %}
+                <a class="btn" href="{{ alt.apps[0].import_url }}">Импортировать профиль</a>
+                {% endif %}
               </div>
             </div>
             {% endfor %}
@@ -1151,11 +1204,9 @@
   {% if sub_info and sub_info.status_key == 'active' %}
   <script>
     (function() {
-      const appEmpty = document.getElementById('app-empty');
       const configUrlInput = document.getElementById('config-url');
       const btnCopy = document.getElementById('btn-copy');
       const copyOk = document.getElementById('copy-ok');
-      if (appEmpty) appEmpty.style.display = 'none';
       if (!btnCopy || !configUrlInput || !copyOk) return;
       btnCopy.addEventListener('click', function() {
         configUrlInput.select();
