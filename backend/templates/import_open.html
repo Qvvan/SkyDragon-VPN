@@ -76,6 +76,19 @@
       font-family: "Manrope", "Onest", sans-serif;
       letter-spacing: -0.02em;
     }
+    .steps-list {
+      margin: 0;
+      padding-left: 1.2rem;
+      color: var(--muted);
+    }
+    .steps-list li {
+      margin-bottom: 0.5rem;
+      line-height: 1.55;
+    }
+    .steps-list strong {
+      color: var(--text);
+      font-weight: 600;
+    }
     .btn-row { display: flex; gap: 0.65rem; flex-wrap: wrap; margin-top: 0.6rem; }
     .btn {
       border: none;
@@ -124,15 +137,6 @@
       display: none;
     }
     .manual.visible { display: block; }
-    .manual-steps {
-      margin: 0;
-      padding-left: 1.15rem;
-      color: var(--muted);
-    }
-    .manual-steps li {
-      margin-bottom: 0.45rem;
-      line-height: 1.5;
-    }
     .url-box { display: flex; gap: 0.55rem; flex-wrap: wrap; margin-top: 0.6rem; }
     .url-box input {
       flex: 1 1 14rem;
@@ -155,45 +159,45 @@
   <main class="card">
     <section class="hero">
       <h1>Открываем приложение</h1>
-      <p>1. Нажмите «Импортировать». 2. Если не сработало, откройте ручной режим.</p>
+      <p>Если не получилось с первого раза, просто пройдите шаги ниже.</p>
     </section>
 
     <section class="layout">
       <section class="panel">
-        <h2 class="panel-title">Шаг 1. Импорт</h2>
+        <h2 class="panel-title">Если не сработало</h2>
+        <ol class="steps-list">
+          <li>Убедитесь, что установлено приложение <strong>Happ</strong>.</li>
+          <li>Нажмите кнопку <strong>Импортировать</strong> еще раз.</li>
+        </ol>
         <div class="btn-row">
           <button id="btn-open" class="btn" type="button">Импортировать</button>
         </div>
-        <div class="btn-row">
-          <button id="btn-manual-toggle" class="btn btn-secondary" type="button">Если не переходит в приложение — ручной режим</button>
-        </div>
-        <section class="manual" id="manual-block">
-          <h3 class="panel-title" style="font-size:0.95rem;margin-bottom:0.55rem;">Ручная установка</h3>
-          <ol class="manual-steps">
-            <li>Скопируйте ссылку подписки.</li>
-            <li>Откройте приложение VPN.</li>
-            <li>Выберите «Импорт по ссылке» или «Импорт из буфера».</li>
-            <li>Вставьте ссылку и сохраните профиль.</li>
-          </ol>
-          <div class="url-box">
-            <input id="config-url" type="text" value="{{ manual_config_url }}" readonly>
-            <button type="button" id="btn-copy" class="btn btn-secondary">Копировать ссылку</button>
-          </div>
-          <div id="copy-ok" class="copy-ok">Ссылка скопирована.</div>
-        </section>
         <div class="btn-row" style="margin-top:0.9rem;">
           <a class="btn btn-ghost" href="{{ telegram_support_url }}" target="_blank" rel="noopener">Техподдержка</a>
         </div>
       </section>
 
       <section class="panel">
-        <h2 class="panel-title">Шаг 2. Скачать</h2>
-        <p>Если приложение еще не установлено, скачайте его.</p>
+        <h2 class="panel-title">Если не помогло</h2>
+        <p>Тогда используйте ручную установку:</p>
+        <ol class="steps-list">
+          <li>Нажмите <strong>Скачать</strong> и установите Happ.</li>
+          <li>Откройте ручную установку кнопкой ниже.</li>
+          <li>Скопируйте ссылку и вставьте ее в импорт в приложении.</li>
+        </ol>
         <div class="download-list">
           {% if apps_for_platform and apps_for_platform[0] %}
           <a class="btn btn-secondary" href="{{ apps_for_platform[0].store_url }}" target="_blank" rel="noopener">Скачать</a>
           {% endif %}
+          <button id="btn-manual-toggle" class="btn btn-secondary" type="button">Ручная установка</button>
         </div>
+        <section class="manual" id="manual-block">
+          <div class="url-box">
+            <input id="config-url" type="text" value="{{ manual_config_url }}" readonly>
+            <button type="button" id="btn-copy" class="btn">Копировать ссылку</button>
+          </div>
+          <div id="copy-ok" class="copy-ok">Ссылка скопирована.</div>
+        </section>
       </section>
     </section>
   </main>

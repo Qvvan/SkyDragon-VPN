@@ -1081,6 +1081,22 @@
             {% endif %}
           </div>
         </div>
+        <details class="other-device">
+          <summary>Другое устройство</summary>
+          <div class="other-device__body">
+            {% for alt in alternative_platforms %}
+            <div class="alt-platform">
+              <div class="alt-platform__title">{{ alt.label }}</div>
+              <div class="btn-row" style="margin-top:0;">
+                {% if alt.apps %}
+                <a class="btn btn-secondary" href="{{ alt.apps[0].store_url }}" target="_blank" rel="noopener">Скачать</a>
+                <a class="btn" href="{{ alt.apps[0].import_url }}">Импортировать</a>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </details>
       </section>
 
       <section class="card">
