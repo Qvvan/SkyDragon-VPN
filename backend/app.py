@@ -636,8 +636,8 @@ def _renewal_hint_for_client(user_agent: Optional[str]) -> str:
     if "v2raytun" in ua:
         return "Нажмите сюда, чтобы оплатить подписку."
     if any(token in ua for token in ("happ", "flyfrog", "happ-proxy")):
-        return "Нажмите на самолетик справа, чтобы продлить подписку."
-    return "Нажмите сюда или на самолетик справа, чтобы продлить подписку."
+        return "Нажмите на кнопку 🔗, чтобы продлить подписку."
+    return "Нажмите сюда или на кнопку 🔗, чтобы продлить подписку."
 
 
 @app.get("/sub/{encrypted_part}")
