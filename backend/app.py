@@ -577,6 +577,7 @@ def _build_subscription_body(
     sub_info_button_link: str,
     msk_time: str,
     provider_id: str,
+    renewal_hint: str = "",
 ) -> tuple[str, str]:
     """
     Внутренний текст подписки: порядок #мета как у WhyPN; sub-info plain UTF-8; #announce — base64:.
@@ -587,6 +588,8 @@ def _build_subscription_body(
         announce_plain = (
             f"Обновлено {msk_time} МСК. Выберите сервер с наименьшим пингом — с ним чаще всего лучше скорость."
         )
+        if renewal_hint.strip():
+            announce_plain = f"{announce_plain} {renewal_hint.strip()}"
         profile_title_body = PROFILE_TITLE_BODY_ACTIVE
         meta_head = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
@@ -597,6 +600,8 @@ def _build_subscription_body(
         announce_url = profile_url
     elif state == "expired":
         announce_plain = f"{msk_time} МСК. {ANNOUNCE_EXPIRED_TAIL}"
+        if renewal_hint.strip():
+            announce_plain = f"{announce_plain} {renewal_hint.strip()}"
         profile_title_body = f"{PROFILE_TITLE_BODY_ACTIVE} — Истекла"
         meta_head = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
@@ -626,6 +631,15 @@ def _build_subscription_body(
     return "\n".join(lines), announce_plain
 
 
+def _renewal_hint_for_client(user_agent: Optional[str]) -> str:
+    ua = (user_agent or "").lower()
+    if "v2raytun" in ua:
+        return "Нажмите сюда, чтобы оплатить подписку."
+    if any(token in ua for token in ("happ", "flyfrog", "happ-proxy")):
+        return "Нажмите на самолетик справа, чтобы продлить подписку."
+    return "Нажмите сюда или на самолетик справа, чтобы продлить подписку."
+
+
 @app.get("/sub/{encrypted_part}")
 async def get_subscription(
     encrypted_part: str,
@@ -644,6 +658,7 @@ async def get_subscription(
     expire_unix = _expire_unix(subscription)
     config_url = _public_sub_url(encrypted_part)
     user_agent = request.headers.get("user-agent", "")
+    renewal_hint = _renewal_hint_for_client(user_agent)
 
     if _should_return_html_landing(request):
         detected_platform = _detect_platform_from_ua(user_agent)
@@ -689,7 +704,7 @@ async def get_subscription(
         response_bytes = _outer_base64_payload(inner)
         headers = _subscription_download_headers(
             profile_page_url=config_url,
-            support_url=TELEGRAM_SUPPORT_URL,
+            support_url=config_url,
             profile_title_plain=f"{PROFILE_TITLE} — Не найдена",
             expire_unix=0,
             traffic_total_bytes=0,
@@ -714,11 +729,12 @@ async def get_subscription(
             sub_info_button_link=config_url,
             msk_time=msk_time,
             provider_id=HAPP_PROVIDER_ID,
+            renewal_hint=renewal_hint,
         )
         response_bytes = _outer_base64_payload(inner)
         headers = _subscription_download_headers(
             profile_page_url=config_url,
-            support_url=TELEGRAM_SUPPORT_URL,
+            support_url=config_url,
             profile_title_plain=PROFILE_TITLE,
             expire_unix=expire_unix,
             traffic_total_bytes=SUBSCRIPTION_USERINFO_TOTAL_BYTES,
@@ -761,12 +777,13 @@ async def get_subscription(
         sub_info_button_link=config_url,
         msk_time=msk_time,
         provider_id=HAPP_PROVIDER_ID,
+        renewal_hint=renewal_hint,
     )
     response_bytes = _outer_base64_payload(inner)
 
     headers = _subscription_download_headers(
         profile_page_url=config_url,
-        support_url=TELEGRAM_SUPPORT_URL,
+        support_url=config_url,
         profile_title_plain=PROFILE_TITLE,
         expire_unix=expire_unix,
         traffic_total_bytes=SUBSCRIPTION_USERINFO_TOTAL_BYTES,
