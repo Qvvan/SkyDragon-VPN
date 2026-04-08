@@ -102,11 +102,21 @@
       border: 1px solid var(--border);
       color: var(--text);
     }
+    .btn-ghost {
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--muted);
+      box-shadow: none;
+    }
     .btn-secondary:hover {
       box-shadow: none;
       filter: brightness(1.07);
     }
     .download-list { margin-top: 0.75rem; display: grid; gap: 0.55rem; }
+    .download-list .btn {
+      width: 100%;
+      justify-content: center;
+    }
     .manual {
       margin-top: 0.9rem;
       border-top: 1px dashed var(--border);
@@ -145,15 +155,14 @@
   <main class="card">
     <section class="hero">
       <h1>Открываем приложение</h1>
-      <p>1. Нажмите «Импортировать». 2. Если не сработало, откройте ручной режим ниже.</p>
+      <p>1. Нажмите «Импортировать». 2. Если не сработало, откройте ручной режим.</p>
     </section>
 
     <section class="layout">
       <section class="panel">
-        <h2 class="panel-title">Запуск приложения</h2>
+        <h2 class="panel-title">Шаг 1. Импорт</h2>
         <div class="btn-row">
           <button id="btn-open" class="btn" type="button">Импортировать</button>
-          <a class="btn btn-secondary" href="{{ telegram_support_url }}" target="_blank" rel="noopener">Техподдержка</a>
         </div>
         <div class="btn-row">
           <button id="btn-manual-toggle" class="btn btn-secondary" type="button">Если не переходит в приложение — ручной режим</button>
@@ -172,15 +181,18 @@
           </div>
           <div id="copy-ok" class="copy-ok">Ссылка скопирована.</div>
         </section>
+        <div class="btn-row" style="margin-top:0.9rem;">
+          <a class="btn btn-ghost" href="{{ telegram_support_url }}" target="_blank" rel="noopener">Техподдержка</a>
+        </div>
       </section>
 
       <section class="panel">
-        <h2 class="panel-title">Скачать приложение</h2>
-        <p>Если приложения нет или оно не настроено, установите его и вернитесь к импорту.</p>
+        <h2 class="panel-title">Шаг 2. Скачать</h2>
+        <p>Если приложение еще не установлено, скачайте его.</p>
         <div class="download-list">
-          {% for app in apps_for_platform %}
-          <a class="btn btn-secondary" href="{{ app.store_url }}" target="_blank" rel="noopener">Скачать</a>
-          {% endfor %}
+          {% if apps_for_platform and apps_for_platform[0] %}
+          <a class="btn btn-secondary" href="{{ apps_for_platform[0].store_url }}" target="_blank" rel="noopener">Скачать</a>
+          {% endif %}
         </div>
       </section>
     </section>

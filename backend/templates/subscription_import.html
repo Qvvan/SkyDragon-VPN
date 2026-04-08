@@ -1064,52 +1064,23 @@
         <div class="steps">
           <div class="step">
             <span class="step-num">1</span>
-            <span class="step-content">Скачайте приложение для {{ primary_platform.label }}</span>
+            <span class="step-content">Скачайте приложение</span>
           </div>
-          <div class="download-grid">
-            {% for app in primary_platform.apps %}
-            <div class="download-item">
-              <p class="download-item__name">{{ app.app_name }}</p>
-              <a class="btn btn-secondary" href="{{ app.store_url }}" target="_blank" rel="noopener">Скачать</a>
-            </div>
-            {% endfor %}
+          <div class="btn-row" style="margin-top:0.35rem;">
+            {% if primary_platform.apps %}
+            <a class="btn btn-secondary" href="{{ primary_platform.apps[0].store_url }}" target="_blank" rel="noopener">Скачать</a>
+            {% endif %}
           </div>
           <div class="step">
             <span class="step-num">2</span>
-            <span class="step-content">Импортируйте профиль в приложение</span>
+            <span class="step-content">Импортируйте профиль</span>
           </div>
-        </div>
-        <div class="quick-install-actions">
-          <p class="install-caption">Шаг 2. Нажмите кнопку, чтобы импортировать профиль в приложение.</p>
-          <div class="btn-row" style="margin-top:0;">
+          <div class="btn-row" style="margin-top:0.35rem;">
             {% if primary_platform.apps %}
             <a class="btn" href="{{ primary_platform.apps[0].import_url }}">Импортировать</a>
             {% endif %}
           </div>
         </div>
-        <details class="other-device">
-          <summary>Это другое устройство</summary>
-          <div class="other-device__body">
-            {% for alt in alternative_platforms %}
-            <div class="alt-platform">
-              <div class="alt-platform__title">{{ alt.label }}</div>
-              <div class="download-grid" style="margin-top:0;">
-                {% for app in alt.apps %}
-                <div class="download-item">
-                  <p class="download-item__name">{{ app.app_name }}</p>
-                  <a class="btn btn-secondary" href="{{ app.store_url }}" target="_blank" rel="noopener">Скачать</a>
-                </div>
-                {% endfor %}
-              </div>
-              <div class="btn-row" style="margin-top:0.6rem;">
-                {% if alt.apps %}
-                <a class="btn" href="{{ alt.apps[0].import_url }}">Импортировать</a>
-                {% endif %}
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-        </details>
       </section>
 
       <section class="card">
