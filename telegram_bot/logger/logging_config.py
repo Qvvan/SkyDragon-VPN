@@ -77,18 +77,27 @@ class CustomLogger:
     async def log_info(self, message: str, keyboard=None):
         """Логгирование информации и отправка уведомления."""
         self.logger.info(message)
-        await self.notify_group(message=message, keyboard=keyboard)
+        try:
+            await self.notify_group(message=message, keyboard=keyboard)
+        except Exception as e:
+            self.logger.warning(f"Не удалось отправить INFO-уведомление в группу: {e}")
 
     async def log_error(self, message: str, error: Exception, keyboard=None):
         """Логгирование ошибки и отправка уведомления."""
         full_message = f"{message}. Error: {str(error)}"
         self.logger.error(full_message, exc_info=True)
-        await self.notify_group(message, error=error, keyboard=keyboard)
+        try:
+            await self.notify_group(message, error=error, keyboard=keyboard)
+        except Exception as e:
+            self.logger.warning(f"Не удалось отправить ERROR-уведомление в группу: {e}")
 
     async def warning(self, message: str, keyboard=None):
         """Логгирование предупреждения и отправка уведомления."""
         self.logger.warning(message)
-        await self.notify_group(message, warning=True, keyboard=keyboard)
+        try:
+            await self.notify_group(message, warning=True, keyboard=keyboard)
+        except Exception as e:
+            self.logger.warning(f"Не удалось отправить WARNING-уведомление в группу: {e}")
 
     async def info(self, message):
         self.logger.info(message)

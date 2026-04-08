@@ -321,10 +321,13 @@ class XuiPanelHttpClient:
                 raw_obj = obj.strip()
                 if not raw_obj:
                     return []
+                # Для новых версий 3x-ui это валидный ответ при отсутствии IP-истории клиента.
+                if raw_obj.lower() == "no ip record":
+                    return []
                 try:
                     obj = json.loads(raw_obj)
                 except json.JSONDecodeError:
-                    await logger.warning(
+                    await logger.info(
                         f"clientIps вернул не-JSON для {client_id[:50]}: {raw_obj[:120]}"
                     )
                     return []

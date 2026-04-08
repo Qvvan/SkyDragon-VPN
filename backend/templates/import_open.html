@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Открытие приложения</title>
+  <style>
+    :root {
+      --bg: #060708;
+      --card: #12151a;
+      --border: #2a2f38;
+      --text: #eef0f4;
+      --muted: #9aa3b2;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .card {
+      width: min(760px, 100%);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+    h1 { margin: 0 0 0.5rem 0; font-size: 1.2rem; }
+    p { margin: 0 0 0.8rem 0; color: var(--muted); }
+    .btn-row { display: flex; gap: 0.7rem; flex-wrap: wrap; margin-top: 0.8rem; }
+    .btn {
+      border: none;
+      border-radius: 10px;
+      padding: 0.7rem 1rem;
+      font-size: 0.93rem;
+      cursor: pointer;
+      text-decoration: none;
+      color: #fff;
+      background: linear-gradient(180deg, var(--accent), var(--accent-hover));
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+    }
+    .btn-secondary {
+      background: #1a1e25;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .download-list { margin-top: 0.8rem; display: grid; gap: 0.55rem; }
+    .hint { margin-top: 1rem; }
+    .manual { margin-top: 1rem; border-top: 1px dashed var(--border); padding-top: 1rem; display: none; }
+    .manual.visible { display: block; }
+    .url-box { display: flex; gap: 0.55rem; flex-wrap: wrap; margin-top: 0.6rem; }
+    .url-box input {
+      flex: 1 1 14rem;
+      background: #1a1e25;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 0.65rem 0.75rem;
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 0.78rem;
+    }
+    .copy-ok { color: #10b981; margin-top: 0.45rem; font-size: 0.85rem; display: none; }
+    .copy-ok.visible { display: block; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Пробуем открыть приложение на {{ platform_label }}</h1>
+    <p>Если приложение не открылось автоматически, нажмите кнопку повторно.</p>
+    <div class="btn-row">
+      <button id="btn-open" class="btn" type="button">{{ open_app_label }}</button>
+      <a class="btn btn-secondary" href="{{ telegram_support_url }}" target="_blank" rel="noopener">Техподдержка</a>
+    </div>
+
+    <div class="hint">
+      <button id="btn-manual-toggle" class="btn btn-secondary" type="button">Если не переходит в приложение — ручной режим</button>
+    </div>
+
+    <div class="download-list">
+      {% for app in apps_for_platform %}
+      <a class="btn btn-secondary" href="{{ app.store_url }}" target="_blank" rel="noopener">Скачать {{ app.app_name }}</a>
+      {% endfor %}
+    </div>
+
+    <section class="manual" id="manual-block">
+      <h2 style="font-size:1rem;margin:0 0 0.5rem 0;">Ручная установка</h2>
+      <p>1. Скопируйте ссылку ниже. 2. Откройте приложение. 3. Выберите импорт по ссылке/из буфера и вставьте ее.</p>
+      <div class="url-box">
+        <input id="config-url" type="text" value="{{ manual_config_url }}" readonly>
+        <button type="button" id="btn-copy" class="btn btn-secondary">Копировать ссылку</button>
+      </div>
+      <div id="copy-ok" class="copy-ok">Ссылка скопирована.</div>
+    </section>
+  </main>
+  <script>
+    (function () {
+      const deepLinkUrl = {{ deeplink_url | tojson }};
+      const btnOpen = document.getElementById('btn-open');
+      const btnManualToggle = document.getElementById('btn-manual-toggle');
+      const manualBlock = document.getElementById('manual-block');
+      const btnCopy = document.getElementById('btn-copy');
+      const configUrl = document.getElementById('config-url');
+      const copyOk = document.getElementById('copy-ok');
+
+      function tryOpen() {
+        window.location.href = deepLinkUrl;
+      }
+
+      setTimeout(tryOpen, 150);
+      btnOpen.addEventListener('click', tryOpen);
+      btnManualToggle.addEventListener('click', function () {
+        manualBlock.classList.toggle('visible');
+      });
+
+      btnCopy.addEventListener('click', function () {
+        const text = configUrl.value;
+        navigator.clipboard.writeText(text).then(function () {
+          copyOk.classList.add('visible');
+          setTimeout(function () { copyOk.classList.remove('visible'); }, 2200);
+        }).catch(function () {
+          configUrl.focus();
+          configUrl.select();
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
