@@ -1,0 +1,72 @@
+[project]
+name = "b2b"
+version = "0.1.0"
+readme = "README.md"
+requires-python = ">=3.12.7"
+dependencies = [
+    "aioboto3>=13.2.0",
+    "argon2-cffi>=23.1.0",
+    "asyncpg>=0.30.0",
+    "fastapi>=0.116.1",
+    "granian>=2.6.1",
+    "httpx>=0.28.1",
+    "loguru>=0.7.3",
+    "orjson>=3.11.1",
+    "psycopg2-binary>=2.9.11",
+    "pydantic-settings>=2.10.1",
+    "pydantic[email]>=2.11.7",
+    "pyjwt>=2.8.0",
+    "python-multipart>=0.0.20",
+    "redis>=6.4.0",
+    "slowapi>=0.1.9",
+    "pyyaml>=6.0",
+    "yoyo-migrations>=9.0.0",
+    "pillow>=11.0.0",
+    "email-validator>=2.0.0",
+    "aiosmtplib>=5.1.0",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+fix = true
+exclude = [
+    "migrations/",
+    "venv/",
+    "__pycache__",
+    ".git",
+    ".pytest_cache",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear (ловит реальные баги)
+    "C4",   # flake8-comprehensions
+    "ARG",  # flake8-unused-arguments
+    "SIM",  # flake8-simplify
+    "PTH",  # flake8-use-pathlib (современный подход к путям)
+    "RET",  # flake8-return (улучшает читаемость return)
+    "RUF",  # Ruff-specific rules
+    "PL",   # Pylint (базовые проверки качества)
+]
+
+ignore = [
+    "PLR0913",
+    "PLR2004",
+    "B008",
+    "RUF003",
+    "RUF002",
+    "RUF001"
+]
+
+[tool.ruff.lint.pylint]
+max-args = 7
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]

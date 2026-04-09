@@ -34,7 +34,7 @@ from sub_fetcher import get_sub_from_server, fetch_external_subscription_keys
 
 # Внешние подписки: ключи добавляются к нашим (таймаут 3 сек каждый)
 EXTERNAL_SUB_URLS = [
-    "https://sp.vpnlider.online/ndKFYzNwuk2ryHba",
+    " ",
     "https://link.1cdn.lol/QKLZy",
 ]
 SUB_STATUS_ACTIVE = "активная"

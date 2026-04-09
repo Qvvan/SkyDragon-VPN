@@ -1,0 +1,59 @@
+# ============================================================
+# Non-secret configuration defaults.
+# Override anything here via environment variables or .env.
+# Secrets (passwords, keys) belong in .env — never here.
+# ============================================================
+
+app:
+  public_base_url: "https://b2brk.ru"
+
+postgres:
+  echo: false
+  pool_size: 10
+  max_overflow: 20
+
+logging:
+  level: "INFO"
+  json_format: true
+
+jwt:
+  algorithm: "HS256"
+  access_token_expire_minutes: 15
+  refresh_token_expire_days: 7
+
+s3:
+  endpoint: "http://minio:9000"
+  bucket_name: "b2b-marketplace"
+  region: "us-east-1"
+  use_ssl: false
+  public_url: "https://b2brk.ru"
+
+email:
+  smtp_host: "smtp.mail.ru"
+  smtp_port: 465
+  smtp_use_ssl: true
+  smtp_use_tls: false
+  smtp_timeout: 30
+  from_name: "Flokify"
+  code_expire_minutes: 15
+  verification_base_url: "https://b2brk.ru"
+
+redis:
+  url: "redis://b2b_redis:6379/0"
+
+ssms:
+  api_url: "http://api2.ssms.su"
+  call_protection_seconds: 200
+  sms_sender_name: "Flokify"
+  sms_priority: 2
+  redis_key_ttl: 120   # seconds to keep tokens in Redis after hook fires
+  sms_code_ttl: 300    # seconds before SMS verification code expires
+
+auth:
+  max_verification_attempts: 5    # failed attempts before blocking
+  block_duration_minutes: 30      # how long the block lasts
+  email_verification_resend_cooldown_seconds: 60  # min delay between resend emails
+  phone_registration_require_confirmation: true  # false -> auto-complete without SMS/call confirmation
+
+presence:
+  online_timeout_seconds: 100
