@@ -697,6 +697,86 @@
       line-height: 1.58;
       max-width: 58ch;
     }
+    .quick-install-actions {
+      margin-top: 0.95rem;
+      padding: 0.95rem;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      background: linear-gradient(160deg, rgba(59, 130, 246, 0.14), rgba(59, 130, 246, 0.04));
+      border-radius: var(--radius-sm);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+    }
+    .install-caption {
+      font-size: 0.84rem;
+      color: var(--text-soft);
+      margin: 0 0 0.6rem 0;
+    }
+    .download-grid {
+      display: grid;
+      gap: 0.65rem;
+      margin-top: 0.75rem;
+    }
+    .download-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+      padding: 0.75rem 0.8rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: rgba(17, 21, 29, 0.8);
+    }
+    .download-item__name {
+      font-size: 0.86rem;
+      color: var(--text-muted);
+      margin: 0;
+      max-width: 60%;
+    }
+    .download-item .btn {
+      min-width: 9rem;
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    .download-hint {
+      margin: 0.2rem 0 0.25rem;
+      font-size: 0.82rem;
+      color: var(--text-soft);
+    }
+    .other-device {
+      margin-top: 1.7rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.01);
+      overflow: hidden;
+    }
+    .other-device summary {
+      list-style: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 0.8rem 0.95rem;
+      border-bottom: 1px solid transparent;
+    }
+    .other-device summary::-webkit-details-marker { display: none; }
+    .other-device[open] summary {
+      color: var(--text);
+      border-bottom-color: var(--border);
+    }
+    .other-device__body {
+      padding: 0.8rem 0.95rem 0.2rem;
+    }
+    .alt-platform {
+      margin-bottom: 0.8rem;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-input);
+    }
+    .alt-platform__title {
+      font-size: 0.9rem;
+      color: var(--text);
+      margin-bottom: 0.45rem;
+      font-weight: 600;
+    }
     .renew-action-row {
       margin-bottom: 1rem;
     }
@@ -982,55 +1062,60 @@
     {% else %}
     <section class="instruction-hero" aria-labelledby="instruction-title">
       <h2 class="instruction-hero__title" id="instruction-title">Как подключить VPN</h2>
-      <p class="instruction-hero__lead">Сначала выберите устройство и приложение в левом блоке, при необходимости скачайте его и нажмите «Импортировать профиль». Справа — ссылка для ручной вставки в приложение, если так удобнее.</p>
+      <p class="instruction-hero__lead">Мы определили ваше устройство и сразу показали нужные кнопки. Если приложение не открылось, повторите запуск или перейдите в ручной режим справа.</p>
       <div class="grid">
       <section class="card">
         <h2 class="card-title">Быстрая установка</h2>
         <div class="steps">
           <div class="step">
             <span class="step-num">1</span>
-            <span class="step-content">Выберите устройство</span>
+            <span class="step-content">Скачайте приложение</span>
           </div>
-          <div class="select-wrap">
-            <div class="custom-select" id="device-select" role="listbox" aria-label="Устройство" data-value="{{ detected_platform }}">
-              <button type="button" class="custom-select__trigger" id="device-trigger" aria-haspopup="listbox" aria-expanded="false">
-                <span class="custom-select__trigger-label" id="device-trigger-label">{% for id, label in devices %}{% if id == detected_platform %}{{ label }}{% endif %}{% endfor %}</span>
-                <svg class="custom-select__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-              </button>
-              <div class="custom-select__dropdown" id="device-dropdown" role="listbox">
-                {% for id, label in devices %}
-                <button type="button" class="custom-select__option{% if id == detected_platform %} custom-select__option_selected{% endif %}" role="option" data-value="{{ id }}">{{ label }}</button>
-                {% endfor %}
-              </div>
-            </div>
+          <div class="btn-row" style="margin-top:0.35rem;">
+            {% if primary_platform.apps %}
+            {% if primary_platform.apps|length > 1 %}
+            <p class="download-hint">Выберите один вариант: RU или EU</p>
+            {% endif %}
+            {% for app in primary_platform.apps %}
+            <a class="btn btn-secondary" href="{{ app.store_url }}" target="_blank" rel="noopener">
+              Скачать{% if primary_platform.apps|length > 1 %} {% if "RU" in app.app_name %}RU{% else %}EU{% endif %}{% endif %}
+            </a>
+            {% endfor %}
+            {% endif %}
           </div>
           <div class="step">
             <span class="step-num">2</span>
-            <span class="step-content">Выберите приложение</span>
+            <span class="step-content">Импортируйте профиль</span>
           </div>
-          <div class="select-wrap">
-            <div class="custom-select" id="app-select" role="listbox" aria-label="Приложение" data-value="0">
-              <button type="button" class="custom-select__trigger" id="app-trigger" aria-haspopup="listbox" aria-expanded="false">
-                <span class="custom-select__trigger-label" id="app-trigger-label">—</span>
-                <svg class="custom-select__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-              </button>
-              <div class="custom-select__dropdown" id="app-dropdown" role="listbox"></div>
+          <div class="btn-row" style="margin-top:0.35rem;">
+            {% if primary_platform.apps %}
+            <a class="btn" href="{{ primary_platform.apps[0].import_url }}">Импортировать</a>
+            {% endif %}
+          </div>
+        </div>
+        <details class="other-device">
+          <summary>Другое устройство</summary>
+          <div class="other-device__body">
+            {% for alt in alternative_platforms %}
+            <div class="alt-platform">
+              <div class="alt-platform__title">{{ alt.label }}</div>
+              <div class="btn-row" style="margin-top:0;">
+                {% if alt.apps %}
+                {% if alt.apps|length > 1 %}
+                <p class="download-hint">Выберите один вариант: RU или EU</p>
+                {% endif %}
+                {% for app in alt.apps %}
+                <a class="btn btn-secondary" href="{{ app.store_url }}" target="_blank" rel="noopener">
+                  Скачать{% if alt.apps|length > 1 %} {% if "RU" in app.app_name %}RU{% else %}EU{% endif %}{% endif %}
+                </a>
+                {% endfor %}
+                <a class="btn" href="{{ alt.apps[0].import_url }}">Импортировать</a>
+                {% endif %}
+              </div>
             </div>
+            {% endfor %}
           </div>
-          <div class="step">
-            <span class="step-num">3</span>
-            <span class="step-content">Скачайте выбранное приложение (RU или EU версию при необходимости)</span>
-          </div>
-          <div class="step">
-            <span class="step-num">4</span>
-            <span class="step-content">Импортируйте профиль по ссылке</span>
-          </div>
-        </div>
-        <div class="btn-row">
-          <a id="btn-download" class="btn btn-secondary" href="#" target="_blank" rel="noopener">Скачать приложение</a>
-          <a id="btn-import" class="btn" href="#">Импортировать профиль</a>
-        </div>
-        <p id="app-empty" class="app-empty" style="display: none;">Для выбранного устройства нет приложений</p>
+        </details>
       </section>
 
       <section class="card">
@@ -1038,7 +1123,7 @@
         <div class="steps">
           <div class="step">
             <span class="step-num">1</span>
-            <span class="step-content">Выберите устройство и скачайте приложение по кнопке «Скачать приложение»</span>
+            <span class="step-content">Скачайте приложение для вашего устройства (если еще не установлено)</span>
           </div>
           <div class="step">
             <span class="step-num">2</span>
@@ -1160,139 +1245,21 @@
   {% if sub_info and sub_info.status_key == 'active' %}
   <script>
     (function() {
-      const appsByPlatform = {{ apps_by_platform | tojson }};
-      const deviceSelectEl = document.getElementById('device-select');
-      const deviceTrigger = document.getElementById('device-trigger');
-      const deviceLabel = document.getElementById('device-trigger-label');
-      const deviceDropdown = document.getElementById('device-dropdown');
-      const appSelectEl = document.getElementById('app-select');
-      const appTrigger = document.getElementById('app-trigger');
-      const appLabel = document.getElementById('app-trigger-label');
-      const appDropdown = document.getElementById('app-dropdown');
-      const appSelectWrap = document.getElementById('app-select').closest('.select-wrap');
-      const btnDownload = document.getElementById('btn-download');
-      const btnImport = document.getElementById('btn-import');
-      const appEmpty = document.getElementById('app-empty');
       const configUrlInput = document.getElementById('config-url');
       const btnCopy = document.getElementById('btn-copy');
       const copyOk = document.getElementById('copy-ok');
-
-      function openSelect(selectEl) {
-        document.querySelectorAll('.custom-select_open').forEach(function(el) {
-          if (el !== selectEl) el.classList.remove('custom-select_open');
-        });
-        selectEl.classList.toggle('custom-select_open');
-        const trigger = selectEl.querySelector('.custom-select__trigger');
-        trigger.setAttribute('aria-expanded', selectEl.classList.contains('custom-select_open'));
-      }
-
-      function closeSelect(selectEl) {
-        selectEl.classList.remove('custom-select_open');
-        selectEl.querySelector('.custom-select__trigger').setAttribute('aria-expanded', 'false');
-      }
-
-      function setupCustomSelect(selectEl, labelEl, onChoose) {
-        const trigger = selectEl.querySelector('.custom-select__trigger');
-        const dropdown = selectEl.querySelector('.custom-select__dropdown');
-        trigger.addEventListener('click', function(e) {
-          e.stopPropagation();
-          openSelect(selectEl);
-        });
-        dropdown.querySelectorAll('.custom-select__option').forEach(function(opt) {
-          opt.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const value = opt.getAttribute('data-value');
-            const text = opt.textContent.trim();
-            selectEl.setAttribute('data-value', value);
-            labelEl.textContent = text;
-            dropdown.querySelectorAll('.custom-select__option').forEach(function(o) { o.classList.remove('custom-select__option_selected'); });
-            opt.classList.add('custom-select__option_selected');
-            closeSelect(selectEl);
-            onChoose(value, text);
-          });
-        });
-      }
-
-      document.addEventListener('click', function() {
-        document.querySelectorAll('.custom-select_open').forEach(closeSelect);
-      });
-      deviceDropdown.addEventListener('click', function(e) { e.stopPropagation(); });
-      appDropdown.addEventListener('click', function(e) { e.stopPropagation(); });
-
-      document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') document.querySelectorAll('.custom-select_open').forEach(closeSelect);
-      });
-
-      setupCustomSelect(deviceSelectEl, deviceLabel, function() {
-        fillApps();
-      });
-
-      if (!deviceLabel.textContent.trim()) {
-        var firstOpt = deviceDropdown.querySelector('.custom-select__option');
-        if (firstOpt) {
-          deviceLabel.textContent = firstOpt.textContent.trim();
-          deviceSelectEl.setAttribute('data-value', firstOpt.getAttribute('data-value'));
-        }
-      }
-
-      function fillApps() {
-        const platform = deviceSelectEl.getAttribute('data-value');
-        const apps = appsByPlatform[platform] || [];
-        appDropdown.innerHTML = '';
-        if (apps.length === 0) {
-          appSelectWrap.style.display = 'none';
-          appEmpty.style.display = 'block';
-          btnDownload.href = '#';
-          btnImport.href = '#';
-          return;
-        }
-        appSelectWrap.style.display = 'block';
-        appEmpty.style.display = 'none';
-        apps.forEach(function(app, i) {
-          const opt = document.createElement('button');
-          opt.type = 'button';
-          opt.className = 'custom-select__option' + (i === 0 ? ' custom-select__option_selected' : '');
-          opt.setAttribute('role', 'option');
-          opt.setAttribute('data-value', String(i));
-          opt.textContent = app.app_name;
-          opt.addEventListener('click', function(e) {
-            e.stopPropagation();
-            appSelectEl.setAttribute('data-value', String(i));
-            appLabel.textContent = app.app_name;
-            appDropdown.querySelectorAll('.custom-select__option').forEach(function(o) { o.classList.remove('custom-select__option_selected'); });
-            opt.classList.add('custom-select__option_selected');
-            closeSelect(appSelectEl);
-            updateButtons(app);
-          });
-          appDropdown.appendChild(opt);
-        });
-        appLabel.textContent = apps[0].app_name;
-        appSelectEl.setAttribute('data-value', '0');
-        updateButtons(apps[0]);
-      }
-
-      appTrigger.addEventListener('click', function(e) {
-        e.stopPropagation();
-        openSelect(appSelectEl);
-      });
-
-      function updateButtons(app) {
-        if (!app) return;
-        btnDownload.href = app.store_url;
-        btnImport.href = app.import_url;
-      }
-
-      fillApps();
-
+      if (!btnCopy || !configUrlInput || !copyOk) return;
       btnCopy.addEventListener('click', function() {
         configUrlInput.select();
         configUrlInput.setSelectionRange(0, 99999);
         navigator.clipboard.writeText(configUrlInput.value).then(function() {
           copyOk.classList.add('visible');
           setTimeout(function() { copyOk.classList.remove('visible'); }, 2500);
+        }).catch(function() {
+          configUrlInput.focus();
+          configUrlInput.select();
         });
       });
-
     })();
   </script>
   {% endif %}
@@ -1387,10 +1354,7 @@
         e.preventDefault();
         const telegramId = btnSupport.getAttribute('data-telegram-id') || '—';
         const subId = btnSupport.getAttribute('data-sub-id') || '—';
-        const deviceTriggerLabel = document.getElementById('device-trigger-label');
-        const deviceName = deviceTriggerLabel && deviceTriggerLabel.textContent
-          ? deviceTriggerLabel.textContent.trim()
-          : 'Не определено';
+        const deviceName = {{ (primary_platform.label if primary_platform else 'Не определено') | tojson }};
 
         const text = [
           'Здравствуйте!',

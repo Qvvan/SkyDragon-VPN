@@ -209,12 +209,6 @@ APPS_BY_PLATFORM = {
             "import_type": "route",
             "import_app": "happ",
         },
-        {
-            "app_name": "V2RayTun",
-            "store_url": "https://apps.apple.com/ru/app/v2raytun/id6476628951",
-            "import_type": "route",
-            "import_app": "v2raytun",
-        }
     ],
     "android": [
         {
@@ -223,12 +217,6 @@ APPS_BY_PLATFORM = {
             "import_type": "route",
             "import_app": "happ",
         },
-        {
-            "app_name": "V2RayTun",
-            "store_url": "https://play.google.com/store/apps/details?id=com.v2raytun.android&hl=ru",
-            "import_type": "route",
-            "import_app": "v2raytun",
-        }
     ],
     "windows": [
         {
@@ -240,8 +228,14 @@ APPS_BY_PLATFORM = {
     ],
     "macos": [
         {
-            "app_name": "Happ",
+            "app_name": "Happ (RU App Store)",
             "store_url": "https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973",
+            "import_type": "route",
+            "import_app": "happ",
+        },
+        {
+            "app_name": "Happ (EU/US App Store)",
+            "store_url": "https://apps.apple.com/us/app/happ-proxy-utility/id6504287215",
             "import_type": "route",
             "import_app": "happ",
         }
@@ -432,6 +426,63 @@ def _build_import_route_url(platform: str, app_name: str, encrypted_part: str) -
     return f"{PUBLIC_BASE_URL}/import/{platform}/{app_name}/{encrypted_part}"
 
 
+def _mapped_platform_apps(platform: str, encrypted_part: str, config_url: str) -> list[dict]:
+    apps = APPS_BY_PLATFORM.get(platform, [])
+    mapped_apps = []
+    for app_cfg in apps:
+        mapped_apps.append(
+            {
+                "app_name": app_cfg["app_name"],
+                "store_url": app_cfg["store_url"],
+                "import_url": (
+                    _build_import_route_url(platform, app_cfg["import_app"], encrypted_part)
+                    if app_cfg["import_type"] == "route"
+                    else _to_import_url(app_cfg["import_type"], config_url)
+                ),
+            }
+        )
+    return mapped_apps
+
+
+def _build_platform_cards(encrypted_part: str, config_url: str) -> dict[str, dict]:
+    cards = {}
+    for platform, label in DEVICE_LABELS.items():
+        cards[platform] = {
+            "id": platform,
+            "label": label,
+            "apps": _mapped_platform_apps(platform, encrypted_part, config_url),
+        }
+    return cards
+
+
+def _build_import_interstitial(
+    request: Request,
+    *,
+    platform: str,
+    app_name: str,
+    encrypted_part: str,
+):
+    normalized_platform = (platform or "").lower()
+    deep_link_url = (
+        _happ_add_subscription_deeplink(encrypted_part)
+        if app_name == "happ"
+        else f"v2raytun://import/{_public_sub_url(encrypted_part)}"
+    )
+    config_url = _public_sub_url(encrypted_part)
+    return templates.TemplateResponse(
+        name="import_open.html",
+        request=request,
+        context={
+            "deeplink_url": deep_link_url,
+            "manual_config_url": config_url,
+            "platform_label": DEVICE_LABELS.get(normalized_platform, "Устройство"),
+            "apps_for_platform": _mapped_platform_apps(normalized_platform, encrypted_part, config_url),
+            "open_app_label": "Открыть приложение еще раз",
+            **_subscription_landing_template_extra(),
+        },
+    )
+
+
 def _format_date_ru(value: Optional[datetime]) -> str:
     if not value:
         return "—"
@@ -526,6 +577,7 @@ def _build_subscription_body(
     sub_info_button_link: str,
     msk_time: str,
     provider_id: str,
+    renewal_hint: str = "",
 ) -> tuple[str, str]:
     """
     Внутренний текст подписки: порядок #мета как у WhyPN; sub-info plain UTF-8; #announce — base64:.
@@ -536,6 +588,8 @@ def _build_subscription_body(
         announce_plain = (
             f"Обновлено {msk_time} МСК. Выберите сервер с наименьшим пингом — с ним чаще всего лучше скорость."
         )
+        if renewal_hint.strip():
+            announce_plain = f"{announce_plain} {renewal_hint.strip()}"
         profile_title_body = PROFILE_TITLE_BODY_ACTIVE
         meta_head = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
@@ -546,6 +600,8 @@ def _build_subscription_body(
         announce_url = profile_url
     elif state == "expired":
         announce_plain = f"{msk_time} МСК. {ANNOUNCE_EXPIRED_TAIL}"
+        if renewal_hint.strip():
+            announce_plain = f"{announce_plain} {renewal_hint.strip()}"
         profile_title_body = f"{PROFILE_TITLE_BODY_ACTIVE} — Истекла"
         meta_head = [
             f"#sub-info-color: {SUB_INFO_COLOR}",
@@ -575,6 +631,15 @@ def _build_subscription_body(
     return "\n".join(lines), announce_plain
 
 
+def _renewal_hint_for_client(user_agent: Optional[str]) -> str:
+    ua = (user_agent or "").lower()
+    if "v2raytun" in ua:
+        return "Нажмите сюда, чтобы оплатить подписку."
+    if any(token in ua for token in ("happ", "flyfrog", "happ-proxy")):
+        return "Нажмите на кнопку 🔗, чтобы продлить подписку."
+    return "Нажмите сюда или на кнопку 🔗, чтобы продлить подписку."
+
+
 @app.get("/sub/{encrypted_part}")
 async def get_subscription(
     encrypted_part: str,
@@ -593,25 +658,15 @@ async def get_subscription(
     expire_unix = _expire_unix(subscription)
     config_url = _public_sub_url(encrypted_part)
     user_agent = request.headers.get("user-agent", "")
+    renewal_hint = _renewal_hint_for_client(user_agent)
 
     if _should_return_html_landing(request):
         detected_platform = _detect_platform_from_ua(user_agent)
-        apps_by_platform = {}
-        for platform, apps in APPS_BY_PLATFORM.items():
-            mapped_apps = []
-            for app_cfg in apps:
-                mapped_apps.append(
-                    {
-                        "app_name": app_cfg["app_name"],
-                        "store_url": app_cfg["store_url"],
-                        "import_url": (
-                            _build_import_route_url(platform, app_cfg["import_app"], encrypted_part)
-                            if app_cfg["import_type"] == "route"
-                            else _to_import_url(app_cfg["import_type"], config_url)
-                        ),
-                    }
-                )
-            apps_by_platform[platform] = mapped_apps
+        platform_cards = _build_platform_cards(encrypted_part, config_url)
+        primary_platform = platform_cards.get(detected_platform) or platform_cards.get("android")
+        alternative_platforms = [
+            card for platform_id, card in platform_cards.items() if platform_id != primary_platform["id"]
+        ]
         services_for_renewal = await methods.get_services_for_renewal(db)
         return templates.TemplateResponse(
             name="subscription_import.html",
@@ -622,8 +677,8 @@ async def get_subscription(
                 "telegram_user_id": user_id,
                 "subscription_id": sub_id,
                 "detected_platform": detected_platform,
-                "devices": list(DEVICE_LABELS.items()),
-                "apps_by_platform": apps_by_platform,
+                "primary_platform": primary_platform,
+                "alternative_platforms": alternative_platforms,
                 "sub_info": _build_sub_info(subscription),
                 "services_for_renewal": services_for_renewal,
                 **_subscription_landing_template_extra(),
@@ -649,7 +704,7 @@ async def get_subscription(
         response_bytes = _outer_base64_payload(inner)
         headers = _subscription_download_headers(
             profile_page_url=config_url,
-            support_url=TELEGRAM_SUPPORT_URL,
+            support_url=config_url,
             profile_title_plain=f"{PROFILE_TITLE} — Не найдена",
             expire_unix=0,
             traffic_total_bytes=0,
@@ -674,11 +729,12 @@ async def get_subscription(
             sub_info_button_link=config_url,
             msk_time=msk_time,
             provider_id=HAPP_PROVIDER_ID,
+            renewal_hint=renewal_hint,
         )
         response_bytes = _outer_base64_payload(inner)
         headers = _subscription_download_headers(
             profile_page_url=config_url,
-            support_url=TELEGRAM_SUPPORT_URL,
+            support_url=config_url,
             profile_title_plain=PROFILE_TITLE,
             expire_unix=expire_unix,
             traffic_total_bytes=SUBSCRIPTION_USERINFO_TOTAL_BYTES,
@@ -721,12 +777,13 @@ async def get_subscription(
         sub_info_button_link=config_url,
         msk_time=msk_time,
         provider_id=HAPP_PROVIDER_ID,
+        renewal_hint=renewal_hint,
     )
     response_bytes = _outer_base64_payload(inner)
 
     headers = _subscription_download_headers(
         profile_page_url=config_url,
-        support_url=TELEGRAM_SUPPORT_URL,
+        support_url=config_url,
         profile_title_plain=PROFILE_TITLE,
         expire_unix=expire_unix,
         traffic_total_bytes=SUBSCRIPTION_USERINFO_TOTAL_BYTES,
@@ -786,54 +843,54 @@ async def get_subscription_list(encrypted_part: str, db: Session = Depends(get_d
 
 
 @app.get("/import/iphone/{encrypted_part}")
-async def import_iphone_legacy(encrypted_part: str):
+async def import_iphone_legacy(encrypted_part: str, request: Request):
     """Короткая ссылка из бота: импорт в Happ (как на iOS/Android с /happ/)."""
-    return RedirectResponse(url=_happ_add_subscription_deeplink(encrypted_part), status_code=302)
+    return _build_import_interstitial(request, platform="iphone", app_name="happ", encrypted_part=encrypted_part)
 
 
 @app.get("/import/android/{encrypted_part}")
-async def import_android_legacy(encrypted_part: str):
-    return RedirectResponse(url=_happ_add_subscription_deeplink(encrypted_part), status_code=302)
+async def import_android_legacy(encrypted_part: str, request: Request):
+    return _build_import_interstitial(request, platform="android", app_name="happ", encrypted_part=encrypted_part)
 
 
 @app.get("/import/iphone/happ/{encrypted_part}")
-async def import_iphone_happ(encrypted_part: str):
-    return RedirectResponse(url=_happ_add_subscription_deeplink(encrypted_part), status_code=302)
+async def import_iphone_happ(encrypted_part: str, request: Request):
+    return _build_import_interstitial(request, platform="iphone", app_name="happ", encrypted_part=encrypted_part)
 
 
 @app.get("/import/android/happ/{encrypted_part}")
-async def import_android_happ(encrypted_part: str):
-    return RedirectResponse(url=_happ_add_subscription_deeplink(encrypted_part), status_code=302)
+async def import_android_happ(encrypted_part: str, request: Request):
+    return _build_import_interstitial(request, platform="android", app_name="happ", encrypted_part=encrypted_part)
 
 
 @app.get("/import/android/v2raytun/{encrypted_part}")
-async def import_android_v2raytun(encrypted_part: str):
-    return RedirectResponse(url=f"v2raytun://import/{_public_sub_url(encrypted_part)}", status_code=302)
+async def import_android_v2raytun(encrypted_part: str, request: Request):
+    return _build_import_interstitial(request, platform="android", app_name="v2raytun", encrypted_part=encrypted_part)
 
 
 @app.get("/import/iphone/v2raytun/{encrypted_part}")
-async def import_iphone_v2raytun(encrypted_part: str):
-    return RedirectResponse(url=f"v2raytun://import/{_public_sub_url(encrypted_part)}", status_code=302)
+async def import_iphone_v2raytun(encrypted_part: str, request: Request):
+    return _build_import_interstitial(request, platform="iphone", app_name="v2raytun", encrypted_part=encrypted_part)
 
 
 @app.get("/import/windows/happ/{encrypted_part}")
-async def import_windows_happ(encrypted_part: str):
-    return RedirectResponse(url=_happ_add_subscription_deeplink(encrypted_part), status_code=302)
+async def import_windows_happ(encrypted_part: str, request: Request):
+    return _build_import_interstitial(request, platform="windows", app_name="happ", encrypted_part=encrypted_part)
 
 
 @app.get("/import/windows/v2raytun/{encrypted_part}")
-async def import_windows_v2raytun(encrypted_part: str):
-    return RedirectResponse(url=f"v2raytun://import/{_public_sub_url(encrypted_part)}", status_code=302)
+async def import_windows_v2raytun(encrypted_part: str, request: Request):
+    return _build_import_interstitial(request, platform="windows", app_name="v2raytun", encrypted_part=encrypted_part)
 
 
 @app.get("/import/macos/happ/{encrypted_part}")
-async def import_macos_happ(encrypted_part: str):
-    return RedirectResponse(url=_happ_add_subscription_deeplink(encrypted_part), status_code=302)
+async def import_macos_happ(encrypted_part: str, request: Request):
+    return _build_import_interstitial(request, platform="macos", app_name="happ", encrypted_part=encrypted_part)
 
 
 @app.get("/import/macos/v2raytun/{encrypted_part}")
-async def import_macos_v2raytun(encrypted_part: str):
-    return RedirectResponse(url=f"v2raytun://import/{_public_sub_url(encrypted_part)}", status_code=302)
+async def import_macos_v2raytun(encrypted_part: str, request: Request):
+    return _build_import_interstitial(request, platform="macos", app_name="v2raytun", encrypted_part=encrypted_part)
 
 
 def encode_numbers(user_id: int, sub_id: int, secret_key: str = "my_secret_key") -> str:
