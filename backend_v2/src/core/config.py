@@ -45,6 +45,17 @@ class AppConfig(ConfigBase):
     PORT: int
     SECRET_KEY: SecretStr
     PUBLIC_BASE_URL: str = ""
+    CRYPTO_KEY: SecretStr = SecretStr("")
+    TELEGRAM_BOT_URL: str = "https://t.me/SkyDragonVPNBot"
+    TELEGRAM_SUPPORT_URL: str = "https://t.me/SkyDragonSupport"
+    TELEGRAM_YOOKASSA_RETURN_URL: str = "https://t.me/SkyDragonVPNBot"
+    SUBSCRIPTION_USERINFO_TOTAL_BYTES: int = 1099511627776
+    HAPP_PROVIDER_ID: str = ""
+    HAPP_NEW_URL: str = ""
+    SUB_PORT: int = 2096
+    EXTERNAL_SUB_URLS: str = ""
+    YOOKASSA_SHOP_ID: str = ""
+    YOOKASSA_SECRET_KEY: SecretStr = SecretStr("")
 
 
 class RedisConfig(ConfigBase):

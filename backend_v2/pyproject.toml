@@ -24,6 +24,8 @@ dependencies = [
     "pillow>=11.0.0",
     "email-validator>=2.0.0",
     "aiosmtplib>=5.1.0",
+    "cryptography>=45.0.0",
+    "yookassa>=3.7.1",
 ]
 
 [tool.ruff]
