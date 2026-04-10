@@ -45,7 +45,7 @@ class SubscriptionService:
 
     async def get_subscription_content(self, encrypted_part: str, user_agent: str | None) -> tuple[bytes, dict[str, str]]:
         user_id, sub_id = self.decode_user_and_sub(encrypted_part)
-        subscription = await self._subscription_repo.get_by_user_and_subscription_id(user_id, sub_id)
+        subscription = await self._subscription_repo.get_by_principal_and_subscription_id(user_id, sub_id)
         config_url = self._public_sub_url(encrypted_part)
 
         if subscription is None:
@@ -100,7 +100,7 @@ class SubscriptionService:
 
     async def get_subscription_list(self, encrypted_part: str) -> dict:
         user_id, sub_id = self.decode_user_and_sub(encrypted_part)
-        subscription = await self._subscription_repo.get_by_user_and_subscription_id(user_id, sub_id)
+        subscription = await self._subscription_repo.get_by_principal_and_subscription_id(user_id, sub_id)
         if not subscription:
             return {"keys": [], "servers": [], "message": "Подписка не найдена или удалена. Оформите новую в боте."}
 
@@ -124,14 +124,17 @@ class SubscriptionService:
 
     async def get_services_for_renewal(self, encrypted_part: str) -> list[ServicePlan]:
         user_id, sub_id = self.decode_user_and_sub(encrypted_part)
-        subscription = await self._subscription_repo.get_by_user_and_subscription_id(user_id, sub_id)
+        subscription = await self._subscription_repo.get_by_principal_and_subscription_id(user_id, sub_id)
         if not subscription:
             return []
         return await self._service_repo.list_for_renewal()
 
     async def get_subscription_info(self, encrypted_part: str) -> Subscription | None:
         user_id, sub_id = self.decode_user_and_sub(encrypted_part)
-        return await self._subscription_repo.get_by_user_and_subscription_id(user_id, sub_id)
+        return await self._subscription_repo.get_by_principal_and_subscription_id(user_id, sub_id)
+
+    async def list_subscriptions_for_account(self, account_id: int) -> list[Subscription]:
+        return await self._subscription_repo.list_for_account_owner(account_id)
 
     def _public_sub_url(self, encrypted_part: str) -> str:
         return f"{self._config.app.PUBLIC_BASE_URL.rstrip('/')}/sub/{encrypted_part}"

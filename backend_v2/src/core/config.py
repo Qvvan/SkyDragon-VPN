@@ -56,6 +56,8 @@ class AppConfig(ConfigBase):
     EXTERNAL_SUB_URLS: str = ""
     YOOKASSA_SHOP_ID: str = ""
     YOOKASSA_SECRET_KEY: SecretStr = SecretStr("")
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080
+    BOT_API_SECRET: SecretStr = SecretStr("")
 
 
 class RedisConfig(ConfigBase):

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, String, Integer, DateTime, Enum, BigInteger, ARRAY, Boolean, Text, JSON
+from sqlalchemy import Column, String, Integer, DateTime, Enum, BigInteger, ARRAY, Boolean, Text, JSON, ForeignKey
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -26,6 +26,31 @@ class ReferralStatus(str, Enum):
     """Status of a referral in the db"""
     INVITED = 'приглашен'
     SUBSCRIBED = 'купил'
+
+
+class Account(Base):
+    """Учётная запись сайта (общая БД с backend_v2)."""
+
+    __tablename__ = "accounts"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    email = Column(String(320), nullable=True)
+    phone = Column(String(32), nullable=True)
+    password_hash = Column(Text, nullable=False)
+    first_name = Column(String(128), nullable=False, default="")
+    last_name = Column(String(128), nullable=False, default="")
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
+class AccountTelegramLink(Base):
+    """Связь telegram user_id ↔ аккаунт сайта (один к одному с каждой стороны)."""
+
+    __tablename__ = "account_telegram_links"
+
+    telegram_user_id = Column(BigInteger, primary_key=True, nullable=False)
+    account_id = Column(BigInteger, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False, unique=True)
+    linked_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
 class Users(Base):
@@ -65,6 +90,7 @@ class Subscriptions(Base):
 
     subscription_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(BigInteger, nullable=False)  # ID пользователя
+    account_id = Column(BigInteger, ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True)
     service_id = Column(Integer, nullable=True)  # ID сервиса
     start_date = Column(DateTime, nullable=True)  # Дата начала
     end_date = Column(DateTime, nullable=True)  # Дата окончания

@@ -1,12 +1,12 @@
 from datetime import datetime
 from typing import List
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from logger.logging_config import logger
-from models.models import Subscriptions, Services, SubscriptionStatusEnum
+from models.models import AccountTelegramLink, Subscriptions, Services, SubscriptionStatusEnum
 
 
 class SubscriptionMethods:
@@ -33,8 +33,14 @@ class SubscriptionMethods:
                 )
                 .select_from(Subscriptions)
                 .outerjoin(Services, Subscriptions.service_id == Services.service_id)
-                .filter(Subscriptions.user_id == user_id)
             )
+            link_q = select(AccountTelegramLink.account_id).where(AccountTelegramLink.telegram_user_id == user_id)
+            link_r = await self.session.execute(link_q)
+            account_id = link_r.scalar_one_or_none()
+            conds = [Subscriptions.user_id == user_id]
+            if account_id is not None:
+                conds.append(Subscriptions.account_id == account_id)
+            query = query.where(or_(*conds))
 
             result = await self.session.execute(query)
             subscription = result.mappings().all()
@@ -71,6 +77,11 @@ class SubscriptionMethods:
 
     async def create_sub(self, sub: Subscriptions) -> int:
         try:
+            link_q = select(AccountTelegramLink.account_id).where(AccountTelegramLink.telegram_user_id == sub.user_id)
+            link_r = await self.session.execute(link_q)
+            linked_account_id = link_r.scalar_one_or_none()
+            if linked_account_id is not None:
+                sub.account_id = linked_account_id
             self.session.add(sub)
             await self.session.flush()
             return sub
