@@ -1,3 +1,5 @@
+from html import escape
+
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -5,6 +7,7 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKe
 
 from keyboards.kb_inline import InlineKeyboards, MAIN_MENU_BTN, MAIN_MENU_CB
 from lexicon.lexicon_ru import LEXICON_RU
+from logger.logging_config import logger
 
 router = Router()
 
@@ -60,8 +63,8 @@ async def handle_my_gifts(callback: CallbackQuery):
                 )
                 return
 
-            # Формируем сообщение с подарками
-            message_text = f"🎁 **Ваши подарки:**\n\n"
+            # HTML + escape: динамические имена ломают legacy Markdown (например «_» в @username).
+            message_text = "🎁 <b>Ваши подарки:</b>\n\n"
 
             keyboard = []
             for i, gift in enumerate(user_gifts, 1):
@@ -73,8 +76,11 @@ async def handle_my_gifts(callback: CallbackQuery):
                     service_days = service.duration_days if service else "?"
                     giver_name = f"@{giver.username}" if giver and giver.username else "Неизвестный пользователь"
 
-                    message_text += f"{i}. **{service_name}** на {service_days} дней\n"
-                    message_text += f"   От: {giver_name}\n\n"
+                    message_text += (
+                        f"{i}. <b>{escape(str(service_name))}</b> "
+                        f"на {escape(str(service_days))} дней\n"
+                        f"   От: {escape(giver_name)}\n\n"
+                    )
 
                     # Добавляем кнопку активации для каждого подарка
                     keyboard.append([
@@ -91,10 +97,11 @@ async def handle_my_gifts(callback: CallbackQuery):
             await callback.message.edit_text(
                 message_text,
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard),
-                parse_mode="Markdown"
+                parse_mode="HTML",
             )
 
         except Exception as e:
+            await logger.log_error("Ошибка при загрузке подарков (my_gifts)", e)
             await callback.message.edit_text(
                 "❌ Произошла ошибка при загрузке подарков",
                 reply_markup=InlineKeyboards.row_main_menu()

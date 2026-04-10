@@ -31,7 +31,7 @@ class GiftsMethods:
             return True
         except SQLAlchemyError as e:
             await logger.log_error(f"Ошибка добавления подарка", e)
-            return
+            return None
 
     async def update_gift(self, gift_id: int, **kwargs):
         try:
@@ -40,7 +40,7 @@ class GiftsMethods:
             return True
         except SQLAlchemyError as e:
             await logger.log_error(f"Ошибка обновления подарка", e)
-            return
+            return None
 
     async def get_gift_by_id(self, gift_id: int) -> Gifts | None:
         try:
