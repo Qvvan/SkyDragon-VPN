@@ -25,16 +25,14 @@ from cfg.config import (
     SHOP_ID,
     SHOP_API_TOKEN,
     SUBSCRIPTION_USERINFO_TOTAL_BYTES,
-    TELEGRAM_SUPPORT_URL,
     TELEGRAM_YOOKASSA_RETURN_URL,
 )
 from db import methods
 from db.db import get_db
-from sub_fetcher import get_sub_from_server, fetch_external_subscription_keys
+from sub_fetcher import fetch_external_subscription_keys, get_sub_from_server, get_sub_usage_from_server
 
-# Внешние подписки: ключи добавляются к нашим (таймаут 3 сек каждый)
 EXTERNAL_SUB_URLS = [
-    "https://sp.vpnlider.online/ndKFYzNwuk2ryHba",
+    "https://sp.vpnlider.online/xwryfDYFzPb4exDX",
     "https://link.1cdn.lol/QKLZy",
 ]
 SUB_STATUS_ACTIVE = "активная"
@@ -127,6 +125,8 @@ def _subscription_download_headers(
     announce_plain: str,
     response_body_bytes: bytes,
     provider_id: str,
+    upload_bytes: int = 0,
+    download_bytes: int = 0,
 ) -> dict[str, str]:
     """Заголовки ответа подписки (Happ: Providerid + Support-Url + userinfo с total для шкалы трафика)."""
     safe_name = "SkyDragonVPN.txt"
@@ -135,8 +135,8 @@ def _subscription_download_headers(
         "Profile-Title": _b64(profile_title_plain),
         "Profile-Update-Interval": "1",
         "Subscription-Userinfo": _build_userinfo(
-            upload=0,
-            download=0,
+            upload=upload_bytes,
+            download=download_bytes,
             total=traffic_total_bytes,
             expire=expire_unix,
         ),
@@ -147,6 +147,7 @@ def _subscription_download_headers(
         "Content-Disposition": f'inline; filename="{safe_name}"',
         "Cache-Control": "private, no-store",
         "Content-Length": str(len(response_body_bytes)),
+        "X-Subscription-Used-Bytes": str(max(0, upload_bytes) + max(0, download_bytes)),
     }
     if provider_id.strip():
         headers["Providerid"] = provider_id.strip()
@@ -751,13 +752,13 @@ async def get_subscription(
         try:
             sub = await get_sub_from_server(server, encoded_sub_id)
             if sub is None:
-                return []
-            return _decode_sub_to_keys(
-                sub, server.server_ip, server.name or server.server_ip
-            )
+                return [], 0, 0
+            download_bytes, upload_bytes = await get_sub_usage_from_server(server, encoded_sub_id)
+            keys = _decode_sub_to_keys(sub, server.server_ip, server.name or server.server_ip)
+            return keys, download_bytes, upload_bytes
         except Exception as e:
             print(f"Error getting subscription for server {server.server_ip}: {e}")
-            return []
+            return [], 0, 0
 
     # Параллельно: наши сервера + все внешние подписки (таймаут 3 сек каждая)
     server_tasks = [fetch_one(s) for s in servers]
@@ -767,7 +768,9 @@ async def get_subscription(
         *external_tasks,
     )
     external_keys = [k for keys_list in external_results for k in keys_list]
-    keys = [k for key_list in server_results for k in key_list] + external_keys
+    keys = [k for key_list, _, _ in server_results for k in key_list] + external_keys
+    total_download_bytes = sum(download for _, download, _ in server_results)
+    total_upload_bytes = sum(upload for _, _, upload in server_results)
     keys = [_sanitize_proxy_uri_line(k) for k in keys]
     msk_time = _now_msk_time_str()
     inner, announce_plain = _build_subscription_body(
@@ -790,6 +793,8 @@ async def get_subscription(
         announce_plain=announce_plain,
         response_body_bytes=response_bytes,
         provider_id=HAPP_PROVIDER_ID,
+        upload_bytes=total_upload_bytes,
+        download_bytes=total_download_bytes,
     )
     return Response(content=response_bytes, headers=headers)
 

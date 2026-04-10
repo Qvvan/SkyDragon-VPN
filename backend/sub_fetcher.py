@@ -4,8 +4,8 @@
 """
 import asyncio
 import base64
-import re
 import logging
+import re
 from typing import Optional
 from urllib.parse import unquote
 
@@ -17,6 +17,8 @@ from models.models import Servers
 
 SUB_TIMEOUT = 3
 logger = logging.getLogger(__name__)
+_RE_DATA_DOWNLOADBYTE = re.compile(r'data-downloadbyte="(\d+)"')
+_RE_DATA_UPLOADBYTE = re.compile(r'data-uploadbyte="(\d+)"')
 
 
 def _sub_port(server: Servers) -> int:
@@ -64,6 +66,45 @@ async def get_sub_from_server(server: Servers, encoded_sub_id: str) -> Optional[
     server_ip = server.server_ip
     port = _sub_port(server)
     return await _fetch_via_http(server_ip, port, encoded_sub_id)
+
+
+def _parse_usage_bytes_from_html(html: str) -> tuple[int, int]:
+    """Парсит usage из subscription HTML (`data-downloadbyte`, `data-uploadbyte`)."""
+    if not html:
+        return 0, 0
+    download_match = _RE_DATA_DOWNLOADBYTE.search(html)
+    upload_match = _RE_DATA_UPLOADBYTE.search(html)
+    download_bytes = int(download_match.group(1)) if download_match else 0
+    upload_bytes = int(upload_match.group(1)) if upload_match else 0
+    return download_bytes, upload_bytes
+
+
+async def get_sub_usage_from_server(server: Servers, encoded_sub_id: str) -> tuple[int, int]:
+    """
+    Получает usage-трафик по серверу из HTML-представления подписки.
+    Возвращает (download_bytes, upload_bytes). При ошибке/таймауте → (0, 0).
+    """
+    server_ip = server.server_ip
+    port = _sub_port(server)
+    url = f"https://{server_ip}:{port}/sub/{encoded_sub_id}"
+    timeout = ClientTimeout(connect=SUB_TIMEOUT, total=SUB_TIMEOUT)
+    headers = {
+        "Accept": "text/html,application/xhtml+xml",
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        ),
+    }
+    try:
+        connector = aiohttp.TCPConnector(ssl=False)
+        async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+            async with session.get(url, ssl=False, headers=headers) as resp:
+                if resp.status != 200:
+                    return 0, 0
+                html = await resp.text()
+                return _parse_usage_bytes_from_html(html)
+    except (asyncio.TimeoutError, aiohttp.ClientError, OSError):
+        return 0, 0
 
 
 # Таймаут для внешней подписки (секунды)
