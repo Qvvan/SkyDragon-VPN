@@ -1,5 +1,6 @@
 from src.core.config import Config
 from src.core.exceptions import NotFoundError, ValidationError
+from src.domain.entities.payment import Payment
 from src.interfaces.clients.payment.client import IPaymentGatewayClient
 from src.interfaces.repositories.payment import IPaymentRepository
 from src.interfaces.repositories.service_plan import IServicePlanRepository
@@ -47,4 +48,28 @@ class PaymentService:
             return_url=self._telegram_yookassa_return_url,
         )
         await self._payment_repo.create_pending_payment(result.payment_id, user_id, service_id)
+        return result.confirmation_url
+
+    async def list_payments_for_account(self, account_id: int) -> list[Payment]:
+        return await self._payment_repo.list_for_account(account_id)
+
+    async def create_payment_for_account(self, account_id: int, service_id: int) -> str:
+        if service_id <= 0:
+            raise ValidationError("Invalid service_id")
+        if self._gateway is None:
+            raise ValidationError("Оплата не настроена")
+
+        service = await self._service_repo.get_by_id(service_id)
+        if service is None:
+            raise NotFoundError("Услуга не найдена")
+
+        result = await self._gateway.create_payment(
+            amount=service.price,
+            service_id=service_id,
+            service_name=service.name,
+            user_id=account_id,
+            subscription_id=0,
+            return_url=self._telegram_yookassa_return_url,
+        )
+        await self._payment_repo.create_pending_payment(result.payment_id, account_id, service_id)
         return result.confirmation_url

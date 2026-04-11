@@ -62,6 +62,19 @@ class AuthService:
         token = self._jwt.issue(account.id)
         return account, token
 
+    async def update_profile(
+        self,
+        account_id: int,
+        *,
+        first_name: str | None = None,
+        last_name: str | None = None,
+    ) -> Account:
+        return await self._accounts.update_profile(
+            account_id=account_id,
+            first_name=first_name,
+            last_name=last_name,
+        )
+
     async def require_account(self, access_token: str) -> Account:
         account_id = self._jwt.parse_account_id(access_token)
         account = await self._accounts.get_by_id(account_id)

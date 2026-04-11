@@ -60,13 +60,6 @@ class AppConfig(ConfigBase):
     BOT_API_SECRET: SecretStr = SecretStr("")
 
 
-class RedisConfig(ConfigBase):
-    """Настройки Redis"""
-    model_config = SettingsConfigDict(env_prefix="REDIS_", frozen=True)
-
-    URL: str = "redis://b2b_redis:6379/0"
-
-
 class SsmsConfig(ConfigBase):
     """
     Настройки SSMS API (авторизация входящим звонком wait_call).
@@ -83,7 +76,7 @@ class SsmsConfig(ConfigBase):
     PASSWORD: SecretStr = SecretStr("")
     API_KEY: SecretStr = SecretStr("")
     CALL_PROTECTION_SECONDS: int = 200
-    SMS_SENDER_NAME: str
+    SMS_SENDER_NAME: str = "SkyDragon"
     SMS_PRIORITY: int = 2
     WEBHOOK_SECRET: SecretStr = SecretStr("")
     REDIS_KEY_TTL: int = 120
@@ -96,7 +89,6 @@ class Config(ConfigBase):
     app: AppConfig = Field(default_factory=AppConfig)
     postgres: PostgresConfig = Field(default_factory=PostgresConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
-    redis: RedisConfig = Field(default_factory=RedisConfig)
     ssms: SsmsConfig = Field(default_factory=SsmsConfig)
 
     @classmethod

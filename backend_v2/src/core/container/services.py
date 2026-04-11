@@ -15,7 +15,7 @@ from src.interfaces.services.bot_api_secret_verifier import IBotApiSecretVerifie
 from src.interfaces.services.jwt_tokens import IJwtAccessTokenService
 from src.interfaces.services.password_hasher import IPasswordHasher
 from src.interfaces.services.token_codec import ITokenCodec
-from src.services import ImportService, PaymentService, SubscriptionService
+from src.services import ImportService, PaymentService, ServicePlanService, SubscriptionService
 from src.services.auth_service import AuthService
 from src.services.telegram_account_link_service import TelegramAccountLinkService
 
@@ -34,6 +34,7 @@ class ServiceContainer:
         "_subscription_service",
         "_import_service",
         "_payment_service",
+        "_service_plan_service",
         "_password_hasher",
         "_jwt_access_token_service",
         "_auth_service",
@@ -58,6 +59,7 @@ class ServiceContainer:
         self._subscription_service: SubscriptionService | None = None
         self._import_service: ImportService | None = None
         self._payment_service: PaymentService | None = None
+        self._service_plan_service: ServicePlanService | None = None
         self._password_hasher: IPasswordHasher | None = None
         self._jwt_access_token_service: IJwtAccessTokenService | None = None
         self._auth_service: AuthService | None = None
@@ -116,6 +118,14 @@ class ServiceContainer:
                 token_codec=self.token_codec,
             )
         return self._payment_service
+
+    @property
+    def service_plan_service(self) -> ServicePlanService:
+        if not self._service_plan_service:
+            self._service_plan_service = ServicePlanService(
+                service_plan_repo=self._repos.service_plan_repository,
+            )
+        return self._service_plan_service
 
     @property
     def password_hasher(self) -> IPasswordHasher:

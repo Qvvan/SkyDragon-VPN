@@ -58,6 +58,28 @@ class PostgresAccountRepository(IAccountRepository):
         row = await self._query_executor.fetch_row(query, phone)
         return self._row_to_account(row) if row else None
 
+    async def update_profile(
+        self,
+        *,
+        account_id: int,
+        first_name: str | None,
+        last_name: str | None,
+    ) -> Account:
+        query = """
+            UPDATE accounts
+            SET
+                first_name = COALESCE($2, first_name),
+                last_name = COALESCE($3, last_name),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $1
+            RETURNING id, email, phone, password_hash, first_name, last_name, created_at, updated_at
+        """
+        row = await self._query_executor.fetch_row(query, account_id, first_name, last_name)
+        if not row:
+            msg = "Account not found"
+            raise RuntimeError(msg)
+        return self._row_to_account(row)
+
     @staticmethod
     def _row_to_account(row: asyncpg.Record) -> Account:
         return Account(

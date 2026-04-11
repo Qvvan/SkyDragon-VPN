@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from domain.entities.types import WaitCallResult, SmsSendResult
+from src.domain.entities.types import WaitCallResult, SmsSendResult
 
 
 class ISmsVerificationClient(ABC):

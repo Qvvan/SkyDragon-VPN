@@ -42,7 +42,7 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json" if cfg.app.DEBUG else None,
     )
 
-    app.add_middleware(LoggingMiddleware)
+    # app.add_middleware(LoggingMiddleware)
     app.add_middleware(
         CORSMiddleware,  # type: ignore
         allow_origins=["*"],

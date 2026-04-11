@@ -2,7 +2,7 @@
 
 import httpx
 
-from domain.entities.types import WaitCallResult, SmsSendResult
+from src.domain.entities.types import WaitCallResult, SmsSendResult
 from src.core.exceptions import ValidationError
 from src.core.logger import AppLogger
 

@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: b2b_api
+    container_name: sdvpn_api
     restart: always
     ports:
       - "${APP_PORT}:8000"
@@ -13,11 +13,11 @@ services:
       db:
         condition: service_started
     networks:
-      - b2b_network
+      - sdvpn_network
 
   db:
     image: postgres:${POSTGRES_VERSION}
-    container_name: b2b_db
+    container_name: sdvpn_db
     restart: always
     environment:
       - POSTGRES_DB=${POSTGRES_DATABASE}
@@ -26,24 +26,41 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-        - "5555:5432"
+      - "5555:5432"
     networks:
-      - bot-network
+      - sdvpn_network
 
   frontend:
     build:
-      context: ./frontend
+      context: ../frontend
       dockerfile: Dockerfile
-    container_name: b2b_frontend
+    container_name: sdvpn_frontend
     restart: always
     ports:
       - "3000:80"
+    depends_on:
+      - api
     networks:
-      - bot-network
+      - sdvpn_network
 
+  nginx:
+    image: nginx:alpine
+    container_name: sdvpn_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/ssl:ro
+    depends_on:
+      - api
+      - frontend
+    networks:
+      - sdvpn_network
 
 networks:
-  bot-network:
+  sdvpn_network:
     driver: bridge
 
 volumes:

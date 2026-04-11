@@ -7,7 +7,7 @@ from src.core.container import Container
 from src.core.exceptions import AuthenticationError
 from src.domain.entities.account import Account
 from src.interfaces.services.bot_api_secret_verifier import IBotApiSecretVerifier
-from src.services import ImportService, PaymentService, SubscriptionService
+from src.services import ImportService, PaymentService, ServicePlanService, SubscriptionService
 from src.services.auth_service import AuthService
 from src.services.telegram_account_link_service import TelegramAccountLinkService
 
@@ -24,6 +24,10 @@ def get_container(request: Request) -> Container:
 
 def get_subscription_service(container: Annotated[Container, Depends(get_container)]) -> SubscriptionService:
     return container.services.subscription_service
+
+
+def get_service_plan_service(container: Annotated[Container, Depends(get_container)]) -> ServicePlanService:
+    return container.services.service_plan_service
 
 
 def get_import_service(container: Annotated[Container, Depends(get_container)]) -> ImportService:

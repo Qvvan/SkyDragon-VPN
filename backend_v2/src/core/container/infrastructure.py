@@ -5,7 +5,6 @@ from src.infrastructure.postgres.query_executor import PostgresQueryExecutor
 from src.infrastructure.redis.client import RedisClient
 from src.infrastructure.ssms import SsmsClient
 from src.interfaces.clients.db.query_executor import IQueryExecutor
-from src.interfaces.clients.redis.client import IRedisClient
 from src.interfaces.clients.sms.client import ISmsVerificationClient
 
 
@@ -50,12 +49,6 @@ class InfrastructureContainer:
                 connection_pool=self.postgres_db
             )
         return self._query_executor
-
-    @property
-    def redis_client(self) -> IRedisClient:
-        if not self._redis_client:
-            self._redis_client = RedisClient(url=self._config.redis.URL)
-        return self._redis_client
 
     @property
     def ssms_client(self) -> ISmsVerificationClient:

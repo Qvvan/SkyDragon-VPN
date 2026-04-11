@@ -27,3 +27,13 @@ class IAccountRepository(ABC):
     @abstractmethod
     async def get_by_phone(self, phone: str) -> Account | None:
         raise NotImplementedError
+
+    @abstractmethod
+    async def update_profile(
+        self,
+        *,
+        account_id: int,
+        first_name: str | None,
+        last_name: str | None,
+    ) -> Account:
+        raise NotImplementedError

@@ -136,6 +136,14 @@ class SubscriptionService:
     async def list_subscriptions_for_account(self, account_id: int) -> list[Subscription]:
         return await self._subscription_repo.list_for_account_owner(account_id)
 
+    async def list_service_plans(self) -> list[ServicePlan]:
+        return await self._service_repo.list_for_renewal()
+
+    async def set_auto_renewal_for_account(self, account_id: int, subscription_id: int, enabled: bool) -> None:
+        updated = await self._subscription_repo.set_auto_renewal(account_id, subscription_id, enabled)
+        if not updated:
+            raise NotFoundError("Подписка не найдена")
+
     def _public_sub_url(self, encrypted_part: str) -> str:
         return f"{self._config.app.PUBLIC_BASE_URL.rstrip('/')}/sub/{encrypted_part}"
 
