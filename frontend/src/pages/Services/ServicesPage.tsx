@@ -12,9 +12,12 @@ function durationLabel(days: number): string {
   if (days === 30)  return '30 дней'
   if (days === 60)  return '60 дней'
   if (days === 90)  return '90 дней'
+  if (days === 180) return '180 дней'
+  if (days === 360) return '360 дней'
   if (days === 365) return '1 год'
   return `${days} дней`
 }
+
 
 export function ServicesContent() {
   const { data: services, isLoading } = useServices()
@@ -42,45 +45,67 @@ export function ServicesContent() {
 
   return (
     <>
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="font-display text-2xl md:text-3xl text-text font-bold">Тарифы</h1>
+        <p className="text-text-dim text-sm mt-1">Выберите подходящий план подписки</p>
+      </div>
+
+      {/* Cards grid — всегда 2 колонки */}
       <motion.div
         initial="hidden"
         animate="visible"
-        variants={{ visible: { transition: { staggerChildren: 0.07 } } }}
-        className="space-y-3"
+        variants={{ visible: { transition: { staggerChildren: 0.08 } } }}
+        className="grid grid-cols-2 gap-3"
       >
         {services?.map((service) => (
           <motion.div
             key={service.id}
-            variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
+            variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
             transition={{ duration: 0.35, ease: 'easeOut' }}
-            className="rounded-[14px] p-1 bg-surface shadow-card"
           >
-            <div className="rounded-[10px] bg-surface-2 px-3 py-2.5 flex items-center gap-3">
-              {/* Left: concise info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                  <h3 className="font-display text-[13px] leading-none text-text truncate">{service.name}</h3>
-                  {service.popular && <Badge variant="jade">Топ</Badge>}
+            <div
+              className={`
+                relative rounded-xl p-3 md:p-5 cursor-pointer h-full
+                bg-surface shadow-card border transition-all duration-200
+                hover:border-jade/30 hover:shadow-lg
+                ${service.popular
+                  ? 'border-jade/20 bg-gradient-to-br from-surface to-[rgba(110,231,183,0.04)]'
+                  : 'border-[rgba(255,255,255,0.06)]'
+                }
+              `}
+              onClick={() => setConfirm(service)}
+            >
+              {/* Popular badge */}
+              {service.popular && (
+                <div className="absolute top-2.5 right-2.5">
+                  <Badge variant="jade">Топ</Badge>
                 </div>
-                <span className="inline-flex items-center gap-1 font-mono text-[10px] text-jade bg-jade-dim px-1.5 py-0.5 rounded-full">
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                      <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
-                    </svg>
-                    {durationLabel(service.durationDays)}
+              )}
+
+              {/* Duration */}
+              <div className="mb-2">
+                <span className="font-display text-xl md:text-3xl font-bold text-text leading-none">
+                  {durationLabel(service.durationDays)}
                 </span>
               </div>
 
-              {/* Right: price + action */}
-              <div className="flex items-center gap-2.5 shrink-0">
-                <p className="font-mono text-sm text-jade tabular-nums">${service.price.toFixed(2)}</p>
-                <Button
-                  size="sm"
-                  variant="primary"
-                  onClick={() => setConfirm(service)}
-                >
-                  Выбрать
-                </Button>
+              {/* Price */}
+              <div className="mb-3 md:mb-5">
+                <span className="font-mono text-base md:text-2xl font-bold text-jade leading-none tabular-nums">
+                  {service.price.toLocaleString('ru-RU')} ₽
+                </span>
               </div>
+
+              {/* CTA */}
+              <Button
+                variant={service.popular ? 'primary' : 'secondary'}
+                size="sm"
+                className="w-full text-xs md:text-sm"
+                onClick={(e) => { e.stopPropagation(); setConfirm(service) }}
+              >
+                Выбрать
+              </Button>
             </div>
           </motion.div>
         ))}
@@ -91,19 +116,11 @@ export function ServicesContent() {
         {confirm && (
           <Modal open onClose={() => setConfirm(null)} title="Подтверждение">
             <div className="p-6 space-y-4">
-              <div className="rounded-xl bg-surface-3 p-4 space-y-2.5">
-                <div className="flex justify-between items-center">
-                  <span className="font-mono text-xs text-text-dim">Услуга</span>
-                  <span className="font-mono text-sm text-text">{confirm.name}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-mono text-xs text-text-dim">Срок</span>
-                  <span className="font-mono text-sm text-text">{durationLabel(confirm.durationDays)}</span>
-                </div>
-                <div className="flex justify-between items-center pt-2 border-t border-[rgba(157,140,255,0.08)]">
-                  <span className="font-mono text-xs text-text-dim">Итого</span>
-                  <span className="font-mono text-lg text-jade tabular-nums">${confirm.price.toFixed(2)}</span>
-                </div>
+              <div className="rounded-xl bg-surface-3 p-4 flex justify-between items-center">
+                <span className="font-display text-base text-text">{confirm.name}</span>
+                <span className="font-mono text-2xl text-jade tabular-nums font-bold">
+                  {confirm.price.toLocaleString('ru-RU')} ₽
+                </span>
               </div>
               <div className="flex gap-3">
                 <Button

@@ -208,9 +208,10 @@ export function AppShell() {
     <div className="min-h-screen bg-bg flex flex-col">
       {/* Header */}
       <header
+        data-sticky
         className={[
           'sticky top-0 z-20 flex items-center justify-between px-4 md:px-8 h-14 shrink-0',
-          'transition-[background,box-shadow] duration-300',
+          'transition-[background,box-shadow,padding] duration-300',
           scrolled
             ? 'bg-[rgba(7,7,15,0.88)] backdrop-blur-xl shadow-[0_1px_0_rgba(157,140,255,0.07)]'
             : 'bg-transparent',
@@ -229,16 +230,16 @@ export function AppShell() {
         <div className="flex items-center gap-1.5">
           {/* Profile chip */}
           <motion.button
-            whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.97 }}
-            transition={{ type: 'spring', duration: 0.22, bounce: 0 }}
+            whileTap={{ scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 35, mass: 0.5 }}
             onClick={() => setProfileOpen(true)}
             className={[
               'group flex items-center gap-2 rounded-2xl px-2.5 py-1.5 cursor-pointer',
               'bg-surface shadow-card',
-              'hover:shadow-card-hover',
-              'transition-shadow duration-200',
+              'hover:shadow-card-hover hover:bg-surface-2',
+              'transition-[box-shadow,background-color] duration-200',
             ].join(' ')}
+            style={{ willChange: 'transform' }}
             title="Открыть профиль"
           >
             <div className="size-5 rounded-full bg-jade-dim flex items-center justify-center shrink-0">
@@ -259,10 +260,11 @@ export function AppShell() {
 
           {/* Sign out */}
           <motion.button
-            whileTap={{ scale: 0.97 }}
-            transition={{ type: 'spring', duration: 0.2, bounce: 0 }}
+            whileTap={{ scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 35, mass: 0.5 }}
             onClick={clearAuth}
             className="relative flex items-center gap-1.5 h-8 px-3 rounded-xl font-mono text-xs text-text-faint hover:text-ember transition-colors duration-150 after:absolute after:inset-[-4px]"
+            style={{ willChange: 'transform' }}
             title="Выйти"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">

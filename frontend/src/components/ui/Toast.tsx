@@ -10,10 +10,11 @@ export function ToastContainer() {
         {toasts.map((toast) => (
           <motion.div
             key={toast.id}
-            initial={{ opacity: 0, x: 16, scale: 0.96 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 12, scale: 0.97 }}
-            transition={{ type: 'spring', duration: 0.38, bounce: 0 }}
+            initial={{ opacity: 0, x: 20, scale: 0.95 }}
+            animate={{ opacity: 1, x: 0,  scale: 1    }}
+            exit={{ opacity: 0, x: 8,   scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 280, damping: 26, mass: 0.7 }}
+            style={{ willChange: 'transform, opacity' }}
             className={[
               'pointer-events-auto flex items-center gap-3',
               'rounded-2xl px-4 py-3 max-w-xs',

@@ -13,7 +13,7 @@ function mapService(s: BackendServicePlan): Service {
     id: String(s.service_id),
     name: s.name,
     description: `VPN на ${s.duration_days} дней`,
-    price: s.price / 100,
+    price: s.price,
     durationDays: s.duration_days,
     features: ['Безлимитный трафик', 'Все серверы', 'Поддержка 24/7'],
     popular: s.duration_days >= 90,

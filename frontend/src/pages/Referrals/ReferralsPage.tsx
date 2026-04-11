@@ -167,22 +167,24 @@ export function ReferralsContent() {
             <div>
               <p className="font-mono text-xs text-text-dim uppercase tracking-wider mb-3">Услуга</p>
               {services && services.length > 0 ? (
-                <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
                   {services.map((svc) => (
                     <button
                       key={svc.id}
                       onClick={() => setGiftServiceId(svc.id)}
                       className={[
-                        'w-full text-left rounded-xl px-3 py-2.5 font-mono text-sm transition-[background-color,box-shadow,color] duration-150',
+                        'rounded-xl px-3 py-3 text-left transition-[background-color,box-shadow,color] duration-150',
                         giftServiceId === svc.id
-                          ? 'bg-jade-dim text-jade shadow-[0_0_0_1px_rgba(157,140,255,0.25)]'
-                          : 'bg-surface-3 text-text-dim hover:text-text',
+                          ? 'bg-jade-dim shadow-[0_0_0_1px_rgba(157,140,255,0.25)]'
+                          : 'bg-surface-3 hover:bg-surface-2',
                       ].join(' ')}
                     >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="truncate">{svc.name}</span>
-                        <span className="tabular-nums opacity-80">${svc.price.toFixed(2)}</span>
-                      </div>
+                      <p className={`font-display text-base font-bold leading-none mb-1 ${giftServiceId === svc.id ? 'text-jade' : 'text-text'}`}>
+                        {svc.name}
+                      </p>
+                      <p className={`font-mono text-sm tabular-nums ${giftServiceId === svc.id ? 'text-jade/70' : 'text-text-dim'}`}>
+                        {svc.price.toLocaleString('ru-RU')} ₽
+                      </p>
                     </button>
                   ))}
                 </div>
@@ -192,14 +194,6 @@ export function ReferralsContent() {
                 </p>
               )}
             </div>
-            {selectedService && (
-              <div className="rounded-xl bg-surface-3 px-3 py-2.5">
-                <p className="font-mono text-[10px] text-text-dim uppercase tracking-wider mb-1">Параметры подарка</p>
-                <p className="font-mono text-sm text-text">
-                  {selectedService.durationDays} дней · ${selectedService.price.toFixed(2)}
-                </p>
-              </div>
-            )}
             <div className="flex gap-3">
               <Button variant="primary" className="flex-1" loading={createGift.isPending} disabled={!giftServiceId || !selectedService} onClick={handleCreateGift}>
                 Создать подарок

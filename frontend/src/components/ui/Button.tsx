@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
-type Variant = 'primary' | 'ghost' | 'danger'
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
 type Size = 'sm' | 'md' | 'lg'
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -13,6 +13,12 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<Variant, string> = {
+  secondary: [
+    'bg-surface-3 font-mono text-text-dim',
+    'shadow-[0_0_0_1px_rgba(157,140,255,0.12)]',
+    'hover:shadow-[0_0_0_1px_rgba(157,140,255,0.28)] hover:text-text',
+    'transition-[box-shadow,color] duration-200',
+  ].join(' '),
   primary: [
     'relative overflow-hidden font-mono font-medium',
     'bg-gradient-to-br from-[#a899ff] to-[#7c6bff]',
@@ -61,8 +67,8 @@ export function Button({
 
   return (
     <motion.button
-      whileTap={staticPress || isDisabled ? undefined : { scale: 0.955 }}
-      transition={{ type: 'spring', duration: 0.18, bounce: 0 }}
+      whileTap={staticPress || isDisabled ? undefined : { scale: 0.96 }}
+      transition={{ type: 'spring', stiffness: 500, damping: 38, mass: 0.5 }}
       className={[
         'inline-flex items-center justify-center gap-2 cursor-pointer select-none',
         'disabled:opacity-40 disabled:cursor-not-allowed',
@@ -72,6 +78,7 @@ export function Button({
       ]
         .filter(Boolean)
         .join(' ')}
+      style={{ willChange: 'transform' }}
       disabled={isDisabled}
       {...(rest as Record<string, unknown>)}
     >
