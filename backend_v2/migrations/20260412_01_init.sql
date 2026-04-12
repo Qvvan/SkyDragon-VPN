@@ -1,5 +1,21 @@
 -- depends:
 
+-- ── Payment ENUMs ──────────────────────────────────────────────────────────
+
+CREATE TYPE payment_status AS ENUM (
+    'pending',    -- ожидает оплаты
+    'succeeded',  -- успешно оплачен
+    'canceled',   -- отменён пользователем или просрочен
+    'failed',     -- ошибка при оплате
+    'refunded'    -- возвращён
+);
+
+CREATE TYPE payment_type AS ENUM (
+    'subscription', -- новая подписка (выбрана услуга с нуля)
+    'renewal',      -- продление существующей подписки
+    'gift'          -- оплата подарка
+);
+
 -- ── Subscriptions ─────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS subscriptions (
@@ -74,18 +90,34 @@ INSERT INTO services (name, duration_days, price, is_trial, is_active, sort_orde
 -- ── Payments ──────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS payments (
-    id                UUID         NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    payment_id        VARCHAR(255) NOT NULL UNIQUE,
-    user_id           BIGINT       NOT NULL DEFAULT 0,
-    account_id        UUID         NULL,
-    recipient_user_id BIGINT       NULL,
-    service_id        INTEGER      NULL,
-    status            VARCHAR(64)  NOT NULL DEFAULT 'pending',
-    payment_type      VARCHAR(64)  NULL DEFAULT 'myself',
-    receipt_link      VARCHAR(1024) NULL,
-    created_at        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
+    id                UUID           NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    payment_id        VARCHAR(255)   NOT NULL UNIQUE,
+    user_id           BIGINT         NOT NULL DEFAULT 0,
+    account_id        UUID           NULL,
+    recipient_user_id BIGINT         NULL,
+    service_id        INTEGER        NULL,
+    -- UUID для веб-подписок, целое число (в виде строки) для telegram-бота
+    subscription_id   TEXT           NULL,
+    -- Тип платежа: новая подписка, продление или подарок
+    payment_type      payment_type   NOT NULL,
+    -- Статус платежа
+    status            payment_status NOT NULL DEFAULT 'pending',
+    -- Фактическая сумма в момент создания платежа
+    amount            DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    receipt_link      VARCHAR(1024)  NULL,
+    -- URL для перехода к оплате на стороне YooKassa
+    confirmation_url  VARCHAR(1024)  NULL,
+    created_at        TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_payments_account_service_pending
+    ON payments (account_id, service_id, status)
+    WHERE status = 'pending';
+
+CREATE INDEX IF NOT EXISTS idx_payments_subscription_service_pending
+    ON payments (subscription_id, service_id, status)
+    WHERE status = 'pending';
 
 -- ── Accounts ──────────────────────────────────────────────────────────────
 
@@ -114,7 +146,7 @@ CREATE TABLE IF NOT EXISTS account_telegram_links (
 CREATE INDEX IF NOT EXISTS idx_account_telegram_links_account_id
     ON account_telegram_links (account_id);
 
--- ── Deferred FK constraints (reference accounts which is defined above) ──
+-- ── Deferred FK constraints ───────────────────────────────────────────────
 
 ALTER TABLE subscriptions
     ADD CONSTRAINT fk_subscriptions_account_id
@@ -127,18 +159,18 @@ ALTER TABLE payments
 -- ── Key operations (outbox) ───────────────────────────────────────────────
 
 CREATE TYPE key_operation_action AS ENUM (
-    'create',   -- Создать ключ на панели
-    'update',   -- Обновить ключ (продление срока)
-    'delete',   -- Удалить ключ
-    'enable',   -- Включить ключ
-    'disable'   -- Выключить ключ
+    'create',
+    'update',
+    'delete',
+    'enable',
+    'disable'
 );
 
 CREATE TYPE key_operation_status AS ENUM (
-    'pending',     -- Ожидает обработки
-    'processing',  -- В процессе обработки
-    'completed',   -- Успешно выполнено
-    'failed'       -- Ошибка (исчерпаны попытки)
+    'pending',
+    'processing',
+    'completed',
+    'failed'
 );
 
 CREATE TABLE IF NOT EXISTS key_operations (
@@ -152,7 +184,6 @@ CREATE TABLE IF NOT EXISTS key_operations (
     retry_count     INTEGER NOT NULL DEFAULT 0,
     max_retries     INTEGER NOT NULL DEFAULT 10,
     error_message   TEXT,
-    -- scheduled_at позволяет реализовать backoff при повторных попытках
     scheduled_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     started_at      TIMESTAMP WITH TIME ZONE,
     completed_at    TIMESTAMP WITH TIME ZONE,

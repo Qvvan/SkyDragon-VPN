@@ -36,6 +36,16 @@ export const servicesApi = {
     return { subscriptionId: serviceId }
   },
 
+  async renew(subscriptionId: string, serviceId: string): Promise<void> {
+    const res = await client.post<{ payment_url: string }>(
+      `/me/subscriptions/${subscriptionId}/renew`,
+      { service_id: Number(serviceId) },
+    )
+    if (res.data.payment_url) {
+      window.location.href = res.data.payment_url
+    }
+  },
+
   async activateTrial(): Promise<{ subscriptionId: string; endDate: string }> {
     const res = await client.post<{ subscription_id: string; end_date: string }>('/me/trial')
     return { subscriptionId: res.data.subscription_id, endDate: res.data.end_date }

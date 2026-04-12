@@ -4,6 +4,8 @@ DROP TYPE IF EXISTS key_operation_status;
 DROP TABLE IF EXISTS account_telegram_links;
 DROP TABLE IF EXISTS accounts;
 DROP TABLE IF EXISTS payments;
+DROP TYPE IF EXISTS payment_type;
+DROP TYPE IF EXISTS payment_status;
 DROP TABLE IF EXISTS services;
 DROP TABLE IF EXISTS servers;
 DROP TABLE IF EXISTS subscriptions;

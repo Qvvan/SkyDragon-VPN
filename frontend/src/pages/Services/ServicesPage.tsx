@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
 import { SkeletonCard } from '../../components/ui/Skeleton'
-import { useServices, useSubscribeService } from '../../hooks/useServices'
+import { useServices, useSubscribeService, useRenewSubscription } from '../../hooks/useServices'
 import { useUIStore } from '../../stores/ui.store'
 import type { Service } from '../../types/service.types'
 
@@ -18,19 +18,32 @@ function durationLabel(days: number): string {
   return `${days} дней`
 }
 
+interface ServicesContentProps {
+  /** Если передан — режим продления существующей подписки */
+  subscriptionId?: string
+}
 
-export function ServicesContent() {
+export function ServicesContent({ subscriptionId }: ServicesContentProps = {}) {
+  const isRenewal = !!subscriptionId
+
   const { data: services, isLoading } = useServices()
   const subscribe = useSubscribeService()
+  const renew     = useRenewSubscription()
   const { addToast } = useUIStore()
 
   const [confirm, setConfirm] = useState<Service | null>(null)
 
-  async function handleSubscribe() {
+  const isPending = isRenewal ? renew.isPending : subscribe.isPending
+
+  async function handleConfirm() {
     if (!confirm) return
     try {
-      await subscribe.mutateAsync({ serviceId: confirm.id })
-      addToast(`Подписка на ${confirm.name} оформлена!`)
+      if (isRenewal) {
+        await renew.mutateAsync({ subscriptionId: subscriptionId!, serviceId: confirm.id })
+      } else {
+        await subscribe.mutateAsync({ serviceId: confirm.id })
+      }
+      addToast(isRenewal ? `Продление на ${confirm.name} оформлено!` : `Подписка на ${confirm.name} оформлена!`)
       setConfirm(null)
     } catch {
       addToast('Ошибка оформления. Попробуйте снова.', 'error')
@@ -47,8 +60,12 @@ export function ServicesContent() {
     <>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="font-display text-2xl md:text-3xl text-text font-bold">Тарифы</h1>
-        <p className="text-text-dim text-sm mt-1">Выберите подходящий план подписки</p>
+        <h1 className="font-display text-2xl md:text-3xl text-text font-bold">
+          {isRenewal ? 'Продление подписки' : 'Тарифы'}
+        </h1>
+        <p className="text-text-dim text-sm mt-1">
+          {isRenewal ? 'Выберите тариф для продления' : 'Выберите подходящий план подписки'}
+        </p>
       </div>
 
       {/* Cards grid */}
@@ -103,7 +120,7 @@ export function ServicesContent() {
                 className="w-full"
                 onClick={(e) => { e.stopPropagation(); setConfirm(service) }}
               >
-                Выбрать
+                {isRenewal ? 'Продлить' : 'Выбрать'}
               </Button>
             </div>
           </motion.div>
@@ -113,7 +130,11 @@ export function ServicesContent() {
       {/* Confirm modal */}
       <AnimatePresence>
         {confirm && (
-          <Modal open onClose={() => setConfirm(null)} title="Оформление подписки">
+          <Modal
+            open
+            onClose={() => setConfirm(null)}
+            title={isRenewal ? 'Продление подписки' : 'Оформление подписки'}
+          >
             <div className="px-6 sm:px-7 pb-7 pt-5 space-y-5">
               <div
                 className="rounded-2xl p-5 sm:p-6 flex items-center justify-between gap-4"
@@ -136,10 +157,10 @@ export function ServicesContent() {
                   variant="primary"
                   size="lg"
                   className="flex-1"
-                  loading={subscribe.isPending}
-                  onClick={handleSubscribe}
+                  loading={isPending}
+                  onClick={handleConfirm}
                 >
-                  Оформить подписку
+                  {isRenewal ? 'Продлить подписку' : 'Оформить подписку'}
                 </Button>
                 <Button variant="ghost" size="lg" onClick={() => setConfirm(null)}>Отмена</Button>
               </div>

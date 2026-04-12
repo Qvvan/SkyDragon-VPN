@@ -731,7 +731,7 @@ export function DashboardPage() {
               {loadingPayments ? (
                 <Skeleton className="h-3 w-20 mt-1" />
               ) : lastPayment
-                ? `Последний: $${lastPayment.amount.toFixed(2)}`
+                ? `Последний: ${lastPayment.amount.toLocaleString('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 })}`
                 : 'История платежей'
               }
             </ManagementCard>
@@ -773,9 +773,11 @@ export function DashboardPage() {
 
       </motion.div>
 
-      {/* ── Renewal modal (same UI as Services modal) ── */}
-      <Modal open={!!renewTarget} onClose={() => setRenewTarget(null)} title="Услуги" size="xl">
-        <div className="px-6 sm:px-7 py-6"><ServicesContent /></div>
+      {/* ── Renewal modal ── */}
+      <Modal open={!!renewTarget} onClose={() => setRenewTarget(null)} title="Продление" size="xl">
+        <div className="px-6 sm:px-7 py-6">
+          <ServicesContent subscriptionId={renewTarget?.id} />
+        </div>
       </Modal>
 
       {/* ── Services modal ── */}

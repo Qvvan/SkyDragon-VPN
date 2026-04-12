@@ -25,6 +25,7 @@ from src.api.v1.schemas.account import (
     PaymentSchema,
     ReferralListResponse,
     ReferralStatsResponse,
+    RenewSubscriptionRequest,
     SendChatMessageRequest,
     SubscriptionSummaryListResponse,
     SubscriptionSummarySchema,
@@ -108,6 +109,21 @@ async def create_subscription(
     payment_service: Annotated[PaymentService, Depends(get_payment_service)],
 ):
     payment_url = await payment_service.create_payment_for_account(account.id, data.service_id)
+    return CreateSubscriptionResponse(payment_url=payment_url)
+
+
+@router.post("/subscriptions/{subscription_id}/renew", response_model=CreateSubscriptionResponse, status_code=status.HTTP_201_CREATED)
+async def renew_subscription(
+    subscription_id: UUID,
+    data: RenewSubscriptionRequest,
+    account: Annotated[Account, Depends(get_current_account)],
+    payment_service: Annotated[PaymentService, Depends(get_payment_service)],
+):
+    payment_url = await payment_service.create_renewal_payment_for_account(
+        account_id=account.id,
+        subscription_id=str(subscription_id),
+        service_id=data.service_id,
+    )
     return CreateSubscriptionResponse(payment_url=payment_url)
 
 

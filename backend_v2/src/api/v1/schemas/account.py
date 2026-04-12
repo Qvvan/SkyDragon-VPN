@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -81,9 +82,12 @@ class PaymentSchema(BaseModel):
     id: UUID
     payment_id: str
     service_id: int | None
+    service_name: str | None
+    payment_type: str
     status: str
-    payment_type: str | None
+    amount: Decimal
     receipt_link: str | None
+    confirmation_url: str | None
     created_at: datetime | None
 
 
@@ -92,6 +96,10 @@ class PaymentListResponse(BaseModel):
 
 
 class CreateSubscriptionRequest(BaseModel):
+    service_id: int = Field(..., gt=0)
+
+
+class RenewSubscriptionRequest(BaseModel):
     service_id: int = Field(..., gt=0)
 
 

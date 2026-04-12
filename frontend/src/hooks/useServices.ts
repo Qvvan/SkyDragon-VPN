@@ -19,6 +19,15 @@ export function useSubscribeService() {
   })
 }
 
+export function useRenewSubscription() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ subscriptionId, serviceId }: { subscriptionId: string; serviceId: string }) =>
+      servicesApi.renew(subscriptionId, serviceId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subscriptions'] }),
+  })
+}
+
 export function useActivateTrial() {
   const queryClient = useQueryClient()
   return useMutation({
