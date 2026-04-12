@@ -4,7 +4,7 @@ from src.interfaces.repositories.payment import IPaymentRepository
 from src.interfaces.repositories.server import IServerRepository
 from src.interfaces.repositories.service_plan import IServicePlanRepository
 from src.interfaces.repositories.subscription import ISubscriptionRepository
-from src.interfaces.repositories.subscription_provision_task import ISubscriptionProvisionTaskRepository
+from src.interfaces.repositories.subscription_provision_task import IKeyOperationRepository, ISubscriptionProvisionTaskRepository
 
 __all__ = [
     "IAccountRepository",
@@ -13,5 +13,6 @@ __all__ = [
     "IServerRepository",
     "IServicePlanRepository",
     "ISubscriptionRepository",
+    "IKeyOperationRepository",
     "ISubscriptionProvisionTaskRepository",
 ]

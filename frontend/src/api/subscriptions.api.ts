@@ -2,7 +2,7 @@ import client from './client'
 import type { Subscription } from '../types/subscription.types'
 
 interface BackendSubscription {
-  subscription_id: number
+  subscription_id: string
   service_id: number | null
   service_name: string | null
   start_date: string | null
@@ -30,7 +30,7 @@ function mapSubscription(s: BackendSubscription): Subscription {
   const statusKey = (s.status ?? '').toLowerCase()
 
   return {
-    id: String(s.subscription_id),
+    id: s.subscription_id,
     serviceId: String(s.service_id ?? ''),
     serviceName: s.service_name ?? 'Подписка',
     status: STATUS_MAP[statusKey] ?? (daysRemaining > 0 ? 'active' : 'expired'),

@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from datetime import datetime
 
 from src.domain.entities.server import ServerNode
 
@@ -15,18 +14,21 @@ class IServerPanelClient(ABC):
         self,
         server: ServerNode,
         user_id: int,
-        subscription_id: int,
+        subscription_id: str,
         action: str,
-        expire_at: datetime | None,
+        days: int | None = None,
     ) -> None:
         """
         Выполняет действие над пользователем на панели сервера.
 
         action:
-          'create' — создать пользователя / продлить подписку
-          'update' — обновить срок действия
-          'delete' — удалить пользователя
+          'create'  — создать ключ
+          'update'  — обновить ключ (продление)
+          'delete'  — удалить ключ
+          'enable'  — включить ключ
+          'disable' — выключить ключ
 
+        days — количество дней подписки для create/update (None = без ограничений).
         Кидает Exception при ошибке (воркер поймает и уйдёт в retry).
         """
         raise NotImplementedError

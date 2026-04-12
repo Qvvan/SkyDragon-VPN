@@ -11,9 +11,9 @@ class SubscriptionStatus(str, Enum):
 
 @dataclass(slots=True, kw_only=True)
 class Subscription:
-    subscription_id: int
+    subscription_id: str
     user_id: int
-    account_id: int | None = None
+    account_id: str | None = None
     service_id: int | None
     start_date: datetime | None
     end_date: datetime | None

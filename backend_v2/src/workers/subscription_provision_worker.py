@@ -1,12 +1,15 @@
 """
-Воркер провижнинга подписок на VPN-серверах.
+Воркер управления ключами на VPN-серверах.
 
 Запуск:
     python -m src.workers.subscription_provision_worker
 
-Воркер читает таблицу subscription_provision_tasks и выполняет действия
-на панелях серверов (create / update / delete).
+Воркер читает таблицу key_operations и выполняет действия
+на панелях серверов (create / update / delete / enable / disable).
 Использует FOR UPDATE SKIP LOCKED — безопасен для запуска в нескольких репликах.
+
+Примечание: фактическое взаимодействие с 3x-ui панелью происходит в telegram_bot.
+Если backend запускается без бота, используется StubServerPanelClient.
 """
 
 import asyncio
@@ -19,8 +22,8 @@ from src.core.config import Config
 from src.core.container import Container
 
 
-class SubscriptionProvisionWorker:
-    """Тонкий polling-цикл. Вся логика — в SubscriptionProvisionService."""
+class KeyOperationWorker:
+    """Тонкий polling-цикл. Вся логика — в KeyOperationService."""
 
     __slots__ = ("_service", "_running", "_poll_interval", "_stale_reset_interval", "_batch_size")
 
@@ -41,24 +44,26 @@ class SubscriptionProvisionWorker:
         self._running = False
 
     async def run(self) -> None:
-        logger.info("provision_worker.start | poll={}s batch={}", self._poll_interval, self._batch_size)
+        logger.info("key_op_worker.start | poll={}s batch={}", self._poll_interval, self._batch_size)
         last_stale_reset = 0.0
 
         while self._running:
             now = asyncio.get_event_loop().time()
 
-            # Периодически сбрасываем зависшие processing-задачи
             if now - last_stale_reset >= self._stale_reset_interval:
                 await self._service.reset_stale()
                 last_stale_reset = now
 
             processed = await self._service.claim_and_process_batch(self._batch_size)
 
-            # Если задач нет — ждём; если были — сразу следующий цикл (backlog)
             if processed == 0:
                 await asyncio.sleep(self._poll_interval)
 
-        logger.info("provision_worker.stopped")
+        logger.info("key_op_worker.stopped")
+
+
+# Backwards-compat alias
+SubscriptionProvisionWorker = KeyOperationWorker
 
 
 async def main() -> None:
@@ -69,7 +74,7 @@ async def main() -> None:
         await container.infra.init()
         service = container.services.subscription_provision_service
 
-        worker = SubscriptionProvisionWorker(service)
+        worker = KeyOperationWorker(service)
 
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGINT, signal.SIGTERM):

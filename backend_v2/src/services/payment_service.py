@@ -50,10 +50,10 @@ class PaymentService:
         await self._payment_repo.create_pending_payment(result.payment_id, user_id, service_id)
         return result.confirmation_url
 
-    async def list_payments_for_account(self, account_id: int) -> list[Payment]:
+    async def list_payments_for_account(self, account_id: str) -> list[Payment]:
         return await self._payment_repo.list_for_account(account_id)
 
-    async def create_payment_for_account(self, account_id: int, service_id: int) -> str:
+    async def create_payment_for_account(self, account_id: str, service_id: int) -> str:
         if service_id <= 0:
             raise ValidationError("Invalid service_id")
         if self._gateway is None:
@@ -67,9 +67,11 @@ class PaymentService:
             amount=service.price,
             service_id=service_id,
             service_name=service.name,
-            user_id=account_id,
+            user_id=0,
             subscription_id=0,
             return_url=self._telegram_yookassa_return_url,
         )
-        await self._payment_repo.create_pending_payment(result.payment_id, account_id, service_id)
+        await self._payment_repo.create_pending_payment(
+            result.payment_id, user_id=0, service_id=service_id, account_id=account_id
+        )
         return result.confirmation_url

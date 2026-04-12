@@ -4,10 +4,11 @@ import { SkeletonCard } from '../../components/ui/Skeleton'
 import { useSubscriptions } from '../../hooks/useSubscriptions'
 import type { Subscription } from '../../types/subscription.types'
 
-function statusVariant(status: Subscription['status']): 'jade' | 'trial' | 'muted' | 'amber' {
-  if (status === 'active')  return 'jade'
+function statusVariant(status: Subscription['status']): 'green' | 'trial' | 'ember' | 'amber' | 'muted' {
+  if (status === 'active')  return 'green'
   if (status === 'trial')   return 'trial'
   if (status === 'pending') return 'amber'
+  if (status === 'expired') return 'ember'
   return 'muted'
 }
 

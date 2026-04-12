@@ -4,25 +4,25 @@ import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { Toggle } from '../../components/ui/Toggle'
 import { Modal } from '../../components/ui/Modal'
-import { Input } from '../../components/ui/Input'
 import { Skeleton, SkeletonCard } from '../../components/ui/Skeleton'
 import { useAuthStore } from '../../stores/auth.store'
 import { useSubscriptions, useToggleAutoRenewal } from '../../hooks/useSubscriptions'
 import { usePayments } from '../../hooks/usePayments'
 import { useReferralStats } from '../../hooks/useReferrals'
-import { useActivateGift } from '../../hooks/useReferrals'
-import { useServices, useSubscribeService } from '../../hooks/useServices'
+
+import { useActivateTrial, useServices } from '../../hooks/useServices'
 import { ServicesContent } from '../Services/ServicesPage'
 import { PaymentsContent } from '../Payments/PaymentsPage'
 import { ReferralsContent } from '../Referrals/ReferralsPage'
 import { useUIStore } from '../../stores/ui.store'
 import type { Subscription } from '../../types/subscription.types'
 
-type ModalSection = 'services' | 'payments' | 'referrals' | 'activate' | null
+type ModalSection = 'services' | 'payments' | 'referrals' | 'trial-success' | 'instructions' | null
 
 const TELEGRAM = {
   channel: 'https://t.me/skydragonvpn',
   bot:     'https://t.me/skydragonvpn_bot',
+  support: 'https://t.me/SkyDragonSupport',
 }
 
 const ease = [0.16, 1, 0.3, 1] as const
@@ -237,7 +237,7 @@ function SubscriptionCard({
 
   const badgeVariant =
     sub.status === 'trial'   ? 'trial' :
-    sub.status === 'active'  ? (isHealthy ? 'jade' : 'amber') :
+    sub.status === 'active'  ? 'green' :
     sub.status === 'expired' ? 'ember' : 'amber'
 
   const progressColor = isHealthy ? '#9d8cff' : '#f87171'
@@ -292,9 +292,9 @@ function SubscriptionCard({
         >
           <span className="font-mono text-[10px] text-text-dim">Автопродление</span>
           <Toggle
-            checked={sub.autoRenewal}
+            checked={sub.status === 'trial' ? false : sub.autoRenewal}
             onChange={(enabled) => toggleAutoRenewal.mutate({ id: sub.id, enabled })}
-            disabled={sub.status === 'expired'}
+            disabled={sub.status === 'expired' || sub.status === 'trial'}
             label="Автопродление"
           />
         </div>
@@ -340,9 +340,9 @@ function SubscriptionCard({
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs text-text-dim">Автопродление</span>
             <Toggle
-              checked={sub.autoRenewal}
+              checked={sub.status === 'trial' ? false : sub.autoRenewal}
               onChange={(enabled) => toggleAutoRenewal.mutate({ id: sub.id, enabled })}
-              disabled={sub.status === 'expired'}
+              disabled={sub.status === 'expired' || sub.status === 'trial'}
               label="Автопродление"
             />
           </div>
@@ -401,47 +401,31 @@ export function DashboardPage() {
   const { data: subscriptions, isLoading: loadingSubs }      = useSubscriptions()
   const { data: payments, isLoading: loadingPayments }       = usePayments()
   const { data: referralStats, isLoading: loadingReferrals } = useReferralStats()
-  const { data: services }                                   = useServices()
-  const subscribeService = useSubscribeService()
-  const activateGift     = useActivateGift()
+  const { data: services } = useServices()
+  const activateTrial = useActivateTrial()
   const { addToast }     = useUIStore()
 
-  const [activeModal, setActiveModal]       = useState<ModalSection>(null)
-  const [renewTarget, setRenewTarget]       = useState<Subscription | null>(null)
-  const [renewServiceId, setRenewServiceId] = useState('')
-  const [giftCode, setGiftCode]             = useState('')
+  const [activeModal, setActiveModal] = useState<ModalSection>(null)
+  const [renewTarget, setRenewTarget] = useState<Subscription | null>(null)
+  const [trialEndDate, setTrialEndDate] = useState('')
 
-  const lastPayment    = payments?.[0]
-  const hasNoSubs      = !loadingSubs && (!subscriptions || subscriptions.length === 0)
-  const hasUnusedTrial = hasNoSubs
-  const activeSubs     = subscriptions?.filter(s => s.status === 'active' || s.status === 'trial') ?? []
-
-  async function handleRenew() {
-    if (!renewServiceId) return
-    try {
-      await subscribeService.mutateAsync({ serviceId: renewServiceId })
-      addToast('Услуга успешно подключена')
-      setRenewTarget(null)
-    } catch {
-      addToast('Ошибка подключения услуги. Попробуйте снова.', 'error')
-    }
-  }
+  const lastPayment      = payments?.[0]
+  const hasNoSubs        = !loadingSubs && (!subscriptions || subscriptions.length === 0)
+  const hasUnusedTrial   = hasNoSubs
+  const trialAlreadyUsed = !loadingSubs && !!subscriptions && subscriptions.length > 0
+  const activeSubs       = subscriptions?.filter(s => s.status === 'active' || s.status === 'trial') ?? []
 
   function openRenewModal(sub: Subscription) {
     setRenewTarget(sub)
-    setRenewServiceId(sub.serviceId || services?.[0]?.id || '')
   }
 
-  async function handleActivateCode() {
-    const code = giftCode.trim().toUpperCase()
-    if (!code) return
+  async function handleActivateTrial() {
     try {
-      const activated = await activateGift.mutateAsync({ code })
-      addToast(`Код активирован: ${activated.serviceName} на ${activated.durationDays} дней`)
-      setGiftCode('')
-      setActiveModal(null)
+      const result = await activateTrial.mutateAsync()
+      setTrialEndDate(result.endDate)
+      setActiveModal('trial-success')
     } catch {
-      addToast('Не удалось активировать код. Проверьте и попробуйте снова.', 'error')
+      addToast('Не удалось активировать пробный период. Попробуйте снова.', 'error')
     }
   }
 
@@ -501,16 +485,18 @@ export function DashboardPage() {
               </svg>
               Бот
             </a>
-            <button
-              onClick={() => setActiveModal('activate')}
-              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full font-mono text-[11px] md:text-xs text-ember transition-colors duration-150 hover:brightness-110 cursor-pointer active:scale-[0.96] transition-transform"
+            <a
+              href={TELEGRAM.support}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full font-mono text-[11px] md:text-xs text-ember transition-colors duration-150 hover:brightness-110 active:scale-[0.96] transition-transform"
               style={{ background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.16)' }}
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
               </svg>
               Поддержка
-            </button>
+            </a>
           </div>
         </motion.div>
 
@@ -518,12 +504,12 @@ export function DashboardPage() {
         <AnimatePresence initial={false}>
           {hasUnusedTrial && (
             <motion.div
-              key="trial-banner"
+              key="trial-available"
               variants={fadeUp}
               transition={fadeUpTransition}
               exit={{ opacity: 0, y: -10, filter: 'blur(4px)', transition: { duration: 0.15, ease: 'easeIn' } }}
             >
-              <BentoCard glow onClick={() => setActiveModal('services')} innerClassName="p-0">
+              <BentoCard glow onClick={handleActivateTrial} innerClassName="p-0">
                 <div className="flex items-center justify-between gap-4 p-4 md:p-5">
                   <div className="flex items-center gap-3">
                     <TrialSparkIcon />
@@ -536,7 +522,38 @@ export function DashboardPage() {
                       </p>
                     </div>
                   </div>
-                  <Button size="sm" variant="primary" staticPress>Активировать</Button>
+                  <Button size="sm" variant="primary" staticPress loading={activateTrial.isPending}>
+                    Активировать
+                  </Button>
+                </div>
+              </BentoCard>
+            </motion.div>
+          )}
+          {trialAlreadyUsed && (
+            <motion.div
+              key="trial-used"
+              variants={fadeUp}
+              transition={fadeUpTransition}
+            >
+              <BentoCard innerClassName="p-0">
+                <div className="flex items-center gap-4 p-4 md:p-5 opacity-40 select-none">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <span className="size-10 md:size-12 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: 'rgba(157,140,255,0.07)', border: '1px solid rgba(157,140,255,0.1)' }}>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M13 2L5 14h6l-1 8 9-13h-6l0-7z" />
+                      </svg>
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-display text-base md:text-lg font-medium text-text-dim text-balance">
+                        Пробный период использован
+                      </p>
+                      <p className="font-mono text-xs md:text-sm text-text-faint mt-0.5 text-pretty">
+                        5 дней уже были активированы
+                      </p>
+                    </div>
+                  </div>
+                  <span className="font-mono text-xs text-text-faint shrink-0 whitespace-nowrap">Недоступно</span>
                 </div>
               </BentoCard>
             </motion.div>
@@ -657,60 +674,69 @@ export function DashboardPage() {
               )}
             </ManagementCard>
 
-            {/* Activate code */}
-            <ManagementCard
-              accent="gold"
-              onClick={() => setActiveModal('activate')}
-              icon={
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                  <path d="M21 8v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8" />
-                  <path d="M7 12l3 3 7-7" />
-                </svg>
-              }
-              title="Активировать"
-            >
-              Подарок или промокод
-            </ManagementCard>
           </div>
         </motion.div>
+
+        {/* ── Instructions banner ── */}
+        <motion.div variants={fadeUp} transition={fadeUpTransition}>
+          <button
+            onClick={() => setActiveModal('instructions')}
+            className="w-full text-left group"
+          >
+            <div
+              className="relative rounded-[24px] overflow-hidden transition-all duration-300 hover:-translate-y-0.5"
+              style={{
+                background: 'linear-gradient(135deg, rgba(168,153,255,0.07) 0%, rgba(99,102,241,0.05) 50%, rgba(34,211,238,0.06) 100%)',
+                border: '1px solid rgba(157,140,255,0.14)',
+              }}
+            >
+              {/* Decorative top line */}
+              <div
+                className="absolute top-0 left-0 right-0 h-px"
+                style={{ background: 'linear-gradient(90deg, transparent, rgba(157,140,255,0.5), rgba(34,211,238,0.3), transparent)' }}
+              />
+              <div className="flex items-center justify-between gap-4 px-4 md:px-6 py-4 md:py-5">
+                <div className="flex items-center gap-3 md:gap-4">
+                  {/* Icon */}
+                  <div
+                    className="size-10 md:size-12 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(157,140,255,0.15) 0%, rgba(34,211,238,0.1) 100%)',
+                      border: '1px solid rgba(157,140,255,0.2)',
+                    }}
+                  >
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-jade">
+                      <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-display text-base md:text-lg font-medium text-text group-hover:text-jade transition-colors duration-200">
+                      Инструкция по подключению
+                    </p>
+                    <p className="font-mono text-[10px] md:text-xs text-text-faint mt-0.5">
+                      Настройка VPN на всех устройствах
+                    </p>
+                  </div>
+                </div>
+                <motion.div
+                  className="text-text-faint group-hover:text-jade transition-colors duration-200 shrink-0"
+                  whileHover={{ x: 2, y: -2 }}
+                  transition={{ type: 'spring', duration: 0.2, bounce: 0 }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <path d="M7 17L17 7M17 7H7M17 7v10"/>
+                  </svg>
+                </motion.div>
+              </div>
+            </div>
+          </button>
+        </motion.div>
+
       </motion.div>
 
-      {/* ── Renewal modal ── */}
-      <Modal open={!!renewTarget} onClose={() => setRenewTarget(null)} title="Выбрать услугу">
-        {renewTarget && services && (
-          <div className="p-6 space-y-4">
-            <p className="font-mono text-sm text-text-dim text-pretty">
-              Текущая подписка: <span className="text-text">{renewTarget.serviceName}</span>.
-              {' '}Выберите услугу для продления:
-            </p>
-            <div className="space-y-2 max-h-[260px] overflow-auto pr-1">
-              {services.map((service) => (
-                <button
-                  key={service.id}
-                  onClick={() => setRenewServiceId(service.id)}
-                  className={[
-                    'w-full text-left rounded-2xl px-3 py-2.5 font-mono text-sm transition-[background-color,box-shadow,color] duration-150 active:scale-[0.98] transition-transform',
-                    renewServiceId === service.id
-                      ? 'bg-jade-dim text-jade shadow-[0_0_0_1px_rgba(157,140,255,0.3)]'
-                      : 'text-text-dim hover:text-text',
-                  ].join(' ')}
-                  style={renewServiceId !== service.id ? { background: 'rgba(157,140,255,0.04)', border: '1px solid rgba(157,140,255,0.07)' } : {}}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="truncate">{service.name}</span>
-                    <span className="tabular-nums text-xs shrink-0">{service.durationDays} дн · ${service.price.toFixed(2)}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-3">
-              <Button variant="primary" className="flex-1" loading={subscribeService.isPending} disabled={!renewServiceId} onClick={handleRenew}>
-                Продлить
-              </Button>
-              <Button variant="ghost" onClick={() => setRenewTarget(null)}>Отмена</Button>
-            </div>
-          </div>
-        )}
+      {/* ── Renewal modal (same UI as Services modal) ── */}
+      <Modal open={!!renewTarget} onClose={() => setRenewTarget(null)} title="Услуги" size="xl">
+        <div className="p-6"><ServicesContent /></div>
       </Modal>
 
       {/* ── Services modal ── */}
@@ -728,29 +754,153 @@ export function DashboardPage() {
         <div className="p-6"><ReferralsContent /></div>
       </Modal>
 
-      {/* ── Activate code modal ── */}
-      <Modal open={activeModal === 'activate'} onClose={() => setActiveModal(null)} title="Активировать код" size="md">
-        <div className="p-6 space-y-4">
-          <p className="font-mono text-sm text-text-dim text-pretty">
-            Введите подарочный или промокод, чтобы активировать его на аккаунте.
-          </p>
-          <Input
-            label="Код"
-            type="text"
-            placeholder="GIFT-XXXXXXX"
-            value={giftCode}
-            onChange={(e) => setGiftCode(e.target.value.toUpperCase())}
-            autoFocus
-          />
-          <div className="flex gap-3">
-            <Button variant="primary" className="flex-1" loading={activateGift.isPending} disabled={!giftCode.trim()} onClick={handleActivateCode}>
-              Активировать
-            </Button>
-            <Button variant="ghost" onClick={() => setActiveModal(null)}>Отмена</Button>
-          </div>
-        </div>
-      </Modal>
+      {/* ── Trial success modal ── */}
+      <TrialSuccessModal
+        open={activeModal === 'trial-success'}
+        endDate={trialEndDate}
+        onClose={() => setActiveModal(null)}
+      />
+
+      {/* ── Instructions modal ── */}
+      <InstructionsModal
+        open={activeModal === 'instructions'}
+        onClose={() => setActiveModal(null)}
+      />
+
     </div>
+  )
+}
+
+// ─── Trial Success Modal ───────────────────────────────────────────────────────
+
+function TrialSuccessModal({ open, endDate, onClose }: { open: boolean; endDate: string; onClose: () => void }) {
+  const formatted = endDate
+    ? new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(new Date(endDate))
+    : ''
+
+  return (
+    <Modal open={open} onClose={onClose} size="sm">
+      <div className="flex flex-col items-center text-center px-6 pt-8 pb-6 gap-6">
+
+        {/* Glow orb + animated checkmark */}
+        <div className="relative flex items-center justify-center">
+          {/* Outer halo */}
+          <div
+            className="absolute rounded-full"
+            style={{
+              width: 88,
+              height: 88,
+              background: 'radial-gradient(circle, rgba(74,222,128,0.14) 0%, transparent 72%)',
+              filter: 'blur(6px)',
+            }}
+          />
+          {/* Middle ring */}
+          <div
+            className="absolute rounded-full"
+            style={{
+              width: 64,
+              height: 64,
+              border: '1px solid rgba(74,222,128,0.18)',
+            }}
+          />
+          {/* Icon disc */}
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0, rotate: -15 }}
+            animate={{ scale: 1, opacity: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 20, delay: 0.05 }}
+            className="relative z-10 flex items-center justify-center rounded-full"
+            style={{
+              width: 52,
+              height: 52,
+              background: 'linear-gradient(135deg, rgba(74,222,128,0.15) 0%, rgba(34,211,238,0.1) 100%)',
+              border: '1px solid rgba(74,222,128,0.3)',
+              boxShadow: '0 0 20px rgba(74,222,128,0.15)',
+            }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <motion.path
+                d="M5 13l4 4L19 7"
+                stroke="#4ade80"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ duration: 0.4, delay: 0.18, ease: 'easeOut' }}
+              />
+            </svg>
+          </motion.div>
+        </div>
+
+        {/* Copy */}
+        <div className="space-y-1">
+          <motion.p
+            className="font-mono text-[11px] uppercase tracking-[0.16em]"
+            style={{ color: '#4ade80' }}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0.2 }}
+          >
+            Пробный период активирован
+          </motion.p>
+          <motion.p
+            className="font-display font-light"
+            style={{
+              fontSize: 48,
+              lineHeight: 1,
+              background: 'linear-gradient(135deg, #f0fdf4 0%, #bbf7d0 50%, #86efac 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.25 }}
+          >
+            5 дней
+          </motion.p>
+          {formatted && (
+            <motion.p
+              className="font-mono text-xs"
+              style={{ color: 'rgba(255,255,255,0.35)' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3, delay: 0.35 }}
+            >
+              до {formatted}
+            </motion.p>
+          )}
+        </div>
+
+        {/* Info strip */}
+        <motion.div
+          className="w-full rounded-2xl px-4 py-3 font-mono text-xs text-left leading-relaxed"
+          style={{
+            background: 'rgba(74,222,128,0.04)',
+            border: '1px solid rgba(74,222,128,0.1)',
+            color: 'rgba(255,255,255,0.4)',
+          }}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.4 }}
+        >
+          Карта не нужна · Автопродление не подключено ·&nbsp;По истечении срока подписка завершится сама
+        </motion.div>
+
+        {/* CTA */}
+        <motion.div
+          className="w-full"
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.48 }}
+        >
+          <Button onClick={onClose} variant="primary" className="w-full" size="md">
+            Отлично!
+          </Button>
+        </motion.div>
+
+      </div>
+    </Modal>
   )
 }
 
@@ -787,5 +937,261 @@ function DragonShieldIcon() {
       <circle cx="19.6" cy="15.8" r="0.9" fill="currentColor" />
       <path d="M16.2 18.4c0.6 0.7 3 0.7 3.6 0" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
     </svg>
+  )
+}
+
+// ─── Instructions Modal ────────────────────────────────────────────────────────
+
+type PlatformKey = 'iphone' | 'android' | 'windows' | 'macos' | 'other'
+
+interface PlatformApp {
+  name: string
+  url: string
+  note: string
+}
+
+interface PlatformConfig {
+  label: string
+  apps: PlatformApp[]
+  steps: string[]
+}
+
+const PLATFORMS: Record<PlatformKey, PlatformConfig> = {
+  iphone: {
+    label: 'iPhone / iPad',
+    apps: [
+      { name: 'Happ', url: 'https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973', note: 'RU App Store' },
+      { name: 'Happ', url: 'https://apps.apple.com/us/app/happ-proxy-utility/id6504287215', note: 'EU/US App Store' },
+    ],
+    steps: [
+      'Скачайте приложение Happ из App Store',
+      'Откройте Telegram-бот → «Моя подписка» → «Подключить»',
+      'Нажмите «Открыть в Happ» — конфиг импортируется автоматически',
+      'Включите VPN тумблером в приложении',
+    ],
+  },
+  android: {
+    label: 'Android',
+    apps: [
+      { name: 'Happ', url: 'https://play.google.com/store/apps/details?id=com.happproxy', note: 'Google Play' },
+    ],
+    steps: [
+      'Скачайте приложение Happ из Google Play',
+      'Откройте Telegram-бот → «Моя подписка» → «Подключить»',
+      'Нажмите «Открыть в Happ» — конфиг импортируется автоматически',
+      'Нажмите кнопку запуска в приложении',
+    ],
+  },
+  windows: {
+    label: 'Windows',
+    apps: [
+      { name: 'Happ', url: 'https://github.com/Happ-proxy/happ-desktop/releases/latest/download/setup-Happ.x64.exe', note: 'Скачать .exe' },
+    ],
+    steps: [
+      'Скачайте и установите Happ',
+      'Откройте Telegram-бот → «Моя подписка» → «Подключить»',
+      'Нажмите «Открыть в Happ» — конфиг импортируется автоматически',
+      'Включите VPN кнопкой в приложении',
+    ],
+  },
+  macos: {
+    label: 'macOS',
+    apps: [
+      { name: 'Happ', url: 'https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973', note: 'RU App Store' },
+      { name: 'Happ', url: 'https://apps.apple.com/us/app/happ-proxy-utility/id6504287215', note: 'EU/US App Store' },
+    ],
+    steps: [
+      'Скачайте приложение Happ из Mac App Store',
+      'Откройте Telegram-бот → «Моя подписка» → «Подключить»',
+      'Нажмите «Открыть в Happ» — конфиг импортируется автоматически',
+      'Включите VPN кнопкой в приложении',
+    ],
+  },
+  other: {
+    label: 'Другое устройство',
+    apps: [
+      { name: 'Happ (iOS RU)', url: 'https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973', note: 'App Store RU' },
+      { name: 'Happ (iOS/macOS EU)', url: 'https://apps.apple.com/us/app/happ-proxy-utility/id6504287215', note: 'App Store EU/US' },
+      { name: 'Happ (Android)', url: 'https://play.google.com/store/apps/details?id=com.happproxy', note: 'Google Play' },
+      { name: 'Happ (Windows)', url: 'https://github.com/Happ-proxy/happ-desktop/releases/latest/download/setup-Happ.x64.exe', note: 'Windows .exe' },
+    ],
+    steps: [
+      'Скачайте приложение Happ для вашего устройства',
+      'Откройте Telegram-бот → «Моя подписка» → «Подключить»',
+      'Нажмите «Открыть в Happ» — конфиг импортируется автоматически',
+      'Включите VPN в приложении',
+    ],
+  },
+}
+
+const PLATFORM_ORDER: PlatformKey[] = ['iphone', 'android', 'windows', 'macos']
+
+function detectPlatform(): PlatformKey {
+  const ua = navigator.userAgent.toLowerCase()
+  if (/iphone|ipad|ipod/.test(ua)) return 'iphone'
+  if (/android/.test(ua)) return 'android'
+  if (/windows/.test(ua)) return 'windows'
+  if (/mac os x|macintosh/.test(ua)) return 'macos'
+  return 'other'
+}
+
+function InstructionsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [platform, setPlatform] = useState<PlatformKey>('other')
+  const [showPicker, setShowPicker] = useState(false)
+
+  // Detect on first open
+  useEffect(() => {
+    if (open) {
+      setPlatform(detectPlatform())
+      setShowPicker(false)
+    }
+  }, [open])
+
+  const cfg = PLATFORMS[platform]
+
+  return (
+    <Modal open={open} onClose={onClose} title="Подключение VPN" size="md">
+      <div className="px-5 pb-5 pt-1 space-y-4">
+
+        {/* Detected platform pill */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span
+              className="font-mono text-[10px] uppercase tracking-[0.12em] px-2.5 py-1 rounded-full"
+              style={{ background: 'rgba(157,140,255,0.08)', border: '1px solid rgba(157,140,255,0.16)', color: '#9d8cff' }}
+            >
+              {cfg.label}
+            </span>
+          </div>
+          <button
+            onClick={() => setShowPicker(!showPicker)}
+            className="font-mono text-[11px] text-text-faint hover:text-text-dim transition-colors duration-150 flex items-center gap-1"
+          >
+            Другое устройство
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+              style={{ transform: showPicker ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Platform picker */}
+        <AnimatePresence>
+          {showPicker && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="overflow-hidden"
+            >
+              <div className="grid grid-cols-4 gap-1.5 pb-1">
+                {PLATFORM_ORDER.map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => { setPlatform(key); setShowPicker(false) }}
+                    className="py-2 px-1 rounded-xl font-mono text-[10px] text-center transition-all duration-150"
+                    style={platform === key ? {
+                      background: 'rgba(157,140,255,0.12)',
+                      border: '1px solid rgba(157,140,255,0.24)',
+                      color: '#c4b5fd',
+                    } : {
+                      background: 'rgba(157,140,255,0.04)',
+                      border: '1px solid rgba(157,140,255,0.08)',
+                      color: 'rgba(255,255,255,0.4)',
+                    }}
+                  >
+                    {PLATFORMS[key].label.split(' ')[0]}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Download button(s) */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={platform}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="space-y-2"
+          >
+            {cfg.apps.map((app) => (
+              <a
+                key={app.url}
+                href={app.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between gap-3 w-full rounded-2xl px-4 py-3 transition-all duration-150 active:scale-[0.98]"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(157,140,255,0.12) 0%, rgba(124,107,255,0.07) 100%)',
+                  border: '1px solid rgba(157,140,255,0.2)',
+                }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className="flex items-center justify-center size-8 rounded-xl shrink-0"
+                    style={{ background: 'rgba(157,140,255,0.1)', border: '1px solid rgba(157,140,255,0.18)' }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9d8cff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                    </svg>
+                  </span>
+                  <div>
+                    <p className="font-display text-sm text-text leading-none mb-0.5">Скачать {app.name}</p>
+                    <p className="font-mono text-[10px] text-text-faint">{app.note}</p>
+                  </div>
+                </div>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(157,140,255,0.5)" strokeWidth="1.8" strokeLinecap="round">
+                  <path d="M7 17L17 7M17 7H7M17 7v10"/>
+                </svg>
+              </a>
+            ))}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Divider */}
+        <div className="h-px" style={{ background: 'rgba(157,140,255,0.07)' }} />
+
+        {/* Steps */}
+        <div className="space-y-2">
+          {cfg.steps.map((step, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <span
+                className="flex items-center justify-center size-5 rounded-full shrink-0 font-mono text-[10px] font-semibold mt-0.5"
+                style={{
+                  background: i === 0 ? 'rgba(157,140,255,0.15)' : 'rgba(157,140,255,0.06)',
+                  border: `1px solid ${i === 0 ? 'rgba(157,140,255,0.3)' : 'rgba(157,140,255,0.1)'}`,
+                  color: i === 0 ? '#9d8cff' : 'rgba(255,255,255,0.3)',
+                }}
+              >
+                {i + 1}
+              </span>
+              <p className="font-mono text-xs text-text-dim leading-snug pt-0.5">{step}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Bot link */}
+        <div
+          className="flex items-center justify-between rounded-2xl px-3.5 py-2.5"
+          style={{ background: 'rgba(74,222,128,0.04)', border: '1px solid rgba(74,222,128,0.1)' }}
+        >
+          <span className="font-mono text-xs text-text-faint">Конфиг выдаёт бот после активации</span>
+          <a
+            href="https://t.me/skydragonvpn_bot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-[11px] text-[#4ade80] hover:underline shrink-0 ml-2"
+          >
+            Открыть →
+          </a>
+        </div>
+
+      </div>
+    </Modal>
   )
 }

@@ -35,4 +35,9 @@ export const servicesApi = {
     }
     return { subscriptionId: serviceId }
   },
+
+  async activateTrial(): Promise<{ subscriptionId: string; endDate: string }> {
+    const res = await client.post<{ subscription_id: string; end_date: string }>('/me/trial')
+    return { subscriptionId: res.data.subscription_id, endDate: res.data.end_date }
+  },
 }

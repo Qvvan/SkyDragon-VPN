@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from loguru import logger
 
 from src.domain.entities.server import ServerNode
@@ -9,24 +7,24 @@ from src.interfaces.clients.server_panel.client import IServerPanelClient
 class StubServerPanelClient(IServerPanelClient):
     """
     Заглушка панельного клиента.
-    Логирует вызовы — замените реальной реализацией 3x-ui / другой панели.
+    Логирует вызовы — фактическое управление ключами выполняется в telegram_bot
+    через PanelGateway (3x-ui API). Замените реальной реализацией при необходимости.
     """
 
     async def provision(
         self,
         server: ServerNode,
         user_id: int,
-        subscription_id: int,
+        subscription_id: str,
         action: str,
-        expire_at: datetime | None,
+        days: int | None = None,
     ) -> None:
         logger.info(
-            "panel.provision | server={} action={} user_id={} sub_id={} expire_at={}",
+            "panel.provision (stub) | server={} action={} user_id={} sub_id={} days={}",
             server.server_ip,
             action,
             user_id,
             subscription_id,
-            expire_at,
+            days,
         )
-        # TODO: реализовать вызов 3x-ui API
-        # POST https://{server.server_ip}:{server.panel_port}/panel/api/inbounds/addClient
+        # Реальные вызовы к панели выполняет воркер в telegram_bot/workers/key_operations_worker.py

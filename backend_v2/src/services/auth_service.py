@@ -54,7 +54,7 @@ class AuthService:
 
     async def update_profile(
         self,
-        account_id: int,
+        account_id: str,
         *,
         first_name: str | None = None,
         last_name: str | None = None,

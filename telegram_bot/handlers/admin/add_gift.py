@@ -151,7 +151,7 @@ async def process_notification_preference(message: types.Message, state: FSMCont
                 if not subscription:
                     raise Exception("Ошибка создания новой подписки")
             else:
-                subscription = await extend_user_subscription(
+                subscription, _ = await extend_user_subscription(
                     user_id, user.username, duration_days, session_methods
                 )
 

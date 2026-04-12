@@ -83,6 +83,16 @@ class SsmsConfig(ConfigBase):
     SMS_CODE_TTL: int = 300
 
 
+class XuiConfig(ConfigBase):
+    """Настройки 3x-ui панели"""
+    model_config = SettingsConfigDict(env_prefix="XUI_", frozen=True)
+
+    LOGIN: str = ""
+    PASSWORD: SecretStr = SecretStr("")
+    KEY_SECRET: str = "my_secret_key"
+    TIMEOUT: float = 10.0
+
+
 class Config(ConfigBase):
     """Главный класс конфигурации"""
 
@@ -90,6 +100,7 @@ class Config(ConfigBase):
     postgres: PostgresConfig = Field(default_factory=PostgresConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     ssms: SsmsConfig = Field(default_factory=SsmsConfig)
+    xui: XuiConfig = Field(default_factory=XuiConfig)
 
     @classmethod
     def load(cls, env_file: str | Path = ".env") -> "Config":

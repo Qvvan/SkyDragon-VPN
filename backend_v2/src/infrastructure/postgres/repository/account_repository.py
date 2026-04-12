@@ -30,7 +30,7 @@ class PostgresAccountRepository(IAccountRepository):
             raise RuntimeError(msg)
         return self._row_to_account(row)
 
-    async def get_by_id(self, account_id: int) -> Account | None:
+    async def get_by_id(self, account_id: str) -> Account | None:
         query = """
             SELECT id, login, password_hash, first_name, last_name, created_at, updated_at
             FROM accounts
@@ -51,7 +51,7 @@ class PostgresAccountRepository(IAccountRepository):
     async def update_profile(
         self,
         *,
-        account_id: int,
+        account_id: str,
         first_name: str | None,
         last_name: str | None,
     ) -> Account:
@@ -73,7 +73,7 @@ class PostgresAccountRepository(IAccountRepository):
     @staticmethod
     def _row_to_account(row: asyncpg.Record) -> Account:
         return Account(
-            id=row["id"],
+            id=str(row["id"]),
             login=row["login"],
             first_name=row["first_name"] or "",
             last_name=row["last_name"] or "",

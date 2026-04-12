@@ -3,7 +3,7 @@ import type { LoginRequest, LoginResponse, RegisterRequest, UpdateProfileRequest
 
 function mapUser(data: Record<string, unknown>): User {
   return {
-    id: data['id'] as number,
+    id: String(data['id']),
     login: (data['login'] as string) ?? '',
     firstName: (data['first_name'] as string) ?? '',
     lastName: (data['last_name'] as string) ?? '',

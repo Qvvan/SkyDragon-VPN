@@ -4,7 +4,10 @@ from src.infrastructure.postgres.repository.payment_repository import PostgresPa
 from src.infrastructure.postgres.repository.server_repository import PostgresServerRepository
 from src.infrastructure.postgres.repository.service_plan_repository import PostgresServicePlanRepository
 from src.infrastructure.postgres.repository.subscription_repository import PostgresSubscriptionRepository
-from src.infrastructure.postgres.repository.subscription_provision_task_repository import PostgresSubscriptionProvisionTaskRepository
+from src.infrastructure.postgres.repository.subscription_provision_task_repository import (
+    PostgresKeyOperationRepository,
+    PostgresSubscriptionProvisionTaskRepository,
+)
 
 __all__ = [
     "PostgresAccountRepository",
@@ -13,5 +16,6 @@ __all__ = [
     "PostgresServerRepository",
     "PostgresServicePlanRepository",
     "PostgresSubscriptionRepository",
+    "PostgresKeyOperationRepository",
     "PostgresSubscriptionProvisionTaskRepository",
 ]

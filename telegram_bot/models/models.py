@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, String, Integer, DateTime, Enum, BigInteger, ARRAY, Boolean, Text, JSON, ForeignKey
+from sqlalchemy import Column, String, Integer, DateTime, Enum, BigInteger, ARRAY, Boolean, Text, JSON, ForeignKey, Numeric
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -79,9 +79,18 @@ class Services(Base):
     __tablename__ = 'services'
 
     service_id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String, nullable=False)
+    name = Column(String(100), nullable=False)
+    description = Column(Text, nullable=True)
     duration_days = Column(Integer, nullable=False)
-    price = Column(Integer, nullable=False)
+    price = Column(Numeric(10, 2), nullable=False)
+    original_price = Column(Numeric(10, 2), nullable=True)
+    is_trial = Column(Boolean, nullable=False, default=False)
+    is_active = Column(Boolean, nullable=False, default=True)
+    is_featured = Column(Boolean, nullable=False, default=False)
+    sort_order = Column(Integer, nullable=False, default=0)
+    badge = Column(String(50), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 
 class Subscriptions(Base):
@@ -144,7 +153,8 @@ class Gifts(Base):
 class Servers(Base):
     __tablename__ = 'servers'
 
-    server_ip = Column(String, primary_key=True)
+    server_id = Column(Integer, primary_key=True, autoincrement=True)
+    server_ip = Column(String, nullable=False, unique=True)
     name = Column(String, nullable=False)
     limit = Column(Integer, nullable=True)
     hidden = Column(Integer, nullable=True, default=0)
@@ -153,6 +163,26 @@ class Servers(Base):
     url_secret = Column(String, nullable=True)  # URL-секрет панели (по умолчанию из конфига)
     sub_port = Column(Integer, nullable=True)      # порт, на котором отдаётся /sub/ (2096)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class KeyOperations(Base):
+    __tablename__ = 'key_operations'
+
+    operation_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, nullable=False)
+    subscription_id = Column(Integer, ForeignKey('subscriptions.subscription_id', ondelete='CASCADE'), nullable=False)
+    server_id = Column(Integer, ForeignKey('servers.server_id', ondelete='CASCADE'), nullable=False)
+    action = Column(String(20), nullable=False)       # create | update | delete | enable | disable
+    days = Column(Integer, nullable=True)
+    status = Column(String(20), nullable=False, default='pending')
+    retry_count = Column(Integer, nullable=False, default=0)
+    max_retries = Column(Integer, nullable=False, default=10)
+    error_message = Column(Text, nullable=True)
+    scheduled_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 
 class Pushes(Base):

@@ -111,3 +111,11 @@ class ServerMethods:
             return server
         except SQLAlchemyError as e:
             await logger.log_error(f"Error getting server by IP", e)
+
+    async def get_server_by_id(self, server_id: int) -> Servers | None:
+        try:
+            result = await self.session.execute(select(Servers).where(Servers.server_id == server_id))
+            return result.scalars().first()
+        except SQLAlchemyError as e:
+            await logger.log_error(f"Error getting server by ID {server_id}", e)
+            return None

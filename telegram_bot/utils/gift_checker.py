@@ -103,7 +103,7 @@ async def activate_gift_handler(bot: Bot, callback_query: CallbackQuery, gift_id
                 gift.recipient_user_id,
                 recipient_user.username,
                 service.duration_days,
-                session_methods
+                session_methods,
             )
 
             # Уведомляем получателя об успешной активации (в том же окне, с клавиатурой)

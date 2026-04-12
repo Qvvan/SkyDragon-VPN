@@ -4,7 +4,7 @@ from datetime import datetime
 
 @dataclass(slots=True, kw_only=True)
 class Payment:
-    id: int | None
+    id: str | None
     payment_id: str
     user_id: int
     recipient_user_id: int | None

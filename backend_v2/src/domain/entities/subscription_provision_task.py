@@ -3,22 +3,26 @@ from datetime import datetime
 
 
 @dataclass(slots=True, kw_only=True)
-class SubscriptionProvisionTask:
-    id: int | None
-    subscription_id: int
+class KeyOperation:
+    operation_id: int | None
     user_id: int
-    server_ip: str
-    action: str          # 'create' | 'update' | 'delete'
-    status: str          # 'pending' | 'processing' | 'done' | 'failed'
-    attempts: int
-    max_attempts: int
-    last_error: str | None
-    expire_at: datetime | None
+    subscription_id: str
+    server_id: int
+    action: str          # 'create' | 'update' | 'delete' | 'enable' | 'disable'
+    days: int | None
+    status: str          # 'pending' | 'processing' | 'completed' | 'failed'
+    retry_count: int
+    max_retries: int
+    error_message: str | None
     scheduled_at: datetime
-    done_at: datetime | None
+    started_at: datetime | None
+    completed_at: datetime | None
     created_at: datetime | None
+    updated_at: datetime | None
     # Денормализованные поля сервера — заполняются при claim (JOIN с servers)
+    server_ip: str | None = None
     server_name: str | None = None
     server_panel_port: int | None = None
     server_url_secret: str | None = None
     server_sub_port: int | None = None
+    server_available_ports: str | None = None

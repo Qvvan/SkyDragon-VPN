@@ -127,19 +127,19 @@ class SubscriptionService:
         subscription = await self._subscription_repo.get_by_principal_and_subscription_id(user_id, sub_id)
         if not subscription:
             return []
-        return await self._service_repo.list_for_renewal()
+        return await self._service_repo.list_active()
 
     async def get_subscription_info(self, encrypted_part: str) -> Subscription | None:
         user_id, sub_id = self.decode_user_and_sub(encrypted_part)
         return await self._subscription_repo.get_by_principal_and_subscription_id(user_id, sub_id)
 
-    async def list_subscriptions_for_account(self, account_id: int) -> list[Subscription]:
+    async def list_subscriptions_for_account(self, account_id: str) -> list[Subscription]:
         return await self._subscription_repo.list_for_account_owner(account_id)
 
     async def list_service_plans(self) -> list[ServicePlan]:
-        return await self._service_repo.list_for_renewal()
+        return await self._service_repo.list_active()
 
-    async def set_auto_renewal_for_account(self, account_id: int, subscription_id: int, enabled: bool) -> None:
+    async def set_auto_renewal_for_account(self, account_id: str, subscription_id: str, enabled: bool) -> None:
         updated = await self._subscription_repo.set_auto_renewal(account_id, subscription_id, enabled)
         if not updated:
             raise NotFoundError("Подписка не найдена")

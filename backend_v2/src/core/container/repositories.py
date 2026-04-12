@@ -3,19 +3,19 @@ from src.core.container.infrastructure import InfrastructureContainer
 from src.infrastructure.postgres.repository import (
     PostgresAccountRepository,
     PostgresAccountTelegramLinkRepository,
+    PostgresKeyOperationRepository,
     PostgresPaymentRepository,
     PostgresServerRepository,
     PostgresServicePlanRepository,
-    PostgresSubscriptionProvisionTaskRepository,
     PostgresSubscriptionRepository,
 )
 from src.interfaces.repositories import (
     IAccountRepository,
     IAccountTelegramLinkRepository,
+    IKeyOperationRepository,
     IPaymentRepository,
     IServerRepository,
     IServicePlanRepository,
-    ISubscriptionProvisionTaskRepository,
     ISubscriptionRepository,
 )
 
@@ -32,7 +32,7 @@ class RepositoryContainer:
         "_payment_repository",
         "_account_repository",
         "_account_telegram_link_repository",
-        "_subscription_provision_task_repository",
+        "_key_operation_repository",
     )
 
     def __init__(self, config: Config, infra: InfrastructureContainer) -> None:
@@ -44,7 +44,7 @@ class RepositoryContainer:
         self._payment_repository: IPaymentRepository | None = None
         self._account_repository: IAccountRepository | None = None
         self._account_telegram_link_repository: IAccountTelegramLinkRepository | None = None
-        self._subscription_provision_task_repository: ISubscriptionProvisionTaskRepository | None = None
+        self._key_operation_repository: IKeyOperationRepository | None = None
 
     @property
     def subscription_repository(self) -> ISubscriptionRepository:
@@ -83,9 +83,12 @@ class RepositoryContainer:
         return self._account_telegram_link_repository
 
     @property
-    def subscription_provision_task_repository(self) -> ISubscriptionProvisionTaskRepository:
-        if not self._subscription_provision_task_repository:
-            self._subscription_provision_task_repository = PostgresSubscriptionProvisionTaskRepository(
-                self._infra.query_executor
-            )
-        return self._subscription_provision_task_repository
+    def key_operation_repository(self) -> IKeyOperationRepository:
+        if not self._key_operation_repository:
+            self._key_operation_repository = PostgresKeyOperationRepository(self._infra.query_executor)
+        return self._key_operation_repository
+
+    # Backwards-compat alias
+    @property
+    def subscription_provision_task_repository(self) -> IKeyOperationRepository:
+        return self.key_operation_repository

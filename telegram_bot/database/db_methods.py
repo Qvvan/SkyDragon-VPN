@@ -1,5 +1,5 @@
 from database.methods import services, users, subscriptions, server, pushes, subscription_history, \
-    referrals, payments, gifts, notifications, account_links
+    referrals, payments, gifts, notifications, account_links, key_operations
 
 
 class MethodsManager:
@@ -17,3 +17,4 @@ class MethodsManager:
         self.payments = payments.PaymentsMethods(self.session)
         self.gifts = gifts.GiftsMethods(self.session)
         self.notifications = notifications.NotificationMethods(self.session)
+        self.key_operations = key_operations.KeyOperationsMethods(self.session)

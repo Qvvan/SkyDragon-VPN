@@ -16,7 +16,7 @@ class IAccountRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_by_id(self, account_id: int) -> Account | None:
+    async def get_by_id(self, account_id: str) -> Account | None:
         raise NotImplementedError
 
     @abstractmethod
@@ -27,7 +27,7 @@ class IAccountRepository(ABC):
     async def update_profile(
         self,
         *,
-        account_id: int,
+        account_id: str,
         first_name: str | None,
         last_name: str | None,
     ) -> Account:

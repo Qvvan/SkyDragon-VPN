@@ -26,6 +26,7 @@ from utils.gift_checker import run_gift_checker
 from utils.online_abuse_checker import run_online_abuse_check
 from utils.subscription_checker import run_checker
 from utils.trial_checker import run_trial_checker
+from workers.key_operations_worker import run_key_operations_worker
 
 # Глобальные переменные для контроля
 bot_instance = None
@@ -151,6 +152,8 @@ async def setup_background_tasks(bot: Bot):
         asyncio.create_task(run_trial_checker(bot)),
         asyncio.create_task(run_gift_checker(bot)),
         asyncio.create_task(run_online_abuse_check(bot)),
+        # key_operations_worker disabled — backend_v2 handles key provisioning
+        # asyncio.create_task(run_key_operations_worker()),
     ])
 
 

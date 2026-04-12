@@ -2,7 +2,7 @@ import client from './client'
 import type { Payment } from '../types/payment.types'
 
 interface BackendPayment {
-  id: number
+  id: string
   payment_id: string
   service_id: number | null
   status: string
@@ -20,7 +20,7 @@ const STATUS_MAP: Record<string, Payment['status']> = {
 
 function mapPayment(p: BackendPayment): Payment {
   return {
-    id: String(p.id),
+    id: p.id,
     amount: 0,
     currency: 'RUB',
     status: STATUS_MAP[p.status] ?? 'pending',

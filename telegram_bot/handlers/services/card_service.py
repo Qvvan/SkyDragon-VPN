@@ -193,9 +193,9 @@ async def successful_payment(bot, payment_response):
                 user = await session_methods.users.get_user(recipient_user_id)
                 if not user:
                     await bot.send_message(chat_id=user_id, text=LEXICON_RU['gift_thank_you'].format(gift_days=30))
-                    await extend_user_subscription(user_id, username, 30, session_methods)
+                    await extend_user_subscription(user_id, username, 30, session_methods)  # noqa: return ignored
                 else:
-                    await extend_user_subscription(user_id, username, 10, session_methods)
+                    await extend_user_subscription(user_id, username, 10, session_methods)  # noqa: return ignored
                     await bot.send_message(chat_id=user_id, text=LEXICON_RU['gift_thank_you'].format(gift_days=10))
                 await session_methods.session.commit()
             except Exception as e:

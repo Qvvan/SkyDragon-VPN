@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-type Variant = 'jade' | 'ember' | 'amber' | 'muted' | 'trial'
+type Variant = 'jade' | 'ember' | 'amber' | 'muted' | 'trial' | 'green'
 
 interface Props {
   children: ReactNode
@@ -9,6 +9,7 @@ interface Props {
 
 const variantClasses: Record<Variant, string> = {
   jade:  'bg-jade-dim text-jade shadow-[0_0_0_1px_rgba(157,140,255,0.2)]',
+  green: 'bg-[rgba(74,222,128,0.1)] text-[#4ade80] shadow-[0_0_0_1px_rgba(74,222,128,0.22)]',
   ember: 'bg-ember-dim text-ember shadow-[0_0_0_1px_rgba(248,113,113,0.22)]',
   amber: 'bg-gold-dim text-gold shadow-[0_0_0_1px_rgba(226,185,110,0.22)]',
   muted: 'bg-[rgba(74,71,142,0.18)] text-text-dim shadow-[0_0_0_1px_rgba(74,71,142,0.32)]',

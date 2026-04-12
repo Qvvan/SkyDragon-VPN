@@ -14,6 +14,7 @@ class PostgresServerRepository(IServerRepository):
     async def list_visible(self) -> list[ServerNode]:
         query = """
             SELECT
+                server_id,
                 server_ip,
                 name,
                 "limit",
@@ -33,6 +34,7 @@ class PostgresServerRepository(IServerRepository):
     @staticmethod
     def _row_to_entity(row: asyncpg.Record) -> ServerNode:
         return ServerNode(
+            server_id=row["server_id"],
             server_ip=row["server_ip"],
             name=row["name"],
             limit=row["limit"],

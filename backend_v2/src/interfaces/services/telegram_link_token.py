@@ -3,11 +3,11 @@ from abc import ABC, abstractmethod
 
 class ITelegramLinkTokenService(ABC):
     @abstractmethod
-    def generate(self, account_id: int) -> str:
+    def generate(self, account_id: str) -> str:
         """Encrypt account_id into a URL-safe token for Telegram ?start= parameter."""
         raise NotImplementedError
 
     @abstractmethod
-    def parse(self, token: str) -> int:
+    def parse(self, token: str) -> str:
         """Decrypt token and return account_id. Raises ValidationError if invalid or expired."""
         raise NotImplementedError

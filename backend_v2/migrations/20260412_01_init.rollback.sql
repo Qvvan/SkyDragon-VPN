@@ -1,4 +1,6 @@
-DROP TABLE IF EXISTS subscription_provision_tasks;
+DROP TABLE IF EXISTS key_operations;
+DROP TYPE IF EXISTS key_operation_action;
+DROP TYPE IF EXISTS key_operation_status;
 DROP TABLE IF EXISTS account_telegram_links;
 DROP TABLE IF EXISTS accounts;
 DROP TABLE IF EXISTS payments;

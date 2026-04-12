@@ -11,19 +11,25 @@ class PostgresPaymentRepository(IPaymentRepository):
     def __init__(self, query_executor: IQueryExecutor) -> None:
         self._query_executor = query_executor
 
-    async def create_pending_payment(self, payment_id: str, user_id: int, service_id: int) -> None:
+    async def create_pending_payment(
+        self,
+        payment_id: str,
+        user_id: int,
+        service_id: int,
+        account_id: str | None = None,
+    ) -> None:
         query = """
-            INSERT INTO payments (payment_id, user_id, service_id, status, payment_type, created_at, updated_at)
-            VALUES ($1, $2, $3, 'pending', 'myself', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            INSERT INTO payments (payment_id, user_id, account_id, service_id, status, payment_type, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, 'pending', 'myself', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         """
-        await self._query_executor.execute(query, payment_id, user_id, service_id)
+        await self._query_executor.execute(query, payment_id, user_id, account_id, service_id)
 
-    async def list_for_account(self, account_id: int) -> list[Payment]:
+    async def list_for_account(self, account_id: str) -> list[Payment]:
         query = """
             SELECT p.id, p.payment_id, p.user_id, p.recipient_user_id, p.service_id,
                    p.status, p.payment_type, p.receipt_link, p.created_at, p.updated_at
             FROM payments p
-            WHERE p.user_id = $1
+            WHERE p.account_id = $1
                OR p.user_id IN (
                    SELECT telegram_user_id FROM account_telegram_links WHERE account_id = $1
                )
@@ -36,7 +42,7 @@ class PostgresPaymentRepository(IPaymentRepository):
     @staticmethod
     def _row_to_entity(row: asyncpg.Record) -> Payment:
         return Payment(
-            id=row["id"],
+            id=str(row["id"]),
             payment_id=row["payment_id"],
             user_id=row["user_id"],
             recipient_user_id=row["recipient_user_id"],

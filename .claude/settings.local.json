@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(xargs grep:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(dir \"C:\\\\Users\\\\Ivan\\\\Documents\\\\GitHub\\\\SkyDragon-VPN\\\\frontend\\\\node_modules\\\\.bin\")"
     ]
   }
 }

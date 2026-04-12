@@ -4,6 +4,7 @@ from datetime import datetime
 
 @dataclass(slots=True, kw_only=True)
 class ServerNode:
+    server_id: int | None
     server_ip: str
     name: str
     limit: int | None

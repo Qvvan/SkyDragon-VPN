@@ -1,4 +1,5 @@
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends
 from starlette import status
@@ -7,6 +8,7 @@ from src.api.dependencies import (
     get_auth_service,
     get_current_account,
     get_payment_service,
+    get_service_plan_service,
     get_subscription_service,
     get_telegram_account_link_service,
 )
@@ -31,8 +33,10 @@ from src.api.v1.schemas.account import (
     UpdateProfileRequest,
 )
 from src.domain.entities.account import Account
+from src.api.v1.schemas.subscription import TrialActivatedResponse
 from src.services.auth_service import AuthService
 from src.services.payment_service import PaymentService
+from src.services.service_plan_service import ServicePlanService
 from src.services.subscription_service import SubscriptionService
 from src.services.telegram_account_link_service import TelegramAccountLinkService
 
@@ -89,12 +93,12 @@ async def list_my_subscriptions(
 
 @router.patch("/subscriptions/{subscription_id}/auto-renewal", status_code=status.HTTP_204_NO_CONTENT)
 async def toggle_auto_renewal(
-    subscription_id: int,
+    subscription_id: UUID,
     data: ToggleAutoRenewalRequest,
     account: Annotated[Account, Depends(get_current_account)],
     subscription_service: Annotated[SubscriptionService, Depends(get_subscription_service)],
 ):
-    await subscription_service.set_auto_renewal_for_account(account.id, subscription_id, data.enabled)
+    await subscription_service.set_auto_renewal_for_account(account.id, str(subscription_id), data.enabled)
 
 
 @router.post("/subscriptions", response_model=CreateSubscriptionResponse, status_code=status.HTTP_201_CREATED)
@@ -115,6 +119,18 @@ async def list_my_payments(
     payments = await payment_service.list_payments_for_account(account.id)
     return PaymentListResponse(
         payments=[PaymentSchema.model_validate(p, from_attributes=True) for p in payments],
+    )
+
+
+@router.post("/trial", response_model=TrialActivatedResponse, status_code=status.HTTP_201_CREATED)
+async def activate_trial(
+    account: Annotated[Account, Depends(get_current_account)],
+    service_plan_service: Annotated[ServicePlanService, Depends(get_service_plan_service)],
+):
+    sub = await service_plan_service.activate_trial(account.id)
+    return TrialActivatedResponse(
+        subscription_id=sub.subscription_id,
+        end_date=sub.end_date.isoformat() if sub.end_date else "",
     )
 
 

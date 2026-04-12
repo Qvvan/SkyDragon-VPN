@@ -1,75 +1,123 @@
-"""Фоновые задачи для создания и обновления ключей"""
-import asyncio
+"""
+Хелперы для постановки операций с ключами в очередь (таблица key_operations).
 
-from handlers.services.create_keys import create_keys
-from handlers.services.update_keys import update_keys
+Вызываются внутри уже открытой транзакции (session_methods передаётся извне).
+Commit делает вызывающий код — это позволяет атомарно сохранить
+и подписку, и операции с ключами в одной транзакции.
+"""
 from logger.logging_config import logger
 
 
-async def create_keys_background(user_id: int, username: str, subscription_id: int, expiry_days: int = 0):
-    """
-    Фоновая задача для создания ключей.
-    Вызывается асинхронно после того, как пользователь получил ответ об успехе.
-
-    Args:
-        user_id: ID пользователя Telegram
-        username: Имя пользователя (для логирования)
-        subscription_id: ID подписки
-        expiry_days: Количество дней до истечения (0 = без ограничений)
-    """
-    try:
-        await logger.info(
-            f"Запуск фонового создания ключей: user_id={user_id}, username={username}, "
-            f"subscription_id={subscription_id}, expiry_days={expiry_days}"
+async def enqueue_create(
+    user_id: int,
+    subscription_id: int,
+    session_methods,
+    days: int | None = None,
+) -> None:
+    """Ставит в очередь операцию 'create' для всех активных серверов."""
+    servers = await session_methods.servers.get_active_servers_for_keys()
+    if not servers:
+        await logger.warning(
+            f"enqueue_create: нет доступных серверов для sub_id={subscription_id}"
         )
-        
-        result = await create_keys(user_id, username, subscription_id, expiry_days)
-        
-        if result:
-            await logger.info(
-                f"Фоновое создание ключей завершено успешно: user_id={user_id}, "
-                f"subscription_id={subscription_id}"
-            )
+        return
+    await session_methods.key_operations.create_operations(
+        user_id=user_id,
+        subscription_id=subscription_id,
+        action='create',
+        servers=servers,
+        days=days,
+    )
+    await logger.info(
+        f"enqueue_create: {len(servers)} операций для sub_id={subscription_id}"
+    )
+
+
+async def enqueue_enable(
+    user_id: int,
+    subscription_id: int,
+    session_methods,
+) -> None:
+    """Ставит в очередь операцию 'enable' для всех активных серверов."""
+    servers = await session_methods.servers.get_active_servers_for_keys()
+    if not servers:
+        await logger.warning(
+            f"enqueue_enable: нет доступных серверов для sub_id={subscription_id}"
+        )
+        return
+    await session_methods.key_operations.create_operations(
+        user_id=user_id,
+        subscription_id=subscription_id,
+        action='enable',
+        servers=servers,
+    )
+    await logger.info(
+        f"enqueue_enable: {len(servers)} операций для sub_id={subscription_id}"
+    )
+
+
+async def enqueue_delete(
+    user_id: int,
+    subscription_id: int,
+    session_methods,
+) -> None:
+    """Ставит в очередь операцию 'delete' для всех активных серверов."""
+    servers = await session_methods.servers.get_active_servers_for_keys()
+    if not servers:
+        return
+    await session_methods.key_operations.create_operations(
+        user_id=user_id,
+        subscription_id=subscription_id,
+        action='delete',
+        servers=servers,
+    )
+
+
+async def enqueue_disable(
+    user_id: int,
+    subscription_id: int,
+    session_methods,
+) -> None:
+    """Ставит в очередь операцию 'disable' для всех активных серверов."""
+    servers = await session_methods.servers.get_active_servers_for_keys()
+    if not servers:
+        return
+    await session_methods.key_operations.create_operations(
+        user_id=user_id,
+        subscription_id=subscription_id,
+        action='disable',
+        servers=servers,
+    )
+    await logger.info(
+        f"enqueue_disable: {len(servers)} операций для sub_id={subscription_id}"
+    )
+
+
+# ── Backwards-compat wrappers для старого API ────────────────────────────────
+# Позволяют использовать asyncio.create_task(create_keys_background(...)) без изменения
+# вызывающего кода — просто записывают операцию в key_operations вместо прямого вызова панели.
+
+async def create_keys_background(
+    user_id: int,
+    username: str,
+    subscription_id: int,
+    expiry_days: int = 0,
+) -> None:
+    from database.context_manager import DatabaseContextManager
+    async with DatabaseContextManager() as sm:
+        await enqueue_create(user_id, subscription_id, sm, days=expiry_days or None)
+        await sm.session.commit()
+
+
+async def update_keys_background(
+    user_id: int,
+    subscription_id: int,
+    status: bool = True,
+) -> None:
+    from database.context_manager import DatabaseContextManager
+    async with DatabaseContextManager() as sm:
+        if status:
+            await enqueue_enable(user_id, subscription_id, sm)
         else:
-            await logger.warning(
-                f"Фоновое создание ключей завершено с ошибками: user_id={user_id}, "
-                f"subscription_id={subscription_id}"
-            )
-            
-    except Exception as e:
-        # Логируем ошибку, но не пробрасываем её дальше
-        await logger.log_error(
-            f"Критическая ошибка в фоновом создании ключей: user_id={user_id}, "
-            f"subscription_id={subscription_id}", e
-        )
-
-
-async def update_keys_background(user_id: int, subscription_id: int, status: bool):
-    """
-    Фоновая задача для обновления статуса ключей.
-    Вызывается асинхронно после того, как пользователь получил ответ об успехе.
-
-    Args:
-        user_id: ID пользователя Telegram
-        subscription_id: ID подписки
-        status: True для включения, False для выключения
-    """
-    try:
-        await logger.info(
-            f"Запуск фонового обновления ключей: user_id={user_id}, "
-            f"subscription_id={subscription_id}, status={status}"
-        )
-        
-        await update_keys(user_id, subscription_id, status)
-        
-        await logger.info(
-            f"Фоновое обновление ключей завершено: user_id={user_id}, "
-            f"subscription_id={subscription_id}, status={status}"
-        )
-            
-    except Exception as e:
-        # Логируем ошибку, но не пробрасываем её дальше
-        await logger.log_error(
-            f"Критическая ошибка в фоновом обновлении ключей: user_id={user_id}, "
-            f"subscription_id={subscription_id}, status={status}", e
-        )
+            await enqueue_disable(user_id, subscription_id, sm)
+        await sm.session.commit()

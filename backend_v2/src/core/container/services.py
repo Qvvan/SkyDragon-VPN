@@ -17,11 +17,11 @@ from src.interfaces.services.jwt_tokens import IJwtAccessTokenService
 from src.interfaces.services.password_hasher import IPasswordHasher
 from src.interfaces.services.telegram_link_token import ITelegramLinkTokenService
 from src.interfaces.services.token_codec import ITokenCodec
-from src.infrastructure.server_panel import StubServerPanelClient
+from src.infrastructure.server_panel import StubServerPanelClient, XuiServerPanelClient
 from src.interfaces.clients.server_panel.client import IServerPanelClient
 from src.services import ImportService, PaymentService, ServicePlanService, SubscriptionService
 from src.services.auth_service import AuthService
-from src.services.subscription_provision_service import SubscriptionProvisionService
+from src.services.subscription_provision_service import KeyOperationService
 from src.services.telegram_account_link_service import TelegramAccountLinkService
 
 
@@ -75,7 +75,7 @@ class ServiceContainer:
         self._telegram_link_token_service: ITelegramLinkTokenService | None = None
         self._bot_api_secret_verifier: IBotApiSecretVerifier | None = None
         self._panel_client: IServerPanelClient | None = None
-        self._subscription_provision_service: SubscriptionProvisionService | None = None
+        self._subscription_provision_service: KeyOperationService | None = None
 
     @property
     def token_codec(self) -> ITokenCodec:
@@ -135,6 +135,8 @@ class ServiceContainer:
         if not self._service_plan_service:
             self._service_plan_service = ServicePlanService(
                 service_plan_repo=self._repos.service_plan_repository,
+                subscription_repo=self._repos.subscription_repository,
+                link_repo=self._repos.account_telegram_link_repository,
             )
         return self._service_plan_service
 
@@ -182,14 +184,25 @@ class ServiceContainer:
     @property
     def panel_client(self) -> IServerPanelClient:
         if not self._panel_client:
-            self._panel_client = StubServerPanelClient()
+            xui = self._config.xui
+            login = xui.LOGIN.strip()
+            password = xui.PASSWORD.get_secret_value().strip()
+            if login and password:
+                self._panel_client = XuiServerPanelClient(
+                    login=login,
+                    password=password,
+                    key_secret=xui.KEY_SECRET,
+                    timeout=xui.TIMEOUT,
+                )
+            else:
+                self._panel_client = StubServerPanelClient()
         return self._panel_client
 
     @property
-    def subscription_provision_service(self) -> SubscriptionProvisionService:
+    def subscription_provision_service(self) -> KeyOperationService:
         if not self._subscription_provision_service:
-            self._subscription_provision_service = SubscriptionProvisionService(
-                task_repo=self._repos.subscription_provision_task_repository,
+            self._subscription_provision_service = KeyOperationService(
+                op_repo=self._repos.key_operation_repository,
                 server_repo=self._repos.server_repository,
                 panel_client=self.panel_client,
             )

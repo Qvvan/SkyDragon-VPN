@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -23,7 +24,7 @@ class TokenResponse(BaseModel):
 class AccountPublicSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
+    id: UUID
     login: str
     first_name: str
     last_name: str
@@ -40,15 +41,15 @@ class BotTelegramLinkConfirmRequest(BaseModel):
 
 
 class BotTelegramLinkConfirmResponse(BaseModel):
-    account_id: int
+    account_id: UUID
 
 
 class SubscriptionSummarySchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    subscription_id: int
+    subscription_id: UUID
     user_id: int
-    account_id: int | None = None
+    account_id: UUID | None = None
     service_id: int | None
     start_date: datetime | None
     end_date: datetime | None
@@ -76,7 +77,7 @@ class ToggleAutoRenewalRequest(BaseModel):
 class PaymentSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
+    id: UUID
     payment_id: str
     service_id: int | None
     status: str

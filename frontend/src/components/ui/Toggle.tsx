@@ -34,7 +34,7 @@ export function Toggle({ checked, onChange, disabled, label }: Props) {
             ? 'left-[26px] bg-white'
             : 'left-[3px] bg-text-dim',
         ].join(' ')}
-        style={{ top: '50%', translateY: '-50%' }}
+        style={{ top: '3px' }}
       />
 
       <span className="absolute inset-0 flex items-center justify-end pr-1.5 pointer-events-none">

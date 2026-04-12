@@ -18,3 +18,11 @@ export function useSubscribeService() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subscriptions'] }),
   })
 }
+
+export function useActivateTrial() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => servicesApi.activateTrial(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subscriptions'] }),
+  })
+}

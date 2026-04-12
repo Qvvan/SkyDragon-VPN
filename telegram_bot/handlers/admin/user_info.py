@@ -193,7 +193,7 @@ async def process_duration_days(message: types.Message, state: FSMContext):
 
         async with DatabaseContextManager() as session_methods:
             user = await session_methods.users.get_user(user_id)
-            subscription = await extend_user_subscription(
+            subscription, is_new = await extend_user_subscription(
                 user_id, user.username or "", duration_days, session_methods
             )
             await session_methods.session.commit()
