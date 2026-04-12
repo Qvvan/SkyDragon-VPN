@@ -4,8 +4,7 @@ import type { LoginRequest, LoginResponse, RegisterRequest, UpdateProfileRequest
 function mapUser(data: Record<string, unknown>): User {
   return {
     id: data['id'] as number,
-    email: (data['email'] as string | null) ?? null,
-    phone: (data['phone'] as string | null) ?? null,
+    login: (data['login'] as string) ?? '',
     firstName: (data['first_name'] as string) ?? '',
     lastName: (data['last_name'] as string) ?? '',
     telegramUserId: (data['telegram_user_id'] as number | null) ?? null,

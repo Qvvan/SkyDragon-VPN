@@ -73,13 +73,13 @@ export function LoginPage() {
           <div className="p-7">
             <h2 className="font-display text-2xl font-light text-text mb-1 text-balance">С возвращением</h2>
             <p className="font-mono text-[13px] text-text-dim mb-7 leading-relaxed">
-              Введите email или телефон и пароль
+              Введите логин и пароль
             </p>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
-                label="Email или телефон"
+                label="Логин"
                 type="text"
-                placeholder="user@example.com"
+                placeholder="ivan_ivanov"
                 value={login}
                 onChange={(e) => setLogin(e.target.value)}
                 required

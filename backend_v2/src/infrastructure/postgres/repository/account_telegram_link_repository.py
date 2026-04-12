@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from src.interfaces.clients.db.query_executor import IQueryExecutor
 from src.interfaces.repositories.account_telegram_link import IAccountTelegramLinkRepository
 
@@ -27,36 +25,6 @@ class PostgresAccountTelegramLinkRepository(IAccountTelegramLinkRepository):
         """
         row = await self._query_executor.fetch_row(query, account_id)
         return int(row["telegram_user_id"]) if row else None
-
-    async def replace_link_code(self, account_id: int, code: str, expires_at: datetime) -> None:
-        await self._query_executor.execute("DELETE FROM telegram_link_codes WHERE account_id = $1", account_id)
-        await self._query_executor.execute(
-            """
-            INSERT INTO telegram_link_codes (code, account_id, expires_at)
-            VALUES ($1, $2, $3)
-            """,
-            code,
-            account_id,
-            expires_at,
-        )
-
-    async def peek_valid_link_code(self, code: str) -> int | None:
-        query = """
-            SELECT account_id
-            FROM telegram_link_codes
-            WHERE code = $1 AND expires_at > CURRENT_TIMESTAMP
-        """
-        row = await self._query_executor.fetch_row(query, code)
-        return int(row["account_id"]) if row else None
-
-    async def take_valid_link_code(self, code: str) -> int | None:
-        query = """
-            DELETE FROM telegram_link_codes
-            WHERE code = $1 AND expires_at > CURRENT_TIMESTAMP
-            RETURNING account_id
-        """
-        row = await self._query_executor.fetch_row(query, code)
-        return int(row["account_id"]) if row else None
 
     async def insert_link(self, telegram_user_id: int, account_id: int) -> None:
         query = """

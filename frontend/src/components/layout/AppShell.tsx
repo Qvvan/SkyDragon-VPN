@@ -64,7 +64,7 @@ function ProfileModal({ open, onClose }: { open: boolean; onClose: () => void })
           </div>
           <div className="min-w-0">
             <p className="font-display text-base text-text truncate">{displayName}</p>
-            <p className="font-mono text-xs text-text-dim mt-0.5">{user?.email ?? user?.phone ?? '—'}</p>
+            <p className="font-mono text-xs text-text-dim mt-0.5">{user?.login ?? '—'}</p>
           </div>
         </div>
 

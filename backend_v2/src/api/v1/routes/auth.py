@@ -17,10 +17,8 @@ async def register(
     data: RegisterRequest,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ):
-    email_str = str(data.email) if data.email is not None else None
     _, token = await auth_service.register(
-        email=email_str,
-        phone=data.phone,
+        login=data.login,
         password=data.password,
         first_name=data.first_name,
         last_name=data.last_name,

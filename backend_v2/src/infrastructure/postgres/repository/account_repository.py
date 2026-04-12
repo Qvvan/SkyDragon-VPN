@@ -14,18 +14,17 @@ class PostgresAccountRepository(IAccountRepository):
     async def create(
         self,
         *,
-        email: str | None,
-        phone: str | None,
+        login: str,
         password_hash: str,
         first_name: str,
         last_name: str,
     ) -> Account:
         query = """
-            INSERT INTO accounts (email, phone, password_hash, first_name, last_name)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, email, phone, password_hash, first_name, last_name, created_at, updated_at
+            INSERT INTO accounts (login, password_hash, first_name, last_name)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, login, password_hash, first_name, last_name, created_at, updated_at
         """
-        row = await self._query_executor.fetch_row(query, email, phone, password_hash, first_name, last_name)
+        row = await self._query_executor.fetch_row(query, login, password_hash, first_name, last_name)
         if not row:
             msg = "Failed to create account"
             raise RuntimeError(msg)
@@ -33,29 +32,20 @@ class PostgresAccountRepository(IAccountRepository):
 
     async def get_by_id(self, account_id: int) -> Account | None:
         query = """
-            SELECT id, email, phone, password_hash, first_name, last_name, created_at, updated_at
+            SELECT id, login, password_hash, first_name, last_name, created_at, updated_at
             FROM accounts
             WHERE id = $1
         """
         row = await self._query_executor.fetch_row(query, account_id)
         return self._row_to_account(row) if row else None
 
-    async def get_by_email_lower(self, email_lower: str) -> Account | None:
+    async def get_by_login(self, login: str) -> Account | None:
         query = """
-            SELECT id, email, phone, password_hash, first_name, last_name, created_at, updated_at
+            SELECT id, login, password_hash, first_name, last_name, created_at, updated_at
             FROM accounts
-            WHERE LOWER(email) = $1
+            WHERE login = $1
         """
-        row = await self._query_executor.fetch_row(query, email_lower)
-        return self._row_to_account(row) if row else None
-
-    async def get_by_phone(self, phone: str) -> Account | None:
-        query = """
-            SELECT id, email, phone, password_hash, first_name, last_name, created_at, updated_at
-            FROM accounts
-            WHERE phone = $1
-        """
-        row = await self._query_executor.fetch_row(query, phone)
+        row = await self._query_executor.fetch_row(query, login)
         return self._row_to_account(row) if row else None
 
     async def update_profile(
@@ -72,7 +62,7 @@ class PostgresAccountRepository(IAccountRepository):
                 last_name = COALESCE($3, last_name),
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = $1
-            RETURNING id, email, phone, password_hash, first_name, last_name, created_at, updated_at
+            RETURNING id, login, password_hash, first_name, last_name, created_at, updated_at
         """
         row = await self._query_executor.fetch_row(query, account_id, first_name, last_name)
         if not row:
@@ -84,8 +74,7 @@ class PostgresAccountRepository(IAccountRepository):
     def _row_to_account(row: asyncpg.Record) -> Account:
         return Account(
             id=row["id"],
-            email=row["email"],
-            phone=row["phone"],
+            login=row["login"],
             first_name=row["first_name"] or "",
             last_name=row["last_name"] or "",
             password_hash=row["password_hash"],

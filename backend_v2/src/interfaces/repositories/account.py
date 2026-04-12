@@ -8,8 +8,7 @@ class IAccountRepository(ABC):
     async def create(
         self,
         *,
-        email: str | None,
-        phone: str | None,
+        login: str,
         password_hash: str,
         first_name: str,
         last_name: str,
@@ -21,11 +20,7 @@ class IAccountRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_by_email_lower(self, email_lower: str) -> Account | None:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def get_by_phone(self, phone: str) -> Account | None:
+    async def get_by_login(self, login: str) -> Account | None:
         raise NotImplementedError
 
     @abstractmethod

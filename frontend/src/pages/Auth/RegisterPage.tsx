@@ -12,16 +12,20 @@ export function RegisterPage() {
   const navigate = useNavigate()
   const { setAuth } = useAuthStore()
 
-  const [email, setEmail]         = useState('')
-  const [password, setPassword]   = useState('')
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName]   = useState('')
-  const [loading, setLoading]     = useState(false)
-  const [error, setError]         = useState('')
+  const [login, setLogin]           = useState('')
+  const [password, setPassword]     = useState('')
+  const [firstName, setFirstName]   = useState('')
+  const [lastName, setLastName]     = useState('')
+  const [loading, setLoading]       = useState(false)
+  const [error, setError]           = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    if (login.trim().length < 3) {
+      setError('Логин должен быть не менее 3 символов')
+      return
+    }
     if (password.length < 8) {
       setError('Пароль должен быть не менее 8 символов')
       return
@@ -29,7 +33,7 @@ export function RegisterPage() {
     setLoading(true)
     try {
       const { token, user } = await authApi.register({
-        email: email || undefined,
+        login: login.trim().toLowerCase(),
         password,
         first_name: firstName,
         last_name: lastName,
@@ -132,11 +136,11 @@ export function RegisterPage() {
                 />
               </div>
               <Input
-                label="Email"
-                type="email"
-                placeholder="user@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                label="Логин"
+                type="text"
+                placeholder="ivan_ivanov"
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
                 required
               />
               <Input

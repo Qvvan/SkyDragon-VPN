@@ -34,8 +34,7 @@ class Account(Base):
     __tablename__ = "accounts"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    email = Column(String(320), nullable=True)
-    phone = Column(String(32), nullable=True)
+    login = Column(String(64), nullable=False, unique=True)
     password_hash = Column(Text, nullable=False)
     first_name = Column(String(128), nullable=False, default="")
     last_name = Column(String(128), nullable=False, default="")

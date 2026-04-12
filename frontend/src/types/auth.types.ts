@@ -1,7 +1,6 @@
 export interface User {
   id: number
-  email: string | null
-  phone: string | null
+  login: string
   firstName: string
   lastName: string
   telegramUserId: number | null
@@ -29,8 +28,7 @@ export interface LoginResponse {
 }
 
 export interface RegisterRequest {
-  email?: string
-  phone?: string
+  login: string
   password: string
   first_name: string
   last_name: string

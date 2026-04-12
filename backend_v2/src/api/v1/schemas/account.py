@@ -1,24 +1,17 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class RegisterRequest(BaseModel):
-    email: EmailStr | None = None
-    phone: str | None = Field(default=None, max_length=32)
+    login: str = Field(min_length=3, max_length=64, pattern=r"^[a-zA-Z0-9_.-]+$")
     password: str = Field(min_length=8, max_length=256)
     first_name: str = Field(min_length=1, max_length=128)
     last_name: str = Field(min_length=1, max_length=128)
 
-    @model_validator(mode="after")
-    def require_email_or_phone(self) -> "RegisterRequest":
-        if self.email is None and (self.phone is None or not str(self.phone).strip()):
-            raise ValueError("Укажите email или телефон")
-        return self
-
 
 class LoginRequest(BaseModel):
-    login: str = Field(min_length=1, max_length=320)
+    login: str = Field(min_length=1, max_length=64)
     password: str = Field(min_length=1, max_length=256)
 
 
@@ -31,20 +24,18 @@ class AccountPublicSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    email: str | None
-    phone: str | None
+    login: str
     first_name: str
     last_name: str
     telegram_user_id: int | None = None
 
 
-class TelegramLinkCodeResponse(BaseModel):
-    code: str
-    expires_at: datetime
+class TelegramLinkTokenResponse(BaseModel):
+    token: str
 
 
 class BotTelegramLinkConfirmRequest(BaseModel):
-    code: str = Field(min_length=4, max_length=16)
+    token: str = Field(min_length=1, max_length=512)
     telegram_user_id: int = Field(gt=0)
 
 
@@ -115,7 +106,7 @@ class ReferralStatsResponse(BaseModel):
 
 class ReferralSchema(BaseModel):
     id: str
-    masked_phone: str
+    masked_login: str
     joined_at: str
     bonus_days_granted: int
 

@@ -7,8 +7,7 @@ class Account:
     """Учётная запись сайта (не путать с telegram user_id в legacy-колонке subscriptions.user_id)."""
 
     id: int
-    email: str | None
-    phone: str | None
+    login: str
     first_name: str
     last_name: str
     password_hash: str

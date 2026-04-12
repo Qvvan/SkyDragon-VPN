@@ -4,7 +4,6 @@ from src.api.v1.routes import (
     account_router,
     auth_router,
     imports_router,
-    internal_bot_router,
     payments_router,
     services_router,
     subscriptions_router,
@@ -17,6 +16,5 @@ v1_router.include_router(payments_router)
 v1_router.include_router(auth_router)
 v1_router.include_router(account_router)
 v1_router.include_router(services_router)
-v1_router.include_router(internal_bot_router)
 
 __all__ = ["v1_router"]

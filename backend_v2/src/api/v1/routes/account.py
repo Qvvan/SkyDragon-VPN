@@ -26,7 +26,7 @@ from src.api.v1.schemas.account import (
     SendChatMessageRequest,
     SubscriptionSummaryListResponse,
     SubscriptionSummarySchema,
-    TelegramLinkCodeResponse,
+    TelegramLinkTokenResponse,
     ToggleAutoRenewalRequest,
     UpdateProfileRequest,
 )
@@ -47,8 +47,7 @@ async def get_me(
     tg = await link_service.get_linked_telegram_id(account.id)
     return AccountPublicSchema(
         id=account.id,
-        email=account.email,
-        phone=account.phone,
+        login=account.login,
         first_name=account.first_name,
         last_name=account.last_name,
         telegram_user_id=tg,
@@ -70,8 +69,7 @@ async def update_profile(
     tg = await link_service.get_linked_telegram_id(updated.id)
     return AccountPublicSchema(
         id=updated.id,
-        email=updated.email,
-        phone=updated.phone,
+        login=updated.login,
         first_name=updated.first_name,
         last_name=updated.last_name,
         telegram_user_id=tg,
@@ -120,13 +118,13 @@ async def list_my_payments(
     )
 
 
-@router.post("/telegram/link-code", response_model=TelegramLinkCodeResponse)
-async def create_telegram_link_code(
+@router.post("/telegram/link-token", response_model=TelegramLinkTokenResponse)
+async def create_telegram_link_token(
     account: Annotated[Account, Depends(get_current_account)],
     link_service: Annotated[TelegramAccountLinkService, Depends(get_telegram_account_link_service)],
 ):
-    code, expires_at = await link_service.issue_link_code(account.id)
-    return TelegramLinkCodeResponse(code=code, expires_at=expires_at)
+    token = link_service.generate_link_token(account.id)
+    return TelegramLinkTokenResponse(token=token)
 
 
 @router.get("/referrals/stats", response_model=ReferralStatsResponse)

@@ -1,5 +1,3 @@
-import re
-
 from src.core.exceptions import AuthenticationError, ConflictError
 from src.domain.entities.account import Account
 from src.interfaces.repositories.account import IAccountRepository
@@ -23,23 +21,20 @@ class AuthService:
     async def register(
         self,
         *,
-        email: str | None,
-        phone: str | None,
+        login: str,
         password: str,
         first_name: str,
         last_name: str,
     ) -> tuple[Account, str]:
-        email_norm = email.strip().lower() if email else None
-        phone_norm = _normalize_phone(phone)
-        if email_norm and await self._accounts.get_by_email_lower(email_norm):
-            raise ConflictError("Аккаунт с таким email уже существует")
-        if phone_norm and await self._accounts.get_by_phone(phone_norm):
-            raise ConflictError("Аккаунт с таким телефоном уже существует")
+        login_norm = login.strip().lower()
+        if not login_norm:
+            raise ConflictError("Логин не может быть пустым")
+        if await self._accounts.get_by_login(login_norm):
+            raise ConflictError("Аккаунт с таким логином уже существует")
 
         password_hash = self._passwords.hash_password(password)
         account = await self._accounts.create(
-            email=email_norm,
-            phone=phone_norm,
+            login=login_norm,
             password_hash=password_hash,
             first_name=first_name.strip(),
             last_name=last_name.strip(),
@@ -48,15 +43,10 @@ class AuthService:
         return account, token
 
     async def login(self, login: str, password: str) -> tuple[Account, str]:
-        raw = login.strip()
-        if not raw:
+        login_norm = login.strip().lower()
+        if not login_norm:
             raise AuthenticationError("Неверные учётные данные")
-        account: Account | None
-        if "@" in raw:
-            account = await self._accounts.get_by_email_lower(raw.lower())
-        else:
-            phone = _normalize_phone(raw)
-            account = await self._accounts.get_by_phone(phone) if phone else None
+        account = await self._accounts.get_by_login(login_norm)
         if account is None or not self._passwords.verify(account.password_hash, password):
             raise AuthenticationError("Неверные учётные данные")
         token = self._jwt.issue(account.id)
@@ -81,23 +71,3 @@ class AuthService:
         if account is None:
             raise AuthenticationError("Недействительный токен")
         return account
-
-
-def _normalize_phone(raw: str | None) -> str | None:
-    if raw is None:
-        return None
-    s = raw.strip()
-    if not s:
-        return None
-    digits = re.sub(r"\D", "", s)
-    if not digits:
-        return None
-    if s.startswith("+") or s.startswith("00"):
-        return f"+{digits}"
-    if len(digits) == 10:
-        return f"+7{digits}"
-    if len(digits) == 11 and digits.startswith("8"):
-        return f"+7{digits[1:]}"
-    if len(digits) == 11 and digits.startswith("7"):
-        return f"+{digits}"
-    return f"+{digits}" if not s.startswith("+") else f"+{digits}"

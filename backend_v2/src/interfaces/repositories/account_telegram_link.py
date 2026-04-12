@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from datetime import datetime
 
 
 class IAccountTelegramLinkRepository(ABC):
@@ -9,21 +8,6 @@ class IAccountTelegramLinkRepository(ABC):
 
     @abstractmethod
     async def get_telegram_id_by_account(self, account_id: int) -> int | None:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def replace_link_code(self, account_id: int, code: str, expires_at: datetime) -> None:
-        """Удаляет предыдущие коды аккаунта и сохраняет новый (до подтверждения ботом)."""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def peek_valid_link_code(self, code: str) -> int | None:
-        """Проверяет код без удаления (перед проверкой конфликтов привязки)."""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def take_valid_link_code(self, code: str) -> int | None:
-        """Атомарно удаляет валидный код и возвращает account_id."""
         raise NotImplementedError
 
     @abstractmethod

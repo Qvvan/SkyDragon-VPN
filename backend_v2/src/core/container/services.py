@@ -8,15 +8,20 @@ from src.infrastructure.payment import YooKassaPaymentGatewayClient
 from src.infrastructure.security import FernetTokenCodec
 from src.infrastructure.security.argon2_password_hasher import Argon2PasswordHasher
 from src.infrastructure.security.bot_api_secret_verifier import BotApiSecretVerifier
+from src.infrastructure.security.fernet_telegram_link_token_service import FernetTelegramLinkTokenService
 from src.infrastructure.security.jwt_access_token_service import JwtAccessTokenService
 from src.infrastructure.subscription import HttpSubscriptionClient
 from src.interfaces.clients.payment.client import IPaymentGatewayClient
 from src.interfaces.services.bot_api_secret_verifier import IBotApiSecretVerifier
 from src.interfaces.services.jwt_tokens import IJwtAccessTokenService
 from src.interfaces.services.password_hasher import IPasswordHasher
+from src.interfaces.services.telegram_link_token import ITelegramLinkTokenService
 from src.interfaces.services.token_codec import ITokenCodec
+from src.infrastructure.server_panel import StubServerPanelClient
+from src.interfaces.clients.server_panel.client import IServerPanelClient
 from src.services import ImportService, PaymentService, ServicePlanService, SubscriptionService
 from src.services.auth_service import AuthService
+from src.services.subscription_provision_service import SubscriptionProvisionService
 from src.services.telegram_account_link_service import TelegramAccountLinkService
 
 
@@ -39,7 +44,10 @@ class ServiceContainer:
         "_jwt_access_token_service",
         "_auth_service",
         "_telegram_account_link_service",
+        "_telegram_link_token_service",
         "_bot_api_secret_verifier",
+        "_panel_client",
+        "_subscription_provision_service",
     )
 
     def __init__(
@@ -64,7 +72,10 @@ class ServiceContainer:
         self._jwt_access_token_service: IJwtAccessTokenService | None = None
         self._auth_service: AuthService | None = None
         self._telegram_account_link_service: TelegramAccountLinkService | None = None
+        self._telegram_link_token_service: ITelegramLinkTokenService | None = None
         self._bot_api_secret_verifier: IBotApiSecretVerifier | None = None
+        self._panel_client: IServerPanelClient | None = None
+        self._subscription_provision_service: SubscriptionProvisionService | None = None
 
     @property
     def token_codec(self) -> ITokenCodec:
@@ -153,12 +164,36 @@ class ServiceContainer:
         return self._auth_service
 
     @property
+    def telegram_link_token_service(self) -> ITelegramLinkTokenService:
+        if not self._telegram_link_token_service:
+            crypto_key = self._config.app.CRYPTO_KEY.get_secret_value() or self._config.app.SECRET_KEY.get_secret_value()
+            self._telegram_link_token_service = FernetTelegramLinkTokenService(key=crypto_key)
+        return self._telegram_link_token_service
+
+    @property
     def telegram_account_link_service(self) -> TelegramAccountLinkService:
         if not self._telegram_account_link_service:
             self._telegram_account_link_service = TelegramAccountLinkService(
                 link_repo=self._repos.account_telegram_link_repository,
+                token_service=self.telegram_link_token_service,
             )
         return self._telegram_account_link_service
+
+    @property
+    def panel_client(self) -> IServerPanelClient:
+        if not self._panel_client:
+            self._panel_client = StubServerPanelClient()
+        return self._panel_client
+
+    @property
+    def subscription_provision_service(self) -> SubscriptionProvisionService:
+        if not self._subscription_provision_service:
+            self._subscription_provision_service = SubscriptionProvisionService(
+                task_repo=self._repos.subscription_provision_task_repository,
+                server_repo=self._repos.server_repository,
+                panel_client=self.panel_client,
+            )
+        return self._subscription_provision_service
 
     @property
     def bot_api_secret_verifier(self) -> IBotApiSecretVerifier:
