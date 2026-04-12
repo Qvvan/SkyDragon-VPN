@@ -51,12 +51,12 @@ export function ServicesContent() {
         <p className="text-text-dim text-sm mt-1">Выберите подходящий план подписки</p>
       </div>
 
-      {/* Cards grid — всегда 2 колонки */}
+      {/* Cards grid */}
       <motion.div
         initial="hidden"
         animate="visible"
         variants={{ visible: { transition: { staggerChildren: 0.08 } } }}
-        className="grid grid-cols-2 gap-3"
+        className="grid grid-cols-2 gap-3 sm:gap-4"
       >
         {services?.map((service) => (
           <motion.div
@@ -65,43 +65,42 @@ export function ServicesContent() {
             transition={{ duration: 0.35, ease: 'easeOut' }}
           >
             <div
-              className={`
-                relative rounded-xl p-3 md:p-5 cursor-pointer h-full
-                bg-surface shadow-card border transition-all duration-200
-                hover:border-jade/30 hover:shadow-lg
-                ${service.popular
-                  ? 'border-jade/20 bg-gradient-to-br from-surface to-[rgba(110,231,183,0.04)]'
-                  : 'border-[rgba(255,255,255,0.06)]'
-                }
-              `}
+              className={[
+                'relative rounded-2xl p-4 sm:p-5 cursor-pointer h-full flex flex-col',
+                'transition-all duration-200 hover:-translate-y-0.5',
+                service.popular
+                  ? 'shadow-card border border-[rgba(157,140,255,0.2)]'
+                  : 'shadow-card border border-[rgba(157,140,255,0.08)] hover:border-[rgba(157,140,255,0.2)]',
+              ].join(' ')}
+              style={{
+                background: service.popular
+                  ? 'linear-gradient(135deg, rgba(157,140,255,0.1) 0%, rgba(13,12,31,0.95) 60%)'
+                  : 'rgba(13,12,31,0.9)',
+              }}
               onClick={() => setConfirm(service)}
             >
-              {/* Popular badge */}
               {service.popular && (
-                <div className="absolute top-2.5 right-2.5">
+                <div className="absolute top-3 right-3">
                   <Badge variant="jade">Топ</Badge>
                 </div>
               )}
 
-              {/* Duration */}
-              <div className="mb-2">
-                <span className="font-display text-xl md:text-3xl font-bold text-text leading-none">
+              <div className="mb-2 sm:mb-3">
+                <span className="font-display text-2xl sm:text-3xl font-medium text-text leading-none">
                   {durationLabel(service.durationDays)}
                 </span>
               </div>
 
-              {/* Price */}
-              <div className="mb-3 md:mb-5">
-                <span className="font-mono text-base md:text-2xl font-bold text-jade leading-none tabular-nums">
+              <div className="mb-4 sm:mb-5 flex-1">
+                <span className="font-mono text-lg sm:text-2xl font-bold text-jade leading-none tabular-nums">
                   {service.price.toLocaleString('ru-RU')} ₽
                 </span>
               </div>
 
-              {/* CTA */}
               <Button
                 variant={service.popular ? 'primary' : 'secondary'}
-                size="sm"
-                className="w-full text-xs md:text-sm"
+                size="md"
+                className="w-full"
                 onClick={(e) => { e.stopPropagation(); setConfirm(service) }}
               >
                 Выбрать
@@ -114,24 +113,35 @@ export function ServicesContent() {
       {/* Confirm modal */}
       <AnimatePresence>
         {confirm && (
-          <Modal open onClose={() => setConfirm(null)} title="Подтверждение">
-            <div className="p-6 space-y-4">
-              <div className="rounded-xl bg-surface-3 p-4 flex justify-between items-center">
-                <span className="font-display text-base text-text">{confirm.name}</span>
-                <span className="font-mono text-2xl text-jade tabular-nums font-bold">
-                  {confirm.price.toLocaleString('ru-RU')} ₽
-                </span>
+          <Modal open onClose={() => setConfirm(null)} title="Оформление подписки">
+            <div className="px-6 sm:px-7 pb-7 pt-5 space-y-5">
+              <div
+                className="rounded-2xl p-5 sm:p-6 flex items-center justify-between gap-4"
+                style={{ background: 'rgba(157,140,255,0.06)', border: '1px solid rgba(157,140,255,0.12)' }}
+              >
+                <div>
+                  <p className="font-mono text-xs text-text-faint uppercase tracking-wider mb-1">Тариф</p>
+                  <p className="font-display text-xl sm:text-2xl text-text leading-tight">{confirm.name}</p>
+                  <p className="font-mono text-sm text-text-dim mt-1">{durationLabel(confirm.durationDays)}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="font-mono text-xs text-text-faint uppercase tracking-wider mb-1">Сумма</p>
+                  <p className="font-mono text-2xl sm:text-3xl text-jade tabular-nums font-bold leading-none">
+                    {confirm.price.toLocaleString('ru-RU')} ₽
+                  </p>
+                </div>
               </div>
               <div className="flex gap-3">
                 <Button
                   variant="primary"
+                  size="lg"
                   className="flex-1"
                   loading={subscribe.isPending}
                   onClick={handleSubscribe}
                 >
-                  Оформить
+                  Оформить подписку
                 </Button>
-                <Button variant="ghost" onClick={() => setConfirm(null)}>Отмена</Button>
+                <Button variant="ghost" size="lg" onClick={() => setConfirm(null)}>Отмена</Button>
               </div>
             </div>
           </Modal>

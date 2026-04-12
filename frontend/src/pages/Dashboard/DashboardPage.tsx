@@ -226,7 +226,19 @@ function SubscriptionCard({
   onRenew: (sub: Subscription) => void
 }) {
   const toggleAutoRenewal = useToggleAutoRenewal()
+  const [confirmDisable, setConfirmDisable] = useState(false)
   const isHealthy = sub.daysRemaining / sub.totalDays > 0.3
+
+  const isTrial  = sub.status === 'trial'
+  const isLocked = sub.status === 'expired' || isTrial
+
+  function handleToggle(enabled: boolean) {
+    if (!enabled && sub.autoRenewal) {
+      setConfirmDisable(true)
+    } else if (!isLocked) {
+      toggleAutoRenewal.mutate({ id: sub.id, enabled })
+    }
+  }
 
   const statusLabel: Record<Subscription['status'], string> = {
     active:  'Активна',
@@ -247,6 +259,7 @@ function SubscriptionCard({
   })
 
   return (
+    <>
     <BentoCard
       grid={sub.status === 'active' || sub.status === 'trial'}
       accent={sub.status === 'expired' ? 'ember' : (isHealthy ? 'jade' : 'ember')}
@@ -292,9 +305,9 @@ function SubscriptionCard({
         >
           <span className="font-mono text-[10px] text-text-dim">Автопродление</span>
           <Toggle
-            checked={sub.status === 'trial' ? false : sub.autoRenewal}
-            onChange={(enabled) => toggleAutoRenewal.mutate({ id: sub.id, enabled })}
-            disabled={sub.status === 'expired' || sub.status === 'trial'}
+            checked={isTrial ? false : sub.autoRenewal}
+            onChange={handleToggle}
+            disabled={isLocked}
             label="Автопродление"
           />
         </div>
@@ -340,15 +353,40 @@ function SubscriptionCard({
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs text-text-dim">Автопродление</span>
             <Toggle
-              checked={sub.status === 'trial' ? false : sub.autoRenewal}
-              onChange={(enabled) => toggleAutoRenewal.mutate({ id: sub.id, enabled })}
-              disabled={sub.status === 'expired' || sub.status === 'trial'}
+              checked={isTrial ? false : sub.autoRenewal}
+              onChange={handleToggle}
+              disabled={isLocked}
               label="Автопродление"
             />
           </div>
         </div>
       </div>
     </BentoCard>
+
+    {/* Confirm disable auto-renewal */}
+    <Modal open={confirmDisable} onClose={() => setConfirmDisable(false)} title="Отключить автопродление?" size="sm">
+      <div className="px-6 sm:px-7 pb-7 pt-4 space-y-5">
+        <p className="font-mono text-sm sm:text-base text-text-dim leading-relaxed">
+          Подписка не будет продлена автоматически. Когда срок истечёт — нужно будет продлить вручную.
+        </p>
+        <div className="flex gap-3">
+          <Button
+            variant="primary"
+            size="lg"
+            className="flex-1"
+            loading={toggleAutoRenewal.isPending}
+            onClick={() => {
+              toggleAutoRenewal.mutate({ id: sub.id, enabled: false })
+              setConfirmDisable(false)
+            }}
+          >
+            Отключить
+          </Button>
+          <Button variant="ghost" size="lg" onClick={() => setConfirmDisable(false)}>Отмена</Button>
+        </div>
+      </div>
+    </Modal>
+    </>
   )
 }
 
@@ -606,6 +644,61 @@ export function DashboardPage() {
           )}
         </motion.div>
 
+        {/* ── Instructions banner (only when has subscriptions) ── */}
+        {!hasNoSubs && !loadingSubs && (
+          <motion.div variants={fadeUp} transition={fadeUpTransition}>
+            <button
+              onClick={() => setActiveModal('instructions')}
+              className="w-full text-left group"
+            >
+              <div
+                className="relative rounded-[24px] overflow-hidden transition-all duration-300 hover:-translate-y-0.5"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(168,153,255,0.07) 0%, rgba(99,102,241,0.05) 50%, rgba(34,211,238,0.06) 100%)',
+                  border: '1px solid rgba(157,140,255,0.14)',
+                }}
+              >
+                <div
+                  className="absolute top-0 left-0 right-0 h-px"
+                  style={{ background: 'linear-gradient(90deg, transparent, rgba(157,140,255,0.5), rgba(34,211,238,0.3), transparent)' }}
+                />
+                <div className="flex items-center justify-between gap-4 px-4 md:px-6 py-4 md:py-5">
+                  <div className="flex items-center gap-3 md:gap-4">
+                    <div
+                      className="size-10 md:size-12 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(157,140,255,0.15) 0%, rgba(34,211,238,0.1) 100%)',
+                        border: '1px solid rgba(157,140,255,0.2)',
+                      }}
+                    >
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-jade">
+                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-display text-base md:text-lg font-medium text-text group-hover:text-jade transition-colors duration-200">
+                        Инструкция по подключению
+                      </p>
+                      <p className="font-mono text-[10px] md:text-xs text-text-faint mt-0.5">
+                        Настройка VPN на всех устройствах
+                      </p>
+                    </div>
+                  </div>
+                  <motion.div
+                    className="text-text-faint group-hover:text-jade transition-colors duration-200 shrink-0"
+                    whileHover={{ x: 2, y: -2 }}
+                    transition={{ type: 'spring', duration: 0.2, bounce: 0 }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                      <path d="M7 17L17 7M17 7H7M17 7v10"/>
+                    </svg>
+                  </motion.div>
+                </div>
+              </div>
+            </button>
+          </motion.div>
+        )}
+
         {/* ── Управление ── */}
         <motion.div variants={fadeUp} transition={fadeUpTransition}>
           <SectionLabel label="Управление" />
@@ -677,81 +770,27 @@ export function DashboardPage() {
           </div>
         </motion.div>
 
-        {/* ── Instructions banner ── */}
-        <motion.div variants={fadeUp} transition={fadeUpTransition}>
-          <button
-            onClick={() => setActiveModal('instructions')}
-            className="w-full text-left group"
-          >
-            <div
-              className="relative rounded-[24px] overflow-hidden transition-all duration-300 hover:-translate-y-0.5"
-              style={{
-                background: 'linear-gradient(135deg, rgba(168,153,255,0.07) 0%, rgba(99,102,241,0.05) 50%, rgba(34,211,238,0.06) 100%)',
-                border: '1px solid rgba(157,140,255,0.14)',
-              }}
-            >
-              {/* Decorative top line */}
-              <div
-                className="absolute top-0 left-0 right-0 h-px"
-                style={{ background: 'linear-gradient(90deg, transparent, rgba(157,140,255,0.5), rgba(34,211,238,0.3), transparent)' }}
-              />
-              <div className="flex items-center justify-between gap-4 px-4 md:px-6 py-4 md:py-5">
-                <div className="flex items-center gap-3 md:gap-4">
-                  {/* Icon */}
-                  <div
-                    className="size-10 md:size-12 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(157,140,255,0.15) 0%, rgba(34,211,238,0.1) 100%)',
-                      border: '1px solid rgba(157,140,255,0.2)',
-                    }}
-                  >
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-jade">
-                      <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-display text-base md:text-lg font-medium text-text group-hover:text-jade transition-colors duration-200">
-                      Инструкция по подключению
-                    </p>
-                    <p className="font-mono text-[10px] md:text-xs text-text-faint mt-0.5">
-                      Настройка VPN на всех устройствах
-                    </p>
-                  </div>
-                </div>
-                <motion.div
-                  className="text-text-faint group-hover:text-jade transition-colors duration-200 shrink-0"
-                  whileHover={{ x: 2, y: -2 }}
-                  transition={{ type: 'spring', duration: 0.2, bounce: 0 }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                    <path d="M7 17L17 7M17 7H7M17 7v10"/>
-                  </svg>
-                </motion.div>
-              </div>
-            </div>
-          </button>
-        </motion.div>
 
       </motion.div>
 
       {/* ── Renewal modal (same UI as Services modal) ── */}
       <Modal open={!!renewTarget} onClose={() => setRenewTarget(null)} title="Услуги" size="xl">
-        <div className="p-6"><ServicesContent /></div>
+        <div className="px-6 sm:px-7 py-6"><ServicesContent /></div>
       </Modal>
 
       {/* ── Services modal ── */}
       <Modal open={activeModal === 'services'} onClose={() => setActiveModal(null)} title="Услуги" size="xl">
-        <div className="p-6"><ServicesContent /></div>
+        <div className="px-6 sm:px-7 py-6"><ServicesContent /></div>
       </Modal>
 
       {/* ── Payments modal ── */}
       <Modal open={activeModal === 'payments'} onClose={() => setActiveModal(null)} title="История платежей" size="lg">
-        <div className="p-6"><PaymentsContent /></div>
+        <div className="px-6 sm:px-7 py-6"><PaymentsContent /></div>
       </Modal>
 
       {/* ── Referrals modal ── */}
       <Modal open={activeModal === 'referrals'} onClose={() => setActiveModal(null)} title="Реферальная программа" size="lg">
-        <div className="p-6"><ReferralsContent /></div>
+        <div className="px-6 sm:px-7 py-6"><ReferralsContent /></div>
       </Modal>
 
       {/* ── Trial success modal ── */}
@@ -765,6 +804,7 @@ export function DashboardPage() {
       <InstructionsModal
         open={activeModal === 'instructions'}
         onClose={() => setActiveModal(null)}
+        importUrl={activeSubs[0]?.importUrl ?? null}
       />
 
     </div>
@@ -780,44 +820,37 @@ function TrialSuccessModal({ open, endDate, onClose }: { open: boolean; endDate:
 
   return (
     <Modal open={open} onClose={onClose} size="sm">
-      <div className="flex flex-col items-center text-center px-6 pt-8 pb-6 gap-6">
+      <div className="flex flex-col items-center text-center px-6 sm:px-8 pt-8 sm:pt-10 pb-7 sm:pb-8 gap-6 sm:gap-7">
 
         {/* Glow orb + animated checkmark */}
         <div className="relative flex items-center justify-center">
-          {/* Outer halo */}
           <div
             className="absolute rounded-full"
             style={{
-              width: 88,
-              height: 88,
-              background: 'radial-gradient(circle, rgba(74,222,128,0.14) 0%, transparent 72%)',
-              filter: 'blur(6px)',
+              width: 110,
+              height: 110,
+              background: 'radial-gradient(circle, rgba(74,222,128,0.18) 0%, transparent 70%)',
+              filter: 'blur(8px)',
             }}
           />
-          {/* Middle ring */}
           <div
             className="absolute rounded-full"
-            style={{
-              width: 64,
-              height: 64,
-              border: '1px solid rgba(74,222,128,0.18)',
-            }}
+            style={{ width: 80, height: 80, border: '1px solid rgba(74,222,128,0.16)' }}
           />
-          {/* Icon disc */}
           <motion.div
             initial={{ scale: 0.5, opacity: 0, rotate: -15 }}
             animate={{ scale: 1, opacity: 1, rotate: 0 }}
             transition={{ type: 'spring', stiffness: 380, damping: 20, delay: 0.05 }}
             className="relative z-10 flex items-center justify-center rounded-full"
             style={{
-              width: 52,
-              height: 52,
+              width: 64,
+              height: 64,
               background: 'linear-gradient(135deg, rgba(74,222,128,0.15) 0%, rgba(34,211,238,0.1) 100%)',
               border: '1px solid rgba(74,222,128,0.3)',
-              boxShadow: '0 0 20px rgba(74,222,128,0.15)',
+              boxShadow: '0 0 24px rgba(74,222,128,0.18)',
             }}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
               <motion.path
                 d="M5 13l4 4L19 7"
                 stroke="#4ade80"
@@ -833,9 +866,9 @@ function TrialSuccessModal({ open, endDate, onClose }: { open: boolean; endDate:
         </div>
 
         {/* Copy */}
-        <div className="space-y-1">
+        <div className="space-y-2">
           <motion.p
-            className="font-mono text-[11px] uppercase tracking-[0.16em]"
+            className="font-mono text-xs uppercase tracking-[0.18em]"
             style={{ color: '#4ade80' }}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -846,7 +879,7 @@ function TrialSuccessModal({ open, endDate, onClose }: { open: boolean; endDate:
           <motion.p
             className="font-display font-light"
             style={{
-              fontSize: 48,
+              fontSize: 'clamp(52px, 14vw, 64px)',
               lineHeight: 1,
               background: 'linear-gradient(135deg, #f0fdf4 0%, #bbf7d0 50%, #86efac 100%)',
               WebkitBackgroundClip: 'text',
@@ -861,7 +894,7 @@ function TrialSuccessModal({ open, endDate, onClose }: { open: boolean; endDate:
           </motion.p>
           {formatted && (
             <motion.p
-              className="font-mono text-xs"
+              className="font-mono text-sm"
               style={{ color: 'rgba(255,255,255,0.35)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -874,17 +907,17 @@ function TrialSuccessModal({ open, endDate, onClose }: { open: boolean; endDate:
 
         {/* Info strip */}
         <motion.div
-          className="w-full rounded-2xl px-4 py-3 font-mono text-xs text-left leading-relaxed"
+          className="w-full rounded-2xl px-5 py-4 font-mono text-sm text-left leading-relaxed"
           style={{
             background: 'rgba(74,222,128,0.04)',
             border: '1px solid rgba(74,222,128,0.1)',
-            color: 'rgba(255,255,255,0.4)',
+            color: 'rgba(255,255,255,0.38)',
           }}
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.4 }}
         >
-          Карта не нужна · Автопродление не подключено ·&nbsp;По истечении срока подписка завершится сама
+          Карта не нужна · Автопродление не подключено · По истечении срока подписка завершится сама
         </motion.div>
 
         {/* CTA */}
@@ -894,7 +927,7 @@ function TrialSuccessModal({ open, endDate, onClose }: { open: boolean; endDate:
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.48 }}
         >
-          <Button onClick={onClose} variant="primary" className="w-full" size="md">
+          <Button onClick={onClose} variant="primary" className="w-full" size="lg">
             Отлично!
           </Button>
         </motion.div>
@@ -945,81 +978,49 @@ function DragonShieldIcon() {
 type PlatformKey = 'iphone' | 'android' | 'windows' | 'macos' | 'other'
 
 interface PlatformApp {
-  name: string
+  label: string
   url: string
-  note: string
 }
 
 interface PlatformConfig {
   label: string
   apps: PlatformApp[]
-  steps: string[]
 }
 
 const PLATFORMS: Record<PlatformKey, PlatformConfig> = {
   iphone: {
     label: 'iPhone / iPad',
     apps: [
-      { name: 'Happ', url: 'https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973', note: 'RU App Store' },
-      { name: 'Happ', url: 'https://apps.apple.com/us/app/happ-proxy-utility/id6504287215', note: 'EU/US App Store' },
-    ],
-    steps: [
-      'Скачайте приложение Happ из App Store',
-      'Откройте Telegram-бот → «Моя подписка» → «Подключить»',
-      'Нажмите «Открыть в Happ» — конфиг импортируется автоматически',
-      'Включите VPN тумблером в приложении',
+      { label: 'App Store (RU)',    url: 'https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973' },
+      { label: 'App Store (EU/US)', url: 'https://apps.apple.com/us/app/happ-proxy-utility/id6504287215' },
     ],
   },
   android: {
     label: 'Android',
     apps: [
-      { name: 'Happ', url: 'https://play.google.com/store/apps/details?id=com.happproxy', note: 'Google Play' },
-    ],
-    steps: [
-      'Скачайте приложение Happ из Google Play',
-      'Откройте Telegram-бот → «Моя подписка» → «Подключить»',
-      'Нажмите «Открыть в Happ» — конфиг импортируется автоматически',
-      'Нажмите кнопку запуска в приложении',
+      { label: 'Google Play', url: 'https://play.google.com/store/apps/details?id=com.happproxy' },
     ],
   },
   windows: {
     label: 'Windows',
     apps: [
-      { name: 'Happ', url: 'https://github.com/Happ-proxy/happ-desktop/releases/latest/download/setup-Happ.x64.exe', note: 'Скачать .exe' },
-    ],
-    steps: [
-      'Скачайте и установите Happ',
-      'Откройте Telegram-бот → «Моя подписка» → «Подключить»',
-      'Нажмите «Открыть в Happ» — конфиг импортируется автоматически',
-      'Включите VPN кнопкой в приложении',
+      { label: 'Скачать .exe', url: 'https://github.com/Happ-proxy/happ-desktop/releases/latest/download/setup-Happ.x64.exe' },
     ],
   },
   macos: {
     label: 'macOS',
     apps: [
-      { name: 'Happ', url: 'https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973', note: 'RU App Store' },
-      { name: 'Happ', url: 'https://apps.apple.com/us/app/happ-proxy-utility/id6504287215', note: 'EU/US App Store' },
-    ],
-    steps: [
-      'Скачайте приложение Happ из Mac App Store',
-      'Откройте Telegram-бот → «Моя подписка» → «Подключить»',
-      'Нажмите «Открыть в Happ» — конфиг импортируется автоматически',
-      'Включите VPN кнопкой в приложении',
+      { label: 'App Store (RU)',    url: 'https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973' },
+      { label: 'App Store (EU/US)', url: 'https://apps.apple.com/us/app/happ-proxy-utility/id6504287215' },
     ],
   },
   other: {
-    label: 'Другое устройство',
+    label: 'Другое',
     apps: [
-      { name: 'Happ (iOS RU)', url: 'https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973', note: 'App Store RU' },
-      { name: 'Happ (iOS/macOS EU)', url: 'https://apps.apple.com/us/app/happ-proxy-utility/id6504287215', note: 'App Store EU/US' },
-      { name: 'Happ (Android)', url: 'https://play.google.com/store/apps/details?id=com.happproxy', note: 'Google Play' },
-      { name: 'Happ (Windows)', url: 'https://github.com/Happ-proxy/happ-desktop/releases/latest/download/setup-Happ.x64.exe', note: 'Windows .exe' },
-    ],
-    steps: [
-      'Скачайте приложение Happ для вашего устройства',
-      'Откройте Telegram-бот → «Моя подписка» → «Подключить»',
-      'Нажмите «Открыть в Happ» — конфиг импортируется автоматически',
-      'Включите VPN в приложении',
+      { label: 'iOS / macOS (RU)',  url: 'https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973' },
+      { label: 'iOS / macOS (EU)',  url: 'https://apps.apple.com/us/app/happ-proxy-utility/id6504287215' },
+      { label: 'Android',           url: 'https://play.google.com/store/apps/details?id=com.happproxy' },
+      { label: 'Windows .exe',      url: 'https://github.com/Happ-proxy/happ-desktop/releases/latest/download/setup-Happ.x64.exe' },
     ],
   },
 }
@@ -1035,161 +1036,137 @@ function detectPlatform(): PlatformKey {
   return 'other'
 }
 
-function InstructionsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function InstructionsModal({ open, onClose, importUrl }: { open: boolean; onClose: () => void; importUrl: string | null }) {
   const [platform, setPlatform] = useState<PlatformKey>('other')
-  const [showPicker, setShowPicker] = useState(false)
 
-  // Detect on first open
   useEffect(() => {
-    if (open) {
-      setPlatform(detectPlatform())
-      setShowPicker(false)
-    }
+    if (open) setPlatform(detectPlatform())
   }, [open])
 
   const cfg = PLATFORMS[platform]
 
   return (
     <Modal open={open} onClose={onClose} title="Подключение VPN" size="md">
-      <div className="px-5 pb-5 pt-1 space-y-4">
+      <div className="px-6 sm:px-7 pb-7 pt-4 space-y-5">
 
-        {/* Detected platform pill */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span
-              className="font-mono text-[10px] uppercase tracking-[0.12em] px-2.5 py-1 rounded-full"
-              style={{ background: 'rgba(157,140,255,0.08)', border: '1px solid rgba(157,140,255,0.16)', color: '#9d8cff' }}
+        {/* Platform tabs */}
+        <div className="flex gap-2 flex-wrap">
+          {PLATFORM_ORDER.map((key) => (
+            <button
+              key={key}
+              onClick={() => setPlatform(key)}
+              className="font-mono text-xs sm:text-sm px-3.5 py-2 rounded-full transition-all duration-150"
+              style={platform === key ? {
+                background: 'rgba(157,140,255,0.15)',
+                border: '1px solid rgba(157,140,255,0.32)',
+                color: '#c4b5fd',
+              } : {
+                background: 'rgba(157,140,255,0.04)',
+                border: '1px solid rgba(157,140,255,0.1)',
+                color: 'rgba(255,255,255,0.4)',
+              }}
             >
-              {cfg.label}
-            </span>
-          </div>
-          <button
-            onClick={() => setShowPicker(!showPicker)}
-            className="font-mono text-[11px] text-text-faint hover:text-text-dim transition-colors duration-150 flex items-center gap-1"
-          >
-            Другое устройство
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-              style={{ transform: showPicker ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-              <path d="M6 9l6 6 6-6"/>
-            </svg>
-          </button>
-        </div>
-
-        {/* Platform picker */}
-        <AnimatePresence>
-          {showPicker && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="overflow-hidden"
-            >
-              <div className="grid grid-cols-4 gap-1.5 pb-1">
-                {PLATFORM_ORDER.map((key) => (
-                  <button
-                    key={key}
-                    onClick={() => { setPlatform(key); setShowPicker(false) }}
-                    className="py-2 px-1 rounded-xl font-mono text-[10px] text-center transition-all duration-150"
-                    style={platform === key ? {
-                      background: 'rgba(157,140,255,0.12)',
-                      border: '1px solid rgba(157,140,255,0.24)',
-                      color: '#c4b5fd',
-                    } : {
-                      background: 'rgba(157,140,255,0.04)',
-                      border: '1px solid rgba(157,140,255,0.08)',
-                      color: 'rgba(255,255,255,0.4)',
-                    }}
-                  >
-                    {PLATFORMS[key].label.split(' ')[0]}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Download button(s) */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={platform}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="space-y-2"
-          >
-            {cfg.apps.map((app) => (
-              <a
-                key={app.url}
-                href={app.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between gap-3 w-full rounded-2xl px-4 py-3 transition-all duration-150 active:scale-[0.98]"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(157,140,255,0.12) 0%, rgba(124,107,255,0.07) 100%)',
-                  border: '1px solid rgba(157,140,255,0.2)',
-                }}
-              >
-                <div className="flex items-center gap-2.5">
-                  <span
-                    className="flex items-center justify-center size-8 rounded-xl shrink-0"
-                    style={{ background: 'rgba(157,140,255,0.1)', border: '1px solid rgba(157,140,255,0.18)' }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9d8cff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-                    </svg>
-                  </span>
-                  <div>
-                    <p className="font-display text-sm text-text leading-none mb-0.5">Скачать {app.name}</p>
-                    <p className="font-mono text-[10px] text-text-faint">{app.note}</p>
-                  </div>
-                </div>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(157,140,255,0.5)" strokeWidth="1.8" strokeLinecap="round">
-                  <path d="M7 17L17 7M17 7H7M17 7v10"/>
-                </svg>
-              </a>
-            ))}
-          </motion.div>
-        </AnimatePresence>
-
-        {/* Divider */}
-        <div className="h-px" style={{ background: 'rgba(157,140,255,0.07)' }} />
-
-        {/* Steps */}
-        <div className="space-y-2">
-          {cfg.steps.map((step, i) => (
-            <div key={i} className="flex items-start gap-3">
-              <span
-                className="flex items-center justify-center size-5 rounded-full shrink-0 font-mono text-[10px] font-semibold mt-0.5"
-                style={{
-                  background: i === 0 ? 'rgba(157,140,255,0.15)' : 'rgba(157,140,255,0.06)',
-                  border: `1px solid ${i === 0 ? 'rgba(157,140,255,0.3)' : 'rgba(157,140,255,0.1)'}`,
-                  color: i === 0 ? '#9d8cff' : 'rgba(255,255,255,0.3)',
-                }}
-              >
-                {i + 1}
-              </span>
-              <p className="font-mono text-xs text-text-dim leading-snug pt-0.5">{step}</p>
-            </div>
+              {PLATFORMS[key].label}
+            </button>
           ))}
         </div>
 
-        {/* Bot link */}
-        <div
-          className="flex items-center justify-between rounded-2xl px-3.5 py-2.5"
-          style={{ background: 'rgba(74,222,128,0.04)', border: '1px solid rgba(74,222,128,0.1)' }}
-        >
-          <span className="font-mono text-xs text-text-faint">Конфиг выдаёт бот после активации</span>
-          <a
-            href="https://t.me/skydragonvpn_bot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-mono text-[11px] text-[#4ade80] hover:underline shrink-0 ml-2"
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={platform}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="rounded-2xl overflow-hidden"
+            style={{ border: '1px solid rgba(157,140,255,0.12)' }}
           >
-            Открыть →
-          </a>
-        </div>
+            {/* Step 1 — download */}
+            <div className="px-5 sm:px-6 py-5" style={{ borderBottom: '1px solid rgba(157,140,255,0.08)' }}>
+              <div className="flex items-center gap-3 mb-4">
+                <span
+                  className="flex items-center justify-center size-6 rounded-full font-mono text-xs font-bold shrink-0"
+                  style={{ background: 'rgba(157,140,255,0.15)', border: '1px solid rgba(157,140,255,0.28)', color: '#9d8cff' }}
+                >
+                  1
+                </span>
+                <span className="font-display text-base sm:text-lg text-text">Скачайте Happ</span>
+              </div>
+              <div className="flex flex-col gap-2.5">
+                {cfg.apps.map((app) => (
+                  <a
+                    key={app.url}
+                    href={app.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between w-full rounded-xl px-4 py-3.5 transition-all duration-150 active:scale-[0.98] hover:brightness-110"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(157,140,255,0.1) 0%, rgba(124,107,255,0.05) 100%)',
+                      border: '1px solid rgba(157,140,255,0.18)',
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="flex items-center justify-center size-9 rounded-xl shrink-0"
+                        style={{ background: 'rgba(157,140,255,0.1)', border: '1px solid rgba(157,140,255,0.18)' }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9d8cff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                        </svg>
+                      </span>
+                      <span className="font-mono text-sm sm:text-base text-text">{app.label}</span>
+                    </div>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(157,140,255,0.45)" strokeWidth="2" strokeLinecap="round">
+                      <path d="M7 17L17 7M17 7H7M17 7v10"/>
+                    </svg>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            {/* Step 2 — import deeplink */}
+            <div className="px-5 sm:px-6 py-5">
+              <div className="flex items-center gap-3 mb-4">
+                <span
+                  className="flex items-center justify-center size-6 rounded-full font-mono text-xs font-bold shrink-0"
+                  style={{ background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.25)', color: '#4ade80' }}
+                >
+                  2
+                </span>
+                <span className="font-display text-base sm:text-lg text-text">Добавьте подписку</span>
+              </div>
+              {importUrl ? (
+                <a
+                  href={importUrl}
+                  className="flex items-center justify-between w-full rounded-xl px-4 py-3.5 transition-all duration-150 active:scale-[0.98] hover:brightness-110"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(74,222,128,0.1) 0%, rgba(52,211,153,0.05) 100%)',
+                    border: '1px solid rgba(74,222,128,0.2)',
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="flex items-center justify-center size-9 rounded-xl shrink-0"
+                      style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.2)' }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M8 17l4 4 4-4M12 12v9M20.88 18.09A5 5 0 0018 9h-1.26A8 8 0 103 16.29"/>
+                      </svg>
+                    </span>
+                    <span className="font-mono text-sm sm:text-base text-text">Импортировать в Happ</span>
+                  </div>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(74,222,128,0.45)" strokeWidth="2" strokeLinecap="round">
+                    <path d="M7 17L17 7M17 7H7M17 7v10"/>
+                  </svg>
+                </a>
+              ) : (
+                <p className="font-mono text-sm sm:text-base text-text-faint leading-relaxed">
+                  Ссылка недоступна. Убедитесь, что у вас есть активная подписка.
+                </p>
+              )}
+            </div>
+          </motion.div>
+        </AnimatePresence>
 
       </div>
     </Modal>

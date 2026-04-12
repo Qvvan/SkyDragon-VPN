@@ -59,6 +59,7 @@ class SubscriptionSummarySchema(BaseModel):
     service_name: str | None = None
     service_duration_days: int | None = None
     service_price: int | None = None
+    import_url: str | None = None
 
 
 class SubscriptionSummaryListResponse(BaseModel):

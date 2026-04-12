@@ -10,4 +10,5 @@ export interface Subscription {
   autoRenewal: boolean
   daysRemaining: number
   totalDays: number
+  importUrl: string | null
 }

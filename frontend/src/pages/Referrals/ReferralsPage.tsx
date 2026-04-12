@@ -57,15 +57,15 @@ export function ReferralsContent() {
     >
       {/* Referral link */}
       <motion.div variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-        <p className="font-mono text-xs text-text-dim uppercase tracking-wider mb-2">Ваша ссылка</p>
+        <p className="font-mono text-xs text-text-faint uppercase tracking-wider mb-2">Ваша ссылка</p>
         {loadingStats ? (
           <Skeleton className="h-10 w-full" />
         ) : (
           <div className="flex items-center gap-2">
-            <div className="flex-1 rounded-xl px-3 py-2.5 bg-surface-3 font-mono text-xs text-text-dim truncate shadow-card">
+            <div className="flex-1 rounded-xl px-4 py-3 bg-surface-3 font-mono text-sm text-text-dim truncate shadow-card">
               {stats?.referralLink}
             </div>
-            <Button size="sm" variant="primary" onClick={copyLink}>Копировать</Button>
+            <Button size="md" variant="primary" onClick={copyLink}>Копировать</Button>
           </div>
         )}
       </motion.div>
@@ -80,13 +80,13 @@ export function ReferralsContent() {
           <><Skeleton className="h-16" /><Skeleton className="h-16" /></>
         ) : (
           <>
-            <div className="rounded-xl p-4 bg-surface-3 shadow-card">
-              <p className="font-mono text-2xl text-jade tabular-nums">{stats?.totalReferrals ?? 0}</p>
-              <p className="font-mono text-xs text-text-dim mt-1">Приведено друзей</p>
+            <div className="rounded-2xl p-5 bg-surface-3 shadow-card">
+              <p className="font-mono text-3xl sm:text-4xl text-jade tabular-nums">{stats?.totalReferrals ?? 0}</p>
+              <p className="font-mono text-sm text-text-dim mt-1.5">Приведено друзей</p>
             </div>
-            <div className="rounded-xl p-4 bg-surface-3 shadow-card">
-              <p className="font-mono text-2xl text-jade tabular-nums">{stats?.totalBonusDays ?? 0}</p>
-              <p className="font-mono text-xs text-text-dim mt-1">Бонусных дней</p>
+            <div className="rounded-2xl p-5 bg-surface-3 shadow-card">
+              <p className="font-mono text-3xl sm:text-4xl text-jade tabular-nums">{stats?.totalBonusDays ?? 0}</p>
+              <p className="font-mono text-sm text-text-dim mt-1.5">Бонусных дней</p>
             </div>
           </>
         )}
@@ -97,7 +97,7 @@ export function ReferralsContent() {
         <div className="rounded-xl px-3 py-2.5 bg-jade-dim shadow-[0_0_0_1px_rgba(157,140,255,0.18)]">
           <div className="flex items-start gap-2">
             <ReferralIcon />
-            <p className="font-mono text-xs text-jade">
+            <p className="font-mono text-sm text-jade leading-relaxed">
               За каждого приглашённого друга вы получаете +15 дней к подписке
             </p>
           </div>
@@ -121,16 +121,16 @@ export function ReferralsContent() {
         </div>
       ) : referrals?.length ? (
         <motion.div variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-          <p className="font-mono text-xs text-text-dim uppercase tracking-wider mb-3">Приглашённые друзья</p>
+          <p className="font-mono text-xs text-text-faint uppercase tracking-wider mb-3">Приглашённые друзья</p>
           <div className="space-y-2">
             {referrals.map((ref) => (
-              <div key={ref.id} className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-surface-3">
-                <span className="font-mono text-sm text-text">{ref.maskedPhone}</span>
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-xs text-text-dim tabular-nums">
+              <div key={ref.id} className="flex items-center justify-between py-3.5 px-4 rounded-2xl bg-surface-3">
+                <span className="font-mono text-sm sm:text-base text-text">{ref.maskedPhone}</span>
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <span className="font-mono text-xs sm:text-sm text-text-dim tabular-nums">
                     {new Date(ref.joinedAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
                   </span>
-                  <span className="font-mono text-xs text-jade tabular-nums">+{ref.bonusDaysGranted} дн.</span>
+                  <span className="font-mono text-sm text-jade tabular-nums font-medium">+{ref.bonusDaysGranted} дн.</span>
                 </div>
               </div>
             ))}
@@ -145,60 +145,70 @@ export function ReferralsContent() {
       {/* Gift modal */}
       <Modal open={giftOpen} onClose={() => setGiftOpen(false)} title="Создать подарок">
         {createdGift ? (
-          <div className="p-6 space-y-4">
-            <div className="text-center py-2">
-              <div className="mb-3 inline-flex"><GiftIcon large /></div>
-              <p className="font-display text-lg text-text mb-1">Подарок создан!</p>
-              <p className="font-mono text-sm text-text-dim text-pretty">
-                Поделитесь этим кодом —{' '}
-                <span className="text-jade tabular-nums">{createdGift.durationDays} дней</span> {createdGift.serviceName}
+          <div className="px-6 sm:px-7 pb-7 pt-5 space-y-5">
+            <div className="text-center py-3">
+              <div className="mb-4 inline-flex items-center justify-center size-16 rounded-2xl"
+                style={{ background: 'rgba(157,140,255,0.08)', border: '1px solid rgba(157,140,255,0.18)' }}>
+                <GiftIcon large />
+              </div>
+              <p className="font-display text-2xl sm:text-3xl text-text mb-2">Подарок создан!</p>
+              <p className="font-mono text-sm sm:text-base text-text-dim text-pretty leading-relaxed">
+                Поделитесь кодом —{' '}
+                <span className="text-jade tabular-nums">{createdGift.durationDays} дней</span>{' '}
+                {createdGift.serviceName}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 rounded-xl px-3 py-3 bg-surface-3 font-mono text-sm text-jade shadow-card tracking-widest">
+            <div
+              className="flex items-center gap-3 rounded-2xl px-4 sm:px-5 py-4"
+              style={{ background: 'rgba(157,140,255,0.06)', border: '1px solid rgba(157,140,255,0.15)' }}
+            >
+              <span className="flex-1 font-mono text-base sm:text-xl text-jade tracking-[0.2em] tabular-nums">
                 {createdGift.code}
-              </div>
-              <Button size="sm" variant="primary" onClick={copyGiftCode}>Копировать</Button>
+              </span>
+              <Button size="md" variant="primary" onClick={copyGiftCode}>Копировать</Button>
             </div>
-            <Button variant="ghost" className="w-full" onClick={() => setGiftOpen(false)}>Готово</Button>
+            <Button variant="ghost" size="lg" className="w-full" onClick={() => setGiftOpen(false)}>Готово</Button>
           </div>
         ) : (
-          <div className="p-6 space-y-5">
+          <div className="px-6 sm:px-7 pb-7 pt-5 space-y-6">
             <div>
-              <p className="font-mono text-xs text-text-dim uppercase tracking-wider mb-3">Услуга</p>
+              <p className="font-mono text-xs text-text-faint uppercase tracking-wider mb-3">Выберите тариф</p>
               {services && services.length > 0 ? (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2.5">
                   {services.map((svc) => (
                     <button
                       key={svc.id}
                       onClick={() => setGiftServiceId(svc.id)}
-                      className={[
-                        'rounded-xl px-3 py-3 text-left transition-[background-color,box-shadow,color] duration-150',
-                        giftServiceId === svc.id
-                          ? 'bg-jade-dim shadow-[0_0_0_1px_rgba(157,140,255,0.25)]'
-                          : 'bg-surface-3 hover:bg-surface-2',
-                      ].join(' ')}
+                      className="rounded-2xl px-4 py-4 text-left transition-all duration-150 active:scale-[0.98]"
+                      style={giftServiceId === svc.id ? {
+                        background: 'rgba(157,140,255,0.1)',
+                        border: '1px solid rgba(157,140,255,0.28)',
+                      } : {
+                        background: 'rgba(157,140,255,0.04)',
+                        border: '1px solid rgba(157,140,255,0.1)',
+                      }}
                     >
-                      <p className={`font-display text-base font-bold leading-none mb-1 ${giftServiceId === svc.id ? 'text-jade' : 'text-text'}`}>
+                      <p className={`font-display text-lg sm:text-xl leading-tight mb-1 ${giftServiceId === svc.id ? 'text-jade' : 'text-text'}`}>
                         {svc.name}
                       </p>
-                      <p className={`font-mono text-sm tabular-nums ${giftServiceId === svc.id ? 'text-jade/70' : 'text-text-dim'}`}>
+                      <p className={`font-mono text-sm sm:text-base tabular-nums ${giftServiceId === svc.id ? 'text-jade opacity-75' : 'text-text-dim'}`}>
                         {svc.price.toLocaleString('ru-RU')} ₽
                       </p>
                     </button>
                   ))}
                 </div>
               ) : (
-                <p className="font-mono text-xs text-text-dim rounded-xl bg-surface-3 px-3 py-2.5">
-                  Нет услуг для подарка
+                <p className="font-mono text-sm text-text-dim rounded-2xl px-4 py-3"
+                  style={{ background: 'rgba(157,140,255,0.04)', border: '1px solid rgba(157,140,255,0.08)' }}>
+                  Нет доступных тарифов
                 </p>
               )}
             </div>
             <div className="flex gap-3">
-              <Button variant="primary" className="flex-1" loading={createGift.isPending} disabled={!giftServiceId || !selectedService} onClick={handleCreateGift}>
+              <Button variant="primary" size="lg" className="flex-1" loading={createGift.isPending} disabled={!giftServiceId || !selectedService} onClick={handleCreateGift}>
                 Создать подарок
               </Button>
-              <Button variant="ghost" onClick={() => setGiftOpen(false)}>Отмена</Button>
+              <Button variant="ghost" size="lg" onClick={() => setGiftOpen(false)}>Отмена</Button>
             </div>
           </div>
         )}

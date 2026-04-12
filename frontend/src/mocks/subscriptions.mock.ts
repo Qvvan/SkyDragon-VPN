@@ -13,6 +13,7 @@ export const mockSubscriptions: Subscription[] = [
     autoRenewal: true,
     daysRemaining: 31,
     totalDays: 90,
+    importUrl: 'happ://add/https://vpn.example.com/sub/mock_encrypted_001',
   },
   {
     id: 'sub_002',
@@ -24,6 +25,7 @@ export const mockSubscriptions: Subscription[] = [
     autoRenewal: false,
     daysRemaining: 5,
     totalDays: 5,
+    importUrl: 'happ://add/https://vpn.example.com/sub/mock_encrypted_002',
   },
   {
     id: 'sub_003',
@@ -35,6 +37,7 @@ export const mockSubscriptions: Subscription[] = [
     autoRenewal: false,
     daysRemaining: 0,
     totalDays: 30,
+    importUrl: null,
   },
 ]
 

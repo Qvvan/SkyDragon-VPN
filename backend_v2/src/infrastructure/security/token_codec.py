@@ -11,12 +11,12 @@ class FernetTokenCodec(ITokenCodec):
     def __init__(self, secret_key: str) -> None:
         self._cipher = Fernet(secret_key.encode("utf-8"))
 
-    def encrypt(self, user_id: int, subscription_id: int) -> str:
+    def encrypt(self, user_id: int, subscription_id: str) -> str:
         payload = f"{user_id}|{subscription_id}"
         return self._cipher.encrypt(payload.encode("utf-8")).decode("utf-8")
 
-    def decrypt(self, encrypted_part: str) -> tuple[int, int]:
+    def decrypt(self, encrypted_part: str) -> tuple[int, str]:
         normalized = unquote((encrypted_part or "").strip()).replace(" ", "+")
         raw = self._cipher.decrypt(normalized.encode("utf-8")).decode("utf-8")
         user_id_str, subscription_id_str = raw.split("|", maxsplit=1)
-        return int(user_id_str), int(subscription_id_str)
+        return int(user_id_str), subscription_id_str

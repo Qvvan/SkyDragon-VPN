@@ -26,6 +26,7 @@ class Subscription:
     service_name: str | None = None
     service_duration_days: int | None = None
     service_price: int | None = None
+    import_url: str | None = None
 
     def is_active(self) -> bool:
         if self.status != SubscriptionStatus.ACTIVE.value:

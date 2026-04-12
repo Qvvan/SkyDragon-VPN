@@ -27,7 +27,6 @@ const sizeClasses: Record<ModalSize, string> = {
 }
 
 export function Modal({ open, onClose, title, children, size = 'md' }: Props) {
-  // Escape key
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent) => {
@@ -37,20 +36,15 @@ export function Modal({ open, onClose, title, children, size = 'md' }: Props) {
     return () => document.removeEventListener('keydown', handler)
   }, [open, onClose])
 
-  // Scroll lock — компенсируем ширину скроллбара чтобы не было layout shift
   useEffect(() => {
     if (!open) return
-
     const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
     const header = document.querySelector<HTMLElement>('header[data-sticky]')
-
     document.body.style.overflow = 'hidden'
     if (scrollbarWidth > 0) {
       document.body.style.paddingRight = `${scrollbarWidth}px`
-      // header тоже сдвигаем — он sticky и тоже теряет scrollbar offset
       if (header) header.style.paddingRight = `${scrollbarWidth}px`
     }
-
     return () => {
       document.body.style.overflow = ''
       document.body.style.paddingRight = ''
@@ -74,9 +68,9 @@ export function Modal({ open, onClose, title, children, size = 'md' }: Props) {
             transition={{ duration: 0.22, ease: 'easeOut' }}
             className="fixed inset-0 z-40"
             style={{
-              background: 'rgba(4,4,10,0.75)',
-              backdropFilter: 'blur(14px)',
-              WebkitBackdropFilter: 'blur(14px)',
+              background: 'rgba(3,3,9,0.82)',
+              backdropFilter: 'blur(18px)',
+              WebkitBackdropFilter: 'blur(18px)',
             }}
             onClick={onClose}
           />
@@ -86,7 +80,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }: Props) {
             'fixed z-50 pointer-events-none',
             isFull
               ? 'inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4'
-              : 'inset-0 flex items-center justify-center p-4',
+              : 'inset-0 flex items-center justify-center p-3 sm:p-5',
           ].join(' ')}>
             <motion.div
               variants={panelVariants}
@@ -94,31 +88,38 @@ export function Modal({ open, onClose, title, children, size = 'md' }: Props) {
               animate="visible"
               exit="exit"
               transition={spring.gentle}
-              style={{ willChange: 'transform, opacity' }}
+              style={{
+                willChange: 'transform, opacity',
+                border: '1px solid rgba(157,140,255,0.12)',
+                background: 'linear-gradient(160deg, #0f0e24 0%, #0c0b1f 60%, #0a0919 100%)',
+              }}
               className={[
-                'pointer-events-auto w-full',
+                'pointer-events-auto w-full relative',
                 sizeClasses[size],
                 isFull
-                  ? 'rounded-t-[28px] sm:rounded-[24px] bg-surface shadow-modal max-h-[92vh] sm:max-h-[88vh] flex flex-col'
-                  : 'rounded-[24px] bg-surface shadow-modal',
+                  ? 'rounded-t-[28px] sm:rounded-[28px] shadow-modal max-h-[92vh] sm:max-h-[88vh] flex flex-col'
+                  : 'rounded-[28px] shadow-modal max-h-[90vh] flex flex-col',
               ].join(' ')}
-              style={{
-                border: '1px solid rgba(157,140,255,0.1)',
-                willChange: 'transform, opacity',
-              }}
             >
+              {/* Top accent line */}
+              <div
+                className="absolute top-0 left-8 right-8 h-px rounded-full pointer-events-none"
+                style={{ background: 'linear-gradient(90deg, transparent, rgba(157,140,255,0.4), transparent)' }}
+              />
+
               {/* Header */}
               {title && (
                 <div className={[
-                  'flex items-center justify-between px-6 py-4 shrink-0',
+                  'flex items-center justify-between px-6 sm:px-7 py-4 sm:py-5 shrink-0',
                   'border-b border-[rgba(157,140,255,0.07)]',
-                  isFull ? '' : 'rounded-t-[24px]',
                 ].join(' ')}>
-                  <h2 className="font-display text-[17px] font-medium text-text tracking-wide">{title}</h2>
+                  <h2 className="font-display text-xl sm:text-2xl font-medium text-text tracking-wide leading-tight">
+                    {title}
+                  </h2>
                   <button
                     onClick={onClose}
                     className={[
-                      'relative flex items-center justify-center size-8 rounded-full',
+                      'relative flex items-center justify-center size-9 rounded-full ml-4 shrink-0',
                       'text-text-dim hover:text-text',
                       'hover:bg-surface-3',
                       'transition-[background-color,color] duration-150',
@@ -126,18 +127,20 @@ export function Modal({ open, onClose, title, children, size = 'md' }: Props) {
                     ].join(' ')}
                     aria-label="Close"
                   >
-                    <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
-                      <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                      <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
                     </svg>
                   </button>
                 </div>
               )}
 
-              {/* Content */}
+              {/* Content — scrollable */}
               <div className={[
-                isFull ? 'flex-1 overflow-y-auto' : '',
+                'flex-1 overflow-y-auto',
                 !title ? 'p-2' : '',
-              ].join(' ')}>
+              ].join(' ')}
+                style={{ scrollbarWidth: 'none' }}
+              >
                 {children}
               </div>
             </motion.div>

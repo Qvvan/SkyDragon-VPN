@@ -37,15 +37,20 @@ class SubscriptionService:
         self._subscription_client = subscription_client
         self._token_codec = token_codec
 
-    def decode_user_and_sub(self, encrypted_part: str) -> tuple[int, int]:
+    def decode_user_and_sub(self, encrypted_part: str) -> tuple[int, str]:
         try:
             return self._token_codec.decrypt(encrypted_part)
         except Exception as exc:
             raise ValidationError("Invalid encryption") from exc
 
+    def build_happ_deeplink(self, user_id: int, subscription_id: str) -> str:
+        encrypted = self._token_codec.encrypt(user_id, subscription_id)
+        sub_url = self._public_sub_url(encrypted)
+        return f"happ://add/{sub_url}"
+
     async def get_subscription_content(self, encrypted_part: str, user_agent: str | None) -> tuple[bytes, dict[str, str]]:
         user_id, sub_id = self.decode_user_and_sub(encrypted_part)
-        subscription = await self._subscription_repo.get_by_principal_and_subscription_id(user_id, sub_id)
+        subscription = await self._subscription_repo.get_by_principal_and_subscription_id(str(user_id), sub_id)
         config_url = self._public_sub_url(encrypted_part)
 
         if subscription is None:
@@ -134,7 +139,10 @@ class SubscriptionService:
         return await self._subscription_repo.get_by_principal_and_subscription_id(user_id, sub_id)
 
     async def list_subscriptions_for_account(self, account_id: str) -> list[Subscription]:
-        return await self._subscription_repo.list_for_account_owner(account_id)
+        subs = await self._subscription_repo.list_for_account_owner(account_id)
+        for sub in subs:
+            sub.import_url = self.build_happ_deeplink(sub.user_id, sub.subscription_id)
+        return subs
 
     async def list_service_plans(self) -> list[ServicePlan]:
         return await self._service_repo.list_active()

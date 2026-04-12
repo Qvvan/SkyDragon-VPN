@@ -38,7 +38,7 @@ export function PaymentsContent() {
 
   if (!payments?.length) return (
     <div className="text-center py-16">
-      <p className="font-mono text-sm text-text-dim">Платежей пока нет</p>
+      <p className="font-mono text-base text-text-dim">Платежей пока нет</p>
     </div>
   )
 
@@ -48,10 +48,10 @@ export function PaymentsContent() {
       animate="visible"
       variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
     >
-      <div className="grid grid-cols-[1fr_auto_auto] gap-4 pb-2 mb-1 border-b border-[rgba(157,140,255,0.08)]">
-        <span className="font-mono text-xs text-text-dim uppercase tracking-wider">Услуга</span>
-        <span className="font-mono text-xs text-text-dim uppercase tracking-wider text-right">Сумма</span>
-        <span className="font-mono text-xs text-text-dim uppercase tracking-wider">Статус</span>
+      <div className="grid grid-cols-[1fr_auto_auto] gap-4 pb-3 mb-2 border-b border-[rgba(157,140,255,0.08)]">
+        <span className="font-mono text-xs text-text-faint uppercase tracking-wider">Услуга</span>
+        <span className="font-mono text-xs text-text-faint uppercase tracking-wider text-right">Сумма</span>
+        <span className="font-mono text-xs text-text-faint uppercase tracking-wider">Статус</span>
       </div>
 
       {payments.map((payment) => (
@@ -59,17 +59,17 @@ export function PaymentsContent() {
           key={payment.id}
           variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="grid grid-cols-[1fr_auto_auto] gap-4 py-4 border-b border-[rgba(157,140,255,0.06)] last:border-0 rounded-lg hover:bg-surface-3 -mx-2 px-2 transition-[background-color] duration-150"
+          className="grid grid-cols-[1fr_auto_auto] gap-4 py-4 sm:py-5 border-b border-[rgba(157,140,255,0.06)] last:border-0 rounded-xl hover:bg-surface-3 -mx-2 px-2 transition-[background-color] duration-150"
         >
           <div className="min-w-0">
-            <p className="font-mono text-sm text-text truncate">{payment.serviceName}</p>
-            <p className="font-mono text-xs text-text-dim mt-0.5 tabular-nums">
+            <p className="font-mono text-sm sm:text-base text-text truncate">{payment.serviceName}</p>
+            <p className="font-mono text-xs sm:text-sm text-text-dim mt-1 tabular-nums">
               {new Date(payment.createdAt).toLocaleDateString('ru-RU', {
                 day: 'numeric', month: 'short', year: 'numeric',
               })}
             </p>
           </div>
-          <span className="font-mono text-sm text-text tabular-nums self-center">
+          <span className="font-mono text-sm sm:text-base text-text tabular-nums self-center">
             ${payment.amount.toFixed(2)}
           </span>
           <div className="self-center">

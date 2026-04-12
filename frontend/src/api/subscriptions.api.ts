@@ -10,6 +10,7 @@ interface BackendSubscription {
   status: string | null
   auto_renewal: boolean
   service_duration_days: number | null
+  import_url: string | null
 }
 
 const STATUS_MAP: Record<string, Subscription['status']> = {
@@ -39,6 +40,7 @@ function mapSubscription(s: BackendSubscription): Subscription {
     autoRenewal: s.auto_renewal,
     daysRemaining,
     totalDays,
+    importUrl: s.import_url ?? null,
   }
 }
 
