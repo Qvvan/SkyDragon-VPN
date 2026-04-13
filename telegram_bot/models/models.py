@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import Column, String, Integer, DateTime, Enum, BigInteger, ARRAY, Boolean, Text, JSON, ForeignKey, Numeric
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -33,7 +34,7 @@ class Account(Base):
 
     __tablename__ = "accounts"
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(PGUUID(as_uuid=False), primary_key=True)
     login = Column(String(64), nullable=False, unique=True)
     password_hash = Column(Text, nullable=False)
     first_name = Column(String(128), nullable=False, default="")
@@ -48,7 +49,7 @@ class AccountTelegramLink(Base):
     __tablename__ = "account_telegram_links"
 
     telegram_user_id = Column(BigInteger, primary_key=True, nullable=False)
-    account_id = Column(BigInteger, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False, unique=True)
+    account_id = Column(PGUUID(as_uuid=False), ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False, unique=True)
     linked_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
@@ -98,7 +99,7 @@ class Subscriptions(Base):
 
     subscription_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(BigInteger, nullable=False)  # ID пользователя
-    account_id = Column(BigInteger, ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True)
+    account_id = Column(PGUUID(as_uuid=False), ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True)
     service_id = Column(Integer, nullable=True)  # ID сервиса
     start_date = Column(DateTime, nullable=True)  # Дата начала
     end_date = Column(DateTime, nullable=True)  # Дата окончания

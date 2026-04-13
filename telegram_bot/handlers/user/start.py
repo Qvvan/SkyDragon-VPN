@@ -74,10 +74,16 @@ def _get_start_param(message: Message) -> str | None:
     return parts[1].strip() if len(parts) > 1 else None
 
 
+def _pad_token(token: str) -> str:
+    """Добавляет base64-паддинг, если он был срезан перед передачей через Telegram deep link."""
+    padding = (4 - len(token) % 4) % 4
+    return token + '=' * padding
+
+
 def _is_our_token(value: str) -> bool:
     """Структурная валидация: можем ли мы вообще расшифровать этот токен нашим ключом (без TTL)."""
     try:
-        _fernet.decrypt(value.encode(), ttl=None)
+        _fernet.decrypt(_pad_token(value).encode(), ttl=None)
         return True
     except (InvalidToken, Exception):
         return False
@@ -86,8 +92,8 @@ def _is_our_token(value: str) -> bool:
 async def _handle_account_link(message: Message, token: str) -> None:
     # Теперь проверяем с TTL — если токен протух, говорим об этом
     try:
-        data = _fernet.decrypt(token.encode(), ttl=_LINK_TOKEN_TTL)
-        account_id = int(data.decode())
+        data = _fernet.decrypt(_pad_token(token).encode(), ttl=_LINK_TOKEN_TTL)
+        account_id = data.decode()
     except InvalidToken:
         await message.answer(
             "❌ Ссылка устарела. Запросите новую на сайте в разделе профиля."

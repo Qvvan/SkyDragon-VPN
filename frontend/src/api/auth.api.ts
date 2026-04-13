@@ -42,4 +42,9 @@ export const authApi = {
     const res = await client.patch<Record<string, unknown>>('/me', payload)
     return mapUser(res.data)
   },
+
+  async getTelegramLinkToken(): Promise<string> {
+    const res = await client.post<{ token: string }>('/me/telegram/link-token')
+    return res.data.token
+  },
 }

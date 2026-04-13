@@ -11,11 +11,12 @@ import { Modal } from '../ui/Modal'
 function ProfileModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user, updateUser } = useAuthStore()
 
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName]   = useState('')
-  const [saving, setSaving]       = useState(false)
-  const [savedOk, setSavedOk]     = useState(false)
-  const [error, setError]         = useState<string | null>(null)
+  const [firstName, setFirstName]       = useState('')
+  const [lastName, setLastName]         = useState('')
+  const [saving, setSaving]             = useState(false)
+  const [savedOk, setSavedOk]           = useState(false)
+  const [error, setError]               = useState<string | null>(null)
+  const [linkingTg, setLinkingTg]       = useState(false)
 
   useEffect(() => {
     if (open && user) {
@@ -25,6 +26,21 @@ function ProfileModal({ open, onClose }: { open: boolean; onClose: () => void })
       setError(null)
     }
   }, [open, user])
+
+  async function handleTelegramLink() {
+    setLinkingTg(true)
+    setError(null)
+    try {
+      const token = await authApi.getTelegramLinkToken()
+      // Strip base64 padding — Telegram ?start= only allows [A-Za-z0-9_-]
+      const safeToken = token.replace(/=+$/, '')
+      window.open(`https://t.me/SkyDragonVPNBot?start=${safeToken}`, '_blank', 'noopener,noreferrer')
+    } catch {
+      setError('Не удалось получить ссылку. Попробуйте снова.')
+    } finally {
+      setLinkingTg(false)
+    }
+  }
 
   async function handleSave() {
     setSaving(true)
@@ -108,21 +124,14 @@ function ProfileModal({ open, onClose }: { open: boolean; onClose: () => void })
             </div>
           </div>
           {!telegramLinked && (
-            <a
-              href="https://t.me/SkyDragonVPNBot"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0"
-            >
-              <Button size="sm" variant="primary">
-                <span className="flex items-center gap-1.5">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                  </svg>
-                  Привязать
-                </span>
-              </Button>
-            </a>
+            <Button size="sm" variant="primary" loading={linkingTg} onClick={handleTelegramLink} className="shrink-0">
+              <span className="flex items-center gap-1.5">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                Привязать
+              </span>
+            </Button>
           )}
         </div>
 
