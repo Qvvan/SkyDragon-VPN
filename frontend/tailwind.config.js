@@ -4,36 +4,36 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg:          '#07070f',
-        surface:     '#0d0c1f',
-        'surface-2': '#131228',
-        'surface-3': '#1c1a38',
-        // Primary accent — soft aether violet
-        jade:        '#9d8cff',
-        'jade-dim':  'rgba(157,140,255,0.09)',
-        'jade-glow': 'rgba(157,140,255,0.18)',
-        // Danger — soft rose
-        ember:       '#f87171',
-        'ember-dim': 'rgba(248,113,113,0.12)',
-        // Secondary — champagne gold
-        gold:        '#e2b96e',
-        'gold-dim':  'rgba(226,185,110,0.09)',
-        muted:       '#4a478e',
-        text:        '#eeeeff',
-        'text-dim':  '#7875a8',
-        'text-faint':'#3a3864',
+        bg:          '#09070d',
+        surface:     '#141019',
+        'surface-2': '#1b1622',
+        'surface-3': '#241d2f',
+        // Primary accent — dragon flame
+        jade:        '#ff7a59',
+        'jade-dim':  'rgba(255,122,89,0.11)',
+        'jade-glow': 'rgba(255,122,89,0.2)',
+        // Danger — ember red
+        ember:       '#ff5c5c',
+        'ember-dim': 'rgba(255,92,92,0.14)',
+        // Secondary — forged gold
+        gold:        '#f3c677',
+        'gold-dim':  'rgba(243,198,119,0.12)',
+        muted:       '#6a4d82',
+        text:        '#f8f4ef',
+        'text-dim':  '#b29eb8',
+        'text-faint':'#7c667f',
       },
       fontFamily: {
         display: ['"Cormorant Garamond"', 'serif'],
         mono:    ['"JetBrains Mono"', 'monospace'],
       },
       boxShadow: {
-        card:       '0 0 0 1px rgba(157,140,255,0.1), 0 2px 20px rgba(0,0,0,0.45)',
-        'card-hover':'0 0 0 1px rgba(157,140,255,0.24), 0 8px 40px rgba(157,140,255,0.1), 0 2px 8px rgba(0,0,0,0.3)',
-        modal:      '0 0 0 1px rgba(157,140,255,0.14), 0 24px 80px rgba(0,0,0,0.8)',
-        'jade-glow':'0 0 32px rgba(157,140,255,0.35)',
-        'ember-glow':'0 0 32px rgba(248,113,113,0.3)',
-        'gold-glow': '0 0 32px rgba(226,185,110,0.3)',
+        card:       '0 0 0 1px rgba(255,122,89,0.14), 0 12px 34px rgba(6,4,10,0.65)',
+        'card-hover':'0 0 0 1px rgba(255,122,89,0.28), 0 18px 48px rgba(0,0,0,0.55)',
+        modal:      '0 0 0 1px rgba(255,122,89,0.2), 0 24px 80px rgba(0,0,0,0.82)',
+        'jade-glow':'0 0 32px rgba(255,122,89,0.35)',
+        'ember-glow':'0 0 32px rgba(255,92,92,0.32)',
+        'gold-glow': '0 0 32px rgba(243,198,119,0.32)',
       },
       animation: {
         'pulse-jade':  'pulseViolet 3s ease-in-out infinite',
@@ -47,16 +47,16 @@ export default {
       },
       keyframes: {
         pulseViolet: {
-          '0%, 100%': { boxShadow: '0 0 0 1px rgba(157,140,255,0.16), 0 0 14px rgba(157,140,255,0.07)' },
-          '50%':      { boxShadow: '0 0 0 1px rgba(157,140,255,0.4),  0 0 30px rgba(157,140,255,0.22)' },
+          '0%, 100%': { boxShadow: '0 0 0 1px rgba(255,122,89,0.2), 0 0 14px rgba(255,122,89,0.09)' },
+          '50%':      { boxShadow: '0 0 0 1px rgba(255,122,89,0.46),  0 0 30px rgba(255,122,89,0.24)' },
         },
         pulseGold: {
-          '0%, 100%': { boxShadow: '0 0 0 1px rgba(226,185,110,0.16), 0 0 12px rgba(226,185,110,0.06)' },
-          '50%':      { boxShadow: '0 0 0 1px rgba(226,185,110,0.4),  0 0 24px rgba(226,185,110,0.2)'  },
+          '0%, 100%': { boxShadow: '0 0 0 1px rgba(243,198,119,0.2), 0 0 12px rgba(243,198,119,0.1)' },
+          '50%':      { boxShadow: '0 0 0 1px rgba(243,198,119,0.46),  0 0 24px rgba(243,198,119,0.22)'  },
         },
         pulseRose: {
-          '0%, 100%': { boxShadow: '0 0 0 1px rgba(248,113,113,0.16), 0 0 12px rgba(248,113,113,0.06)' },
-          '50%':      { boxShadow: '0 0 0 1px rgba(248,113,113,0.4),  0 0 24px rgba(248,113,113,0.2)'  },
+          '0%, 100%': { boxShadow: '0 0 0 1px rgba(255,92,92,0.2), 0 0 12px rgba(255,92,92,0.08)' },
+          '50%':      { boxShadow: '0 0 0 1px rgba(255,92,92,0.44),  0 0 24px rgba(255,92,92,0.22)'  },
         },
         float: {
           '0%, 100%': { transform: 'translateY(0px)' },

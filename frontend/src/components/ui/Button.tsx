@@ -15,15 +15,15 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 const variantClasses: Record<Variant, string> = {
   secondary: [
     'bg-surface-3 font-mono text-text-dim',
-    'shadow-[0_0_0_1px_rgba(157,140,255,0.12)]',
-    'hover:shadow-[0_0_0_1px_rgba(157,140,255,0.28)] hover:text-text',
+    'shadow-[0_0_0_1px_rgba(255,122,89,0.16)]',
+    'hover:shadow-[0_0_0_1px_rgba(255,122,89,0.32)] hover:text-text',
     'transition-[box-shadow,color] duration-200',
   ].join(' '),
   primary: [
     'relative overflow-hidden font-mono font-medium',
-    'bg-gradient-to-br from-[#a899ff] to-[#7c6bff]',
+    'bg-gradient-to-br from-[#ff936d] to-[#ff5c5c]',
     'text-white',
-    'shadow-[0_1px_0_rgba(255,255,255,0.15)_inset,0_-1px_0_rgba(0,0,0,0.2)_inset]',
+    'shadow-[0_1px_0_rgba(255,255,255,0.18)_inset,0_-1px_0_rgba(0,0,0,0.28)_inset]',
     'hover:brightness-110',
     'transition-[filter,opacity] duration-200',
     // inner shine
@@ -34,8 +34,8 @@ const variantClasses: Record<Variant, string> = {
   ghost: [
     'bg-transparent font-mono',
     'text-text-dim hover:text-text',
-    'shadow-[0_0_0_1px_rgba(157,140,255,0.18)]',
-    'hover:shadow-[0_0_0_1px_rgba(157,140,255,0.35),0_0_12px_rgba(157,140,255,0.08)]',
+    'shadow-[0_0_0_1px_rgba(255,122,89,0.2)]',
+    'hover:shadow-[0_0_0_1px_rgba(255,122,89,0.38),0_0_12px_rgba(255,122,89,0.12)]',
     'hover:bg-jade-dim',
     'transition-[box-shadow,background-color,color] duration-200',
   ].join(' '),

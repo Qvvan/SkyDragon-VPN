@@ -1,0 +1,10 @@
+﻿{
+  "mcpServers": {
+    "connect-apps": {
+      "url": "https://backend.composio.dev/tool_router/trs_Q_0F3YR-xMA3/mcp",
+      "headers": {
+        "x-api-key": "ak_4RRDvcqLuW9LqSvV6I__"
+      }
+    }
+  }
+}

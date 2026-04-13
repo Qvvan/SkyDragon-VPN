@@ -24,8 +24,8 @@ export function Card({ children, glow, grid, className = '', ...rest }: Props) {
           className="absolute inset-0 rounded-[24px] pointer-events-none opacity-100"
           style={{
             backgroundImage:
-              'repeating-linear-gradient(45deg, rgba(157,140,255,0.014) 0px, rgba(157,140,255,0.014) 1px, transparent 1px, transparent 48px), ' +
-              'repeating-linear-gradient(-45deg, rgba(157,140,255,0.014) 0px, rgba(157,140,255,0.014) 1px, transparent 1px, transparent 48px)',
+              'repeating-linear-gradient(45deg, rgba(255,122,89,0.014) 0px, rgba(255,122,89,0.014) 1px, transparent 1px, transparent 48px), ' +
+              'repeating-linear-gradient(-45deg, rgba(255,122,89,0.014) 0px, rgba(255,122,89,0.014) 1px, transparent 1px, transparent 48px)',
           }}
         />
       )}

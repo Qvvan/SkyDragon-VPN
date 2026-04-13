@@ -8,12 +8,10 @@ import { Skeleton, SkeletonCard } from '../../components/ui/Skeleton'
 import { useAuthStore } from '../../stores/auth.store'
 import { useSubscriptions, useToggleAutoRenewal } from '../../hooks/useSubscriptions'
 import { usePayments } from '../../hooks/usePayments'
-import { useReferralStats } from '../../hooks/useReferrals'
 
 import { useActivateTrial, useServices } from '../../hooks/useServices'
 import { ServicesContent } from '../Services/ServicesPage'
 import { PaymentsContent } from '../Payments/PaymentsPage'
-import { ReferralsContent } from '../Referrals/ReferralsPage'
 import { useUIStore } from '../../stores/ui.store'
 import type { Subscription } from '../../types/subscription.types'
 
@@ -79,7 +77,7 @@ function SectionLabel({
       {badge && <span className="shrink-0">{badge}</span>}
       <div
         className="flex-1 h-px"
-        style={{ background: 'linear-gradient(90deg, rgba(157,140,255,0.22) 0%, transparent 100%)' }}
+        style={{ background: 'linear-gradient(90deg, rgba(255,122,89,0.34) 0%, rgba(243,198,119,0.2) 50%, transparent 100%)' }}
       />
     </div>
   )
@@ -89,7 +87,7 @@ function SectionLabel({
 function CircularProgress({
   value,
   total,
-  color = '#9d8cff',
+  color = '#ff7a59',
   compact = false,
 }: {
   value: number
@@ -115,7 +113,7 @@ function CircularProgress({
       >
         <circle
           cx={r + stroke} cy={r + stroke} r={r}
-          fill="none" stroke="rgba(157,140,255,0.08)" strokeWidth={stroke}
+          fill="none" stroke="rgba(255,122,89,0.12)" strokeWidth={stroke}
         />
         <motion.circle
           cx={r + stroke} cy={r + stroke} r={r}
@@ -166,9 +164,9 @@ function BentoCard({ children, className = '', innerClassName = '', glow, grid, 
   const extraProps = href ? { href, target: '_blank', rel: 'noopener noreferrer' } : {}
 
   const accentColor = {
-    jade:  'rgba(157,140,255,0.65)',
-    ember: 'rgba(248,113,113,0.65)',
-    gold:  'rgba(226,185,110,0.65)',
+    jade:  'rgba(255,122,89,0.76)',
+    ember: 'rgba(255,92,92,0.7)',
+    gold:  'rgba(243,198,119,0.72)',
   }
 
   return (
@@ -182,7 +180,7 @@ function BentoCard({ children, className = '', innerClassName = '', glow, grid, 
         glow ? 'animate-pulse-jade' : 'shadow-card',
         className,
       ].filter(Boolean).join(' ')}
-      style={{ background: 'rgba(13,12,31,0.9)', border: '1px solid rgba(157,140,255,0.1)' }}
+      style={{ background: 'rgba(20,16,25,0.9)', border: '1px solid rgba(255,122,89,0.16)' }}
     >
       {/* Grid texture */}
       {grid && (
@@ -190,8 +188,8 @@ function BentoCard({ children, className = '', innerClassName = '', glow, grid, 
           className="absolute inset-0 pointer-events-none"
           style={{
             backgroundImage:
-              'repeating-linear-gradient(45deg,rgba(157,140,255,0.013)0px,rgba(157,140,255,0.013)1px,transparent 1px,transparent 48px),' +
-              'repeating-linear-gradient(-45deg,rgba(157,140,255,0.013)0px,rgba(157,140,255,0.013)1px,transparent 1px,transparent 48px)',
+              'repeating-linear-gradient(45deg,rgba(255,122,89,0.013)0px,rgba(255,122,89,0.013)1px,transparent 1px,transparent 48px),' +
+              'repeating-linear-gradient(-45deg,rgba(255,122,89,0.013)0px,rgba(255,122,89,0.013)1px,transparent 1px,transparent 48px)',
           }}
         />
       )}
@@ -252,7 +250,7 @@ function SubscriptionCard({
     sub.status === 'active'  ? 'green' :
     sub.status === 'expired' ? 'ember' : 'amber'
 
-  const progressColor = isHealthy ? '#9d8cff' : '#f87171'
+  const progressColor = isHealthy ? '#ff7a59' : '#ff5c5c'
 
   const expiresFormatted = new Date(sub.expiresAt).toLocaleDateString('ru-RU', {
     day: 'numeric', month: 'long', year: 'numeric',
@@ -301,7 +299,7 @@ function SubscriptionCard({
         {/* Row 3: auto-renewal */}
         <div
           className="flex items-center justify-between pt-2.5"
-          style={{ borderTop: '1px solid rgba(157,140,255,0.07)' }}
+          style={{ borderTop: '1px solid rgba(255,122,89,0.14)' }}
         >
           <span className="font-mono text-[10px] text-text-dim">Автопродление</span>
           <Toggle
@@ -347,7 +345,7 @@ function SubscriptionCard({
         {/* Footer */}
         <div
           className="flex items-center justify-between pt-3"
-          style={{ borderTop: '1px solid rgba(157,140,255,0.07)' }}
+          style={{ borderTop: '1px solid rgba(255,122,89,0.14)' }}
         >
           <Button size="sm" variant="primary" onClick={() => onRenew(sub)}>Продлить</Button>
           <div className="flex items-center gap-2">
@@ -438,7 +436,6 @@ export function DashboardPage() {
   const { user } = useAuthStore()
   const { data: subscriptions, isLoading: loadingSubs }      = useSubscriptions()
   const { data: payments, isLoading: loadingPayments }       = usePayments()
-  const { data: referralStats, isLoading: loadingReferrals } = useReferralStats()
   const { data: services } = useServices()
   const activateTrial = useActivateTrial()
   const { addToast }     = useUIStore()
@@ -450,7 +447,6 @@ export function DashboardPage() {
   const lastPayment      = payments?.[0]
   const hasNoSubs        = !loadingSubs && (!subscriptions || subscriptions.length === 0)
   const hasUnusedTrial   = hasNoSubs
-  const trialAlreadyUsed = !loadingSubs && !!subscriptions && subscriptions.length > 0
   const activeSubs       = subscriptions?.filter(s => s.status === 'active' || s.status === 'trial') ?? []
 
   function openRenewModal(sub: Subscription) {
@@ -468,7 +464,7 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="px-4 md:px-8 py-8 md:py-10 max-w-5xl mx-auto">
+    <div className="px-4 md:px-8 py-8 md:py-10 max-w-6xl mx-auto">
       <motion.div
         initial="hidden"
         animate="visible"
@@ -481,7 +477,7 @@ export function DashboardPage() {
             С возвращением,{' '}
             <span
               style={{
-                background: 'linear-gradient(135deg, #c4b5fd 0%, #9d8cff 60%, #818cf8 100%)',
+                background: 'linear-gradient(135deg, #ffd7c8 0%, #ff7a59 60%, #f3c677 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
@@ -503,8 +499,8 @@ export function DashboardPage() {
               href={TELEGRAM.channel}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full font-mono text-[11px] md:text-xs text-jade transition-colors duration-150 hover:text-[#c4b5fd] active:scale-[0.96] transition-transform"
-              style={{ background: 'rgba(157,140,255,0.07)', border: '1px solid rgba(157,140,255,0.14)' }}
+              className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full font-mono text-[11px] md:text-xs text-jade transition-colors duration-150 hover:text-[#ffd6c6] active:scale-[0.96] transition-transform"
+              style={{ background: 'rgba(255,122,89,0.1)', border: '1px solid rgba(255,122,89,0.24)' }}
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
@@ -515,8 +511,8 @@ export function DashboardPage() {
               href={TELEGRAM.bot}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full font-mono text-[11px] md:text-xs text-gold transition-colors duration-150 hover:brightness-110 active:scale-[0.96] transition-transform"
-              style={{ background: 'rgba(226,185,110,0.07)', border: '1px solid rgba(226,185,110,0.16)' }}
+              className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full font-mono text-[11px] md:text-xs text-gold transition-colors duration-150 hover:brightness-110 active:scale-[0.96] transition-transform"
+              style={{ background: 'rgba(243,198,119,0.1)', border: '1px solid rgba(243,198,119,0.24)' }}
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/>
@@ -527,8 +523,8 @@ export function DashboardPage() {
               href={TELEGRAM.support}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full font-mono text-[11px] md:text-xs text-ember transition-colors duration-150 hover:brightness-110 active:scale-[0.96] transition-transform"
-              style={{ background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.16)' }}
+              className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full font-mono text-[11px] md:text-xs text-ember transition-colors duration-150 hover:brightness-110 active:scale-[0.96] transition-transform"
+              style={{ background: 'rgba(255,92,92,0.1)', border: '1px solid rgba(255,92,92,0.24)' }}
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
@@ -567,35 +563,6 @@ export function DashboardPage() {
               </BentoCard>
             </motion.div>
           )}
-          {trialAlreadyUsed && (
-            <motion.div
-              key="trial-used"
-              variants={fadeUp}
-              transition={fadeUpTransition}
-            >
-              <BentoCard innerClassName="p-0">
-                <div className="flex items-center gap-4 p-4 md:p-5 opacity-40 select-none">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <span className="size-10 md:size-12 rounded-xl flex items-center justify-center shrink-0"
-                      style={{ background: 'rgba(157,140,255,0.07)', border: '1px solid rgba(157,140,255,0.1)' }}>
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M13 2L5 14h6l-1 8 9-13h-6l0-7z" />
-                      </svg>
-                    </span>
-                    <div className="min-w-0">
-                      <p className="font-display text-base md:text-lg font-medium text-text-dim text-balance">
-                        Пробный период использован
-                      </p>
-                      <p className="font-mono text-xs md:text-sm text-text-faint mt-0.5 text-pretty">
-                        5 дней уже были активированы
-                      </p>
-                    </div>
-                  </div>
-                  <span className="font-mono text-xs text-text-faint shrink-0 whitespace-nowrap">Недоступно</span>
-                </div>
-              </BentoCard>
-            </motion.div>
-          )}
         </AnimatePresence>
 
         {/* ── Подписки ── */}
@@ -606,7 +573,7 @@ export function DashboardPage() {
               !loadingSubs && activeSubs.length > 0 ? (
                 <span
                   className="font-mono text-[11px] text-jade tabular-nums px-2 py-0.5 rounded-full"
-                  style={{ background: 'rgba(157,140,255,0.1)', border: '1px solid rgba(157,140,255,0.2)' }}
+                  style={{ background: 'rgba(255,122,89,0.12)', border: '1px solid rgba(255,122,89,0.26)' }}
                 >
                   {activeSubs.length} активных
                 </span>
@@ -654,21 +621,21 @@ export function DashboardPage() {
               <div
                 className="relative rounded-[24px] overflow-hidden transition-all duration-300 hover:-translate-y-0.5"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(168,153,255,0.07) 0%, rgba(99,102,241,0.05) 50%, rgba(34,211,238,0.06) 100%)',
-                  border: '1px solid rgba(157,140,255,0.14)',
+                  background: 'linear-gradient(135deg, rgba(255,122,89,0.12) 0%, rgba(243,198,119,0.08) 50%, rgba(255,92,92,0.08) 100%)',
+                  border: '1px solid rgba(255,122,89,0.22)',
                 }}
               >
                 <div
                   className="absolute top-0 left-0 right-0 h-px"
-                  style={{ background: 'linear-gradient(90deg, transparent, rgba(157,140,255,0.5), rgba(34,211,238,0.3), transparent)' }}
+                  style={{ background: 'linear-gradient(90deg, transparent, rgba(255,122,89,0.7), rgba(243,198,119,0.4), transparent)' }}
                 />
                 <div className="flex items-center justify-between gap-4 px-4 md:px-6 py-4 md:py-5">
                   <div className="flex items-center gap-3 md:gap-4">
                     <div
                       className="size-10 md:size-12 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0"
                       style={{
-                        background: 'linear-gradient(135deg, rgba(157,140,255,0.15) 0%, rgba(34,211,238,0.1) 100%)',
-                        border: '1px solid rgba(157,140,255,0.2)',
+                        background: 'linear-gradient(135deg, rgba(255,122,89,0.2) 0%, rgba(243,198,119,0.16) 100%)',
+                        border: '1px solid rgba(255,122,89,0.28)',
                       }}
                     >
                       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-jade">
@@ -702,7 +669,7 @@ export function DashboardPage() {
         {/* ── Управление ── */}
         <motion.div variants={fadeUp} transition={fadeUpTransition}>
           <SectionLabel label="Управление" />
-          <div className="grid grid-cols-2 gap-3 md:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
             {/* Services */}
             <ManagementCard
               accent="jade"
@@ -736,7 +703,8 @@ export function DashboardPage() {
               }
             </ManagementCard>
 
-            {/* Referrals */}
+            {/* TEMP: referrals UI hidden, will be restored later */}
+            {/*
             <ManagementCard
               accent="jade"
               onClick={() => setActiveModal('referrals')}
@@ -766,6 +734,7 @@ export function DashboardPage() {
                 </div>
               )}
             </ManagementCard>
+            */}
 
           </div>
         </motion.div>
@@ -774,14 +743,14 @@ export function DashboardPage() {
       </motion.div>
 
       {/* ── Renewal modal ── */}
-      <Modal open={!!renewTarget} onClose={() => setRenewTarget(null)} title="Продление" size="xl">
+      <Modal open={!!renewTarget} onClose={() => setRenewTarget(null)} title="Продление" size="lg">
         <div className="px-6 sm:px-7 py-6">
           <ServicesContent subscriptionId={renewTarget?.id} />
         </div>
       </Modal>
 
       {/* ── Services modal ── */}
-      <Modal open={activeModal === 'services'} onClose={() => setActiveModal(null)} title="Услуги" size="xl">
+      <Modal open={activeModal === 'services'} onClose={() => setActiveModal(null)} title="Услуги" size="lg">
         <div className="px-6 sm:px-7 py-6"><ServicesContent /></div>
       </Modal>
 
@@ -790,10 +759,12 @@ export function DashboardPage() {
         <div className="px-6 sm:px-7 py-6"><PaymentsContent /></div>
       </Modal>
 
-      {/* ── Referrals modal ── */}
+      {/* TEMP: referrals modal hidden, will be restored later */}
+      {/*
       <Modal open={activeModal === 'referrals'} onClose={() => setActiveModal(null)} title="Реферальная программа" size="lg">
         <div className="px-6 sm:px-7 py-6"><ReferralsContent /></div>
       </Modal>
+      */}
 
       {/* ── Trial success modal ── */}
       <TrialSuccessModal
@@ -955,7 +926,7 @@ function ArrowUpRight({ size = 'sm' }: { size?: 'sm' | 'md' }) {
 
 function TrialSparkIcon() {
   return (
-    <span className="size-10 md:size-12 rounded-xl bg-jade-dim text-jade flex items-center justify-center shadow-[0_0_0_1px_rgba(157,140,255,0.2)]">
+    <span className="size-10 md:size-12 rounded-xl bg-jade-dim text-jade flex items-center justify-center shadow-[0_0_0_1px_rgba(255,122,89,0.28)]">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         <path d="M13 2L5 14h6l-1 8 9-13h-6l0-7z" />
       </svg>
@@ -1048,7 +1019,7 @@ function InstructionsModal({ open, onClose, importUrl }: { open: boolean; onClos
   const cfg = PLATFORMS[platform]
 
   return (
-    <Modal open={open} onClose={onClose} title="Подключение VPN" size="md">
+    <Modal open={open} onClose={onClose} title="Подключение VPN" size="lg">
       <div className="px-6 sm:px-7 pb-7 pt-4 space-y-5">
 
         {/* Platform tabs */}
@@ -1059,12 +1030,12 @@ function InstructionsModal({ open, onClose, importUrl }: { open: boolean; onClos
               onClick={() => setPlatform(key)}
               className="font-mono text-xs sm:text-sm px-3.5 py-2 rounded-full transition-all duration-150"
               style={platform === key ? {
-                background: 'rgba(157,140,255,0.15)',
-                border: '1px solid rgba(157,140,255,0.32)',
-                color: '#c4b5fd',
+                background: 'rgba(255,122,89,0.2)',
+                border: '1px solid rgba(255,122,89,0.38)',
+                color: '#ffd6c6',
               } : {
-                background: 'rgba(157,140,255,0.04)',
-                border: '1px solid rgba(157,140,255,0.1)',
+                background: 'rgba(255,122,89,0.06)',
+                border: '1px solid rgba(255,122,89,0.15)',
                 color: 'rgba(255,255,255,0.4)',
               }}
             >
@@ -1081,14 +1052,14 @@ function InstructionsModal({ open, onClose, importUrl }: { open: boolean; onClos
             exit={{ opacity: 0, y: -5 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
             className="rounded-2xl overflow-hidden"
-            style={{ border: '1px solid rgba(157,140,255,0.12)' }}
+            style={{ border: '1px solid rgba(255,122,89,0.2)' }}
           >
             {/* Step 1 — download */}
-            <div className="px-5 sm:px-6 py-5" style={{ borderBottom: '1px solid rgba(157,140,255,0.08)' }}>
+            <div className="px-5 sm:px-6 py-5" style={{ borderBottom: '1px solid rgba(255,122,89,0.12)' }}>
               <div className="flex items-center gap-3 mb-4">
                 <span
                   className="flex items-center justify-center size-6 rounded-full font-mono text-xs font-bold shrink-0"
-                  style={{ background: 'rgba(157,140,255,0.15)', border: '1px solid rgba(157,140,255,0.28)', color: '#9d8cff' }}
+                  style={{ background: 'rgba(255,122,89,0.18)', border: '1px solid rgba(255,122,89,0.32)', color: '#ff9f84' }}
                 >
                   1
                 </span>
@@ -1103,22 +1074,22 @@ function InstructionsModal({ open, onClose, importUrl }: { open: boolean; onClos
                     rel="noopener noreferrer"
                     className="flex items-center justify-between w-full rounded-xl px-4 py-3.5 transition-all duration-150 active:scale-[0.98] hover:brightness-110"
                     style={{
-                      background: 'linear-gradient(135deg, rgba(157,140,255,0.1) 0%, rgba(124,107,255,0.05) 100%)',
-                      border: '1px solid rgba(157,140,255,0.18)',
+                      background: 'linear-gradient(135deg, rgba(255,122,89,0.15) 0%, rgba(243,198,119,0.08) 100%)',
+                      border: '1px solid rgba(255,122,89,0.24)',
                     }}
                   >
                     <div className="flex items-center gap-3">
                       <span
                         className="flex items-center justify-center size-9 rounded-xl shrink-0"
-                        style={{ background: 'rgba(157,140,255,0.1)', border: '1px solid rgba(157,140,255,0.18)' }}
+                        style={{ background: 'rgba(255,122,89,0.12)', border: '1px solid rgba(255,122,89,0.24)' }}
                       >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9d8cff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff9f84" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                         </svg>
                       </span>
                       <span className="font-mono text-sm sm:text-base text-text">{app.label}</span>
                     </div>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(157,140,255,0.45)" strokeWidth="2" strokeLinecap="round">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,122,89,0.55)" strokeWidth="2" strokeLinecap="round">
                       <path d="M7 17L17 7M17 7H7M17 7v10"/>
                     </svg>
                   </a>
@@ -1131,7 +1102,7 @@ function InstructionsModal({ open, onClose, importUrl }: { open: boolean; onClos
               <div className="flex items-center gap-3 mb-4">
                 <span
                   className="flex items-center justify-center size-6 rounded-full font-mono text-xs font-bold shrink-0"
-                  style={{ background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.25)', color: '#4ade80' }}
+                  style={{ background: 'rgba(243,198,119,0.14)', border: '1px solid rgba(243,198,119,0.3)', color: '#f3c677' }}
                 >
                   2
                 </span>
@@ -1142,22 +1113,22 @@ function InstructionsModal({ open, onClose, importUrl }: { open: boolean; onClos
                   href={importUrl}
                   className="flex items-center justify-between w-full rounded-xl px-4 py-3.5 transition-all duration-150 active:scale-[0.98] hover:brightness-110"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(74,222,128,0.1) 0%, rgba(52,211,153,0.05) 100%)',
-                    border: '1px solid rgba(74,222,128,0.2)',
+                    background: 'linear-gradient(135deg, rgba(243,198,119,0.15) 0%, rgba(255,122,89,0.08) 100%)',
+                    border: '1px solid rgba(243,198,119,0.28)',
                   }}
                 >
                   <div className="flex items-center gap-3">
                     <span
                       className="flex items-center justify-center size-9 rounded-xl shrink-0"
-                      style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.2)' }}
+                      style={{ background: 'rgba(243,198,119,0.12)', border: '1px solid rgba(243,198,119,0.28)' }}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f3c677" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M8 17l4 4 4-4M12 12v9M20.88 18.09A5 5 0 0018 9h-1.26A8 8 0 103 16.29"/>
                       </svg>
                     </span>
                     <span className="font-mono text-sm sm:text-base text-text">Импортировать в Happ</span>
                   </div>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(74,222,128,0.45)" strokeWidth="2" strokeLinecap="round">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(243,198,119,0.55)" strokeWidth="2" strokeLinecap="round">
                     <path d="M7 17L17 7M17 7H7M17 7v10"/>
                   </svg>
                 </a>

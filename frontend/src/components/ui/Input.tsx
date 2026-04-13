@@ -26,9 +26,9 @@ export function Input({ label, error, prefix, suffix, className = '', id, ...res
         className={[
           'flex items-center gap-2.5 rounded-2xl px-4 h-12',
           'bg-surface-2',
-          'shadow-[0_0_0_1px_rgba(157,140,255,0.12)]',
+          'shadow-[0_0_0_1px_rgba(255,122,89,0.16)]',
           'transition-shadow duration-200',
-          'focus-within:shadow-[0_0_0_1px_rgba(157,140,255,0.45),0_0_0_4px_rgba(157,140,255,0.07)]',
+          'focus-within:shadow-[0_0_0_1px_rgba(255,122,89,0.5),0_0_0_4px_rgba(255,122,89,0.1)]',
           error && 'shadow-[0_0_0_1px_rgba(248,113,113,0.45)] focus-within:shadow-[0_0_0_1px_rgba(248,113,113,0.6),0_0_0_4px_rgba(248,113,113,0.07)]',
         ]
           .filter(Boolean)

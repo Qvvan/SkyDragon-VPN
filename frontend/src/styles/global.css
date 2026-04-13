@@ -6,8 +6,8 @@
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: #07070f;
-    color: #eeeeff;
+    background-color: #09070d;
+    color: #f8f4ef;
   }
 
   * {
@@ -15,8 +15,8 @@
   }
 
   ::selection {
-    background: rgba(157, 140, 255, 0.22);
-    color: #c4b5fd;
+    background: rgba(255, 122, 89, 0.28);
+    color: #fff3e9;
   }
 
   ::-webkit-scrollbar {
@@ -27,11 +27,11 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(157, 140, 255, 0.18);
+    background: rgba(255, 122, 89, 0.24);
     border-radius: 99px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(157, 140, 255, 0.35);
+    background: rgba(255, 122, 89, 0.42);
   }
 }
 
@@ -41,12 +41,12 @@
     background-image:
       repeating-linear-gradient(
         45deg,
-        rgba(157,140,255,0.013) 0px, rgba(157,140,255,0.013) 1px,
+        rgba(255,122,89,0.015) 0px, rgba(255,122,89,0.015) 1px,
         transparent 1px, transparent 48px
       ),
       repeating-linear-gradient(
         -45deg,
-        rgba(157,140,255,0.013) 0px, rgba(157,140,255,0.013) 1px,
+        rgba(255,122,89,0.015) 0px, rgba(255,122,89,0.015) 1px,
         transparent 1px, transparent 48px
       );
   }
@@ -65,9 +65,9 @@
   .skeleton-shimmer {
     background: linear-gradient(
       90deg,
-      rgba(157,140,255,0.04) 0%,
-      rgba(157,140,255,0.12) 50%,
-      rgba(157,140,255,0.04) 100%
+      rgba(255,122,89,0.05) 0%,
+      rgba(255,122,89,0.14) 50%,
+      rgba(255,122,89,0.05) 100%
     );
     background-size: 600px 100%;
     animation: shimmer 2.2s ease-in-out infinite;
@@ -77,7 +77,7 @@
   .particle {
     position: absolute;
     border-radius: 50%;
-    background: rgba(157, 140, 255, 0.55);
+    background: rgba(255, 122, 89, 0.6);
     animation: driftUp linear infinite;
   }
 
@@ -88,14 +88,14 @@
 
   /* ── Gradient text ── */
   .text-gradient-violet {
-    background: linear-gradient(135deg, #c4b5fd 0%, #9d8cff 50%, #818cf8 100%);
+    background: linear-gradient(135deg, #ffd2bf 0%, #ff7a59 50%, #ff5c5c 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .text-gradient-gold {
-    background: linear-gradient(135deg, #fde68a 0%, #e2b96e 60%, #d4a44c 100%);
+    background: linear-gradient(135deg, #fff0cb 0%, #f3c677 60%, #df9f3b 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

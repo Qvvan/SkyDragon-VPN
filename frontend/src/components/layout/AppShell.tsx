@@ -222,7 +222,7 @@ export function AppShell() {
           'sticky top-0 z-20 flex items-center justify-between px-4 md:px-8 h-14 shrink-0',
           'transition-[background,box-shadow,padding] duration-300',
           scrolled
-            ? 'bg-[rgba(7,7,15,0.88)] backdrop-blur-xl shadow-[0_1px_0_rgba(157,140,255,0.07)]'
+            ? 'bg-[rgba(9,7,13,0.88)] backdrop-blur-xl shadow-[0_1px_0_rgba(255,122,89,0.16)]'
             : 'bg-transparent',
         ].join(' ')}
       >
@@ -230,7 +230,7 @@ export function AppShell() {
         <div className="flex items-center gap-2.5">
           <LogoMark />
           <div className="flex items-baseline gap-1.5">
-            <span className="font-display text-[15px] font-medium text-text tracking-[0.18em] uppercase">SkyDragon</span>
+            <span className="font-display text-[15px] font-medium text-text tracking-[0.15em] uppercase">SkyDragon</span>
             <span className="font-mono text-[10px] text-text-faint tracking-widest">VPN</span>
           </div>
         </div>
@@ -243,7 +243,7 @@ export function AppShell() {
             transition={{ type: 'spring', stiffness: 500, damping: 35, mass: 0.5 }}
             onClick={() => setProfileOpen(true)}
             className={[
-              'group flex items-center gap-2 rounded-2xl px-2.5 py-1.5 cursor-pointer',
+              'group flex items-center gap-2 rounded-2xl px-2.5 py-1.5 min-h-[40px] cursor-pointer',
               'bg-surface shadow-card',
               'hover:shadow-card-hover hover:bg-surface-2',
               'transition-[box-shadow,background-color] duration-200',
@@ -251,7 +251,7 @@ export function AppShell() {
             style={{ willChange: 'transform' }}
             title="Открыть профиль"
           >
-            <div className="size-5 rounded-full bg-jade-dim flex items-center justify-center shrink-0">
+            <div className="size-6 rounded-full bg-jade-dim flex items-center justify-center shrink-0">
               <ProfileChipIcon />
             </div>
             <span className="hidden sm:inline font-mono text-xs text-text-dim group-hover:text-text transition-colors duration-150">

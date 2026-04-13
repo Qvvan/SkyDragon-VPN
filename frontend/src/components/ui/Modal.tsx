@@ -19,10 +19,10 @@ interface Props {
 }
 
 const sizeClasses: Record<ModalSize, string> = {
-  sm:   'max-w-sm',
-  md:   'max-w-md',
-  lg:   'max-w-2xl',
-  xl:   'max-w-4xl',
+  sm:   'max-w-[560px]',
+  md:   'max-w-[680px]',
+  lg:   'max-w-[920px]',
+  xl:   'max-w-[1100px]',
   full: 'max-w-full mx-3',
 }
 
@@ -69,8 +69,8 @@ export function Modal({ open, onClose, title, children, size = 'md' }: Props) {
             className="fixed inset-0 z-40"
             style={{
               background: 'rgba(3,3,9,0.82)',
-              backdropFilter: 'blur(18px)',
-              WebkitBackdropFilter: 'blur(18px)',
+              backdropFilter: 'blur(14px)',
+              WebkitBackdropFilter: 'blur(14px)',
             }}
             onClick={onClose}
           />
@@ -90,28 +90,28 @@ export function Modal({ open, onClose, title, children, size = 'md' }: Props) {
               transition={spring.gentle}
               style={{
                 willChange: 'transform, opacity',
-                border: '1px solid rgba(157,140,255,0.12)',
-                background: 'linear-gradient(160deg, #0f0e24 0%, #0c0b1f 60%, #0a0919 100%)',
+                border: '1px solid rgba(255,122,89,0.22)',
+                background: 'linear-gradient(160deg, #17121d 0%, #130f19 60%, #100c15 100%)',
               }}
               className={[
                 'pointer-events-auto w-full relative',
                 sizeClasses[size],
                 isFull
-                  ? 'rounded-t-[28px] sm:rounded-[28px] shadow-modal max-h-[92vh] sm:max-h-[88vh] flex flex-col'
-                  : 'rounded-[28px] shadow-modal max-h-[90vh] flex flex-col',
+                  ? 'rounded-t-[24px] sm:rounded-[24px] shadow-modal max-h-[92vh] sm:max-h-[88vh] flex flex-col'
+                  : 'rounded-[24px] shadow-modal max-h-[90vh] flex flex-col',
               ].join(' ')}
             >
               {/* Top accent line */}
               <div
                 className="absolute top-0 left-8 right-8 h-px rounded-full pointer-events-none"
-                style={{ background: 'linear-gradient(90deg, transparent, rgba(157,140,255,0.4), transparent)' }}
+                style={{ background: 'linear-gradient(90deg, transparent, rgba(255,122,89,0.62), rgba(243,198,119,0.34), transparent)' }}
               />
 
               {/* Header */}
               {title && (
                 <div className={[
                   'flex items-center justify-between px-6 sm:px-7 py-4 sm:py-5 shrink-0',
-                  'border-b border-[rgba(157,140,255,0.07)]',
+                  'border-b border-[rgba(255,122,89,0.14)]',
                 ].join(' ')}>
                   <h2 className="font-display text-xl sm:text-2xl font-medium text-text tracking-wide leading-tight">
                     {title}
@@ -121,7 +121,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }: Props) {
                     className={[
                       'relative flex items-center justify-center size-9 rounded-full ml-4 shrink-0',
                       'text-text-dim hover:text-text',
-                      'hover:bg-surface-3',
+                      'hover:bg-[rgba(255,122,89,0.12)]',
                       'transition-[background-color,color] duration-150',
                       'after:absolute after:inset-[-6px]',
                     ].join(' ')}
