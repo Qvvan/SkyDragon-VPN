@@ -7,7 +7,11 @@
       "Bash(node_modules/.bin/tsc --noEmit)",
       "Bash(dir \"C:\\\\Users\\\\Ivan\\\\Documents\\\\GitHub\\\\SkyDragon-VPN\\\\frontend\\\\node_modules\\\\.bin\")",
       "Bash(ls /c/Users/Ivan/Documents/GitHub/SkyDragon-VPN/backend/*.py)",
-      "Bash(cmd:*)"
+      "Bash(cmd:*)",
+      "Bash(python -c ':*)",
+      "Bash(python:*)",
+      "Bash(npx vite:*)",
+      "Bash(npm install:*)"
     ]
   }
 }
