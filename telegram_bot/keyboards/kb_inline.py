@@ -11,6 +11,7 @@ from database.context_manager import DatabaseContextManager
 from handlers.services.create_config_link import create_config_link
 from logger.logging_config import logger
 from models.models import NameApp, Subscriptions
+from utils.service_ui_label import service_keyboard_label
 
 
 class ServerCallbackData(CallbackData, prefix="server_disable"):
@@ -190,11 +191,10 @@ class InlineKeyboards:
             try:
                 keyboard = InlineKeyboardBuilder()
                 services = await session_methods.services.get_services()
-                buttons: list[InlineKeyboardButton] = []
 
                 for service in services:
                     service_id = str(service.service_id)
-                    service_name = service.name
+                    btn_text = service_keyboard_label(service.duration_days, service.price)
 
                     callback_data = ServiceCallbackFactory(
                         service_id=service_id,
@@ -202,8 +202,7 @@ class InlineKeyboards:
                         subscription_id=subscription_id
                     ).pack()
 
-                    buttons.append(InlineKeyboardButton(text=service_name, callback_data=callback_data))
-                keyboard.row(*buttons)
+                    keyboard.row(InlineKeyboardButton(text=btn_text, callback_data=callback_data))
 
                 if back_target:
                     keyboard.row(
@@ -800,33 +799,6 @@ class InlineKeyboards:
             ]
         ]
 
-        if user_id:
-            from database.context_manager import DatabaseContextManager
-
-            async with DatabaseContextManager() as session_methods:
-                try:
-                    # Получаем пользователя по ID
-                    user = await session_methods.users.get_user(user_id)
-                    if user:
-                        # Ищем подарки для этого пользователя со статусом "awaiting_activation"
-                        gifts = await session_methods.gifts.get_gifts(user_id=user_id)
-                        awaiting_gifts = [gift for gift in gifts if gift.status == "awaiting_activation"]
-
-                        # Если есть подарки для активации, добавляем кнопку
-                        if awaiting_gifts:
-                            count = len(awaiting_gifts)
-                            gift_text = "🎁 Мои подарки" if count == 1 else f"🎁 Мои подарки ({count})"
-
-                            # Вставляем кнопку подарков перед поддержкой
-                            keyboard.insert(-1 if len(keyboard) > 4 else len(keyboard), [
-                                InlineKeyboardButton(
-                                    text=gift_text,
-                                    callback_data="my_gifts"
-                                )
-                            ])
-                except Exception:
-                    pass
-
         # Добавляем оставшиеся кнопки
         keyboard.extend([
             [
@@ -863,35 +835,3 @@ class InlineKeyboards:
             await logger.error("Ошибка при создание кнопки пользователя", e)
             return None
 
-    @staticmethod
-    async def create_or_extend(subscription_id: int = None):
-        keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text='⏳ Продлить подписку',
-                        callback_data=SubscriptionCallbackFactory(
-                            action='extend_subscription',
-                            subscription_id=subscription_id,
-                            back="subscribe"
-                        ).pack() if subscription_id else "view_subs"
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        text="🔥 Оформить подписку",
-                        callback_data=DefaultCallback(
-                            action='create_order',
-                            back="subscribe"
-                        ).pack()
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        text="🌌 Главное меню",
-                        callback_data='main_menu'
-                    )
-                ]
-            ]
-        )
-        return keyboard

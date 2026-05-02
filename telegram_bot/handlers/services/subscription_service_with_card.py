@@ -12,6 +12,7 @@ from keyboards.kb_inline import InlineKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 from models.models import StatusSubscriptionHistory, SubscriptionStatusEnum, Subscriptions, Gifts
+from utils.admin_activity_log import admin_activity_message
 
 
 class NoActiveSubscriptionsError(Exception):
@@ -47,9 +48,20 @@ class SubscriptionsServiceCard:
                 # Сразу отправляем успех пользователю
                 await SubscriptionsServiceCard.send_success_response(bot, user_id, subscription)
                 await session_methods.session.commit()
-                await logger.log_info(f"Пользователь: @{username}\n"
-                                      f"ID: {user_id}\n"
-                                      f"Оформил подписку на {durations_days} дней")
+                await logger.log_info(
+                    admin_activity_message(
+                        "Покупка: новая подписка (оплата прошла)",
+                        user_id=user_id,
+                        username=username,
+                        service=service,
+                        subscription_id=subscription.subscription_id,
+                        payment_response=payment_response,
+                        extra=(
+                            f"end_date (после оплаты): {subscription.end_date}\n"
+                            f"дней начислено: {durations_days}"
+                        ),
+                    )
+                )
 
                 # Запускаем создание ключей в фоне (не блокируем ответ пользователю)
                 asyncio.create_task(
@@ -116,9 +128,19 @@ class SubscriptionsServiceCard:
                             # Сразу отправляем успех пользователю
                             await bot.send_message(chat_id=user_id, text=LEXICON_RU['subscription_renewed'])
                             await logger.log_info(
-                                f"Пользователь: @{username}\n"
-                                f"ID: {user_id}\n"
-                                f"Продлил подписку на {durations_days} дней"
+                                admin_activity_message(
+                                    "Покупка: продление подписки",
+                                    user_id=user_id,
+                                    username=username,
+                                    service=service,
+                                    subscription_id=sub.subscription_id,
+                                    payment_response=payment_response,
+                                    extra=(
+                                        f"новая end_date: {new_end_date}\n"
+                                        f"дней добавлено: {durations_days}\n"
+                                        f"автопродление (карта в подписке обновлена): {bool(sub.auto_renewal and card_details_id)}"
+                                    ),
+                                )
                             )
                             
                             # Запускаем обновление ключей в фоне (не блокируем ответ пользователю)
@@ -151,10 +173,19 @@ class SubscriptionsServiceCard:
                 await SubscriptionsServiceCard.send_success_response(bot, user_id, subscription)
                 await session_methods.session.commit()
                 await logger.log_info(
-                    f"Пользователь: @{username}\n"
-                    f"ID: {user_id}\n"
-                    f"Пытался продлить подписку на {durations_days} дней\n"
-                    f"Но старой подписки не оказалось, создана новая"
+                    admin_activity_message(
+                        "Продление по оплате → подписка не найдена, создана новая",
+                        user_id=user_id,
+                        username=username,
+                        service=service,
+                        subscription_id=getattr(subscription, "subscription_id", None),
+                        payment_response=payment_response,
+                        extra=(
+                            f"запрошенный subscription_id: {subscription_id}\n"
+                            f"дней по тарифу: {durations_days}\n"
+                            f"новая подписка end_date: {getattr(subscription, 'end_date', None)}"
+                        ),
+                    )
                 )
                 
                 # Запускаем создание ключей в фоне (не блокируем ответ пользователю)
@@ -197,9 +228,23 @@ class SubscriptionsServiceCard:
                 referrer_id = await session_methods.referrals.update_referral_status_if_invited(user_id)
                 if referrer_id:
                     subscription = await extend_user_subscription(referrer_id, str(username), 15, session_methods)
+                    ref_user = await session_methods.users.get_user(referrer_id)
+                    ref_username = ref_user.username if ref_user else None
                     await bot.send_message(referrer_id, LEXICON_RU['referrer_message'].format(username=username))
                     await logger.log_info(
-                        f"Пользователь с ID: {referrer_id} получает 15 дня подписки по приглашению: @{username}"
+                        admin_activity_message(
+                            "Реферальный бонус: пригласившему +15 дней",
+                            user_id=referrer_id,
+                            username=ref_username,
+                            service=None,
+                            subscription_id=getattr(subscription, "subscription_id", None),
+                            payment_response=None,
+                            extra=(
+                                f"приглашённый user_id: {user_id}\n"
+                                f"приглашённый username: @{username or '—'}\n"
+                                f"дней бонуса: 15"
+                            ),
+                        )
                     )
                     await session_methods.session.commit()
                     
@@ -222,16 +267,35 @@ class SubscriptionsServiceCard:
         return True
 
     @staticmethod
-    async def gift_for_friend(user_id, username, recipient_user_id, service_id):
+    async def gift_for_friend(user_id, username, recipient_user_id, service_id, payment_response=None):
         async with DatabaseContextManager() as session_methods:
             try:
-                await session_methods.gifts.add_gift(Gifts(
+                service = await session_methods.services.get_service_by_id(service_id)
+                gift_row = await session_methods.gifts.add_gift(Gifts(
                     giver_id=user_id,
                     recipient_user_id=recipient_user_id,
                     service_id=service_id,
                     status="pending",
                 ))
+                if not gift_row:
+                    raise Exception("Не удалось сохранить подарок")
+                gift_id = gift_row.gift_id
                 await session_methods.session.commit()
+                await logger.log_info(
+                    admin_activity_message(
+                        "Оплата подарка: запись подарка в БД (ожидает вручения получателю)",
+                        user_id=user_id,
+                        username=username,
+                        service=service,
+                        subscription_id=None,
+                        payment_response=payment_response,
+                        extra=(
+                            f"gift_id: {gift_id}\n"
+                            f"recipient_user_id: {recipient_user_id}\n"
+                            f"статус: pending → авто-зачисление при появлении получателя в БД / в фоне"
+                        ),
+                    )
+                )
 
             except Exception as e:
                 await session_methods.session.rollback()

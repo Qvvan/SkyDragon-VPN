@@ -15,6 +15,7 @@ from keyboards.kb_inline import InlineKeyboards, BACK_BTN, MAIN_MENU_BTN, MAIN_M
 from logger.logging_config import logger
 from models.models import Payments
 from utils.gift_checker import activate_gift_handler
+from utils.service_ui_label import service_keyboard_label
 
 router = Router()
 
@@ -131,11 +132,10 @@ async def create_order_keyboards(sender_user_id: int, recipient_user_id: int) ->
         try:
             keyboard = InlineKeyboardBuilder()
             services = await session_methods.services.get_services()
-            buttons: list[InlineKeyboardButton] = []
 
             for service in services:
                 service_id = str(service.service_id)
-                service_name = service.name
+                btn_text = service_keyboard_label(service.duration_days, service.price)
 
                 callback_data = GiftCallback(
                     action="gift",
@@ -144,8 +144,7 @@ async def create_order_keyboards(sender_user_id: int, recipient_user_id: int) ->
                     recipient_user_id=recipient_user_id
                 ).pack()
 
-                buttons.append(InlineKeyboardButton(text=service_name, callback_data=callback_data))
-            keyboard.row(*buttons)
+                keyboard.row(InlineKeyboardButton(text=btn_text, callback_data=callback_data))
             keyboard.row(InlineKeyboardButton(text=BACK_BTN, callback_data="gift_sub"))
             keyboard.row(InlineKeyboardButton(text=MAIN_MENU_BTN, callback_data=MAIN_MENU_CB))
 
@@ -190,11 +189,11 @@ async def handle_gift_payment(callback_query: CallbackQuery, callback_data: Gift
                     [InlineKeyboardButton(text=MAIN_MENU_BTN, callback_data=MAIN_MENU_CB)],
                 ])
 
+            offer_line = service_keyboard_label(service.duration_days, service.price)
             await callback_query.message.edit_text(
                 text=(
-                    f"🎁 <b>Подарочная подписка {service.name}</b>\n\n"
-                    f"⏳ <b>Длительность:</b> {service.duration_days} дней\n"
-                    f"💰 <b>Цена:</b> {service.price} ₽\n\n"
+                    f"🎁 {offer_line}\n\n"
+                    f"Оплата ниже."
                 ),
                 parse_mode="HTML",
                 reply_markup=payment_kb,

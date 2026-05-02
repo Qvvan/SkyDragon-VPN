@@ -186,8 +186,6 @@ async def successful_payment(bot, payment_response):
                                                                      service_id, payment_response)
     elif service_type == 'gift':
         recipient_user_id = int(metadata.get("recipient_user_id"))
-        await logger.log_info(f"Пользователь: @{username}\nID: {user_id}\n"
-                              f"Подарил другу подписку с ID: {recipient_user_id}")
         async with DatabaseContextManager() as session_methods:
             try:
                 user = await session_methods.users.get_user(recipient_user_id)
@@ -202,4 +200,6 @@ async def successful_payment(bot, payment_response):
                 await session_methods.session.rollback()
                 await logger.log_error(f"Пользователь: @{username}\nID: {user_id}\nError during transaction processing",
                                        e)
-        await SubscriptionsServiceCard.gift_for_friend(user_id, username, recipient_user_id, service_id)
+        await SubscriptionsServiceCard.gift_for_friend(
+            user_id, username, recipient_user_id, service_id, payment_response=payment_response
+        )

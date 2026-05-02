@@ -11,6 +11,7 @@ from handlers.services.key_operations_background import create_keys_background
 from keyboards.kb_inline import InlineKeyboards, SubscriptionCallbackFactory
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
+from utils.admin_activity_log import admin_activity_message
 
 router = Router()
 
@@ -54,9 +55,19 @@ async def process_trial_subscription_callback(callback: CallbackQuery, state: FS
                     await session_methods.session.commit()
                     
                     await logger.log_info(
-                        f"Пользователь @{callback.from_user.username}\n"
-                        f"ID: {callback.from_user.id}\n"
-                        f"Активировал(а) пробную подписку"
+                        admin_activity_message(
+                            "Пробный период: активирован",
+                            user_id=callback.from_user.id,
+                            username=callback.from_user.username,
+                            service=None,
+                            subscription_id=subscription.subscription_id,
+                            payment_response=None,
+                            extra=(
+                                "дней: 5\n"
+                                f"end_date подписки: {getattr(subscription, 'end_date', None)}\n"
+                                "trial_used: True после commit"
+                            ),
+                        )
                     )
 
                     asyncio.create_task(

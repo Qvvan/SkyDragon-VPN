@@ -11,10 +11,69 @@ from handlers.services.create_config_link import create_config_link
 from keyboards.kb_inline import InlineKeyboards, BACK_BTN, SubscriptionCallbackFactory, StatusPay, AutoRenewalCallbackFactory
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
+from models.models import SubscriptionStatusEnum
 
 router = Router()
 
 moscow_tz = pytz.timezone("Europe/Moscow")
+
+
+def _row_status(row) -> str:
+    try:
+        return row["status"]
+    except (KeyError, TypeError):
+        return getattr(row, "status", "") or ""
+
+
+def _subscriptions_list_intro_html(subscription_data) -> str:
+    """Текст над кнопками списка подписок: количество, разбивка по статусам, призыв открыть детали."""
+    n = len(subscription_data)
+    active = sum(1 for d in subscription_data if _row_status(d) == SubscriptionStatusEnum.ACTIVE)
+    expired = sum(1 for d in subscription_data if _row_status(d) == SubscriptionStatusEnum.EXPIRED)
+    off = sum(1 for d in subscription_data if _row_status(d) == SubscriptionStatusEnum.OFF)
+    rest = n - active - expired - off
+
+    def subs_word(cnt: int) -> str:
+        if cnt % 10 == 1 and cnt % 100 != 11:
+            return "подписка"
+        if cnt % 10 in (2, 3, 4) and cnt % 100 not in (12, 13, 14):
+            return "подписки"
+        return "подписок"
+
+    lines = [f"<b>У вас {n} {subs_word(n)}.</b>", "", "<b>Из них:</b>"]
+    bullets = []
+    if active:
+        if active == 1:
+            bullets.append("• 1 активна")
+        elif active in (2, 3, 4):
+            bullets.append(f"• {active} активные")
+        else:
+            bullets.append(f"• {active} активных")
+    if expired:
+        if expired == 1:
+            bullets.append("• 1 истекла")
+        elif expired in (2, 3, 4):
+            bullets.append(f"• {expired} истекшие")
+        else:
+            bullets.append(f"• {expired} истекших")
+    if off:
+        if off == 1:
+            bullets.append("• 1 отключена")
+        elif off in (2, 3, 4):
+            bullets.append(f"• {off} отключены")
+        else:
+            bullets.append(f"• {off} отключено")
+    if rest > 0:
+        bullets.append(f"• {rest} с иным статусом")
+
+    lines.extend(bullets or ["• нет разбивки по статусам"])
+    lines.extend(
+        [
+            "",
+            "Нажмите на конкретную подписку в списке ниже, чтобы узнать подробнее.",
+        ]
+    )
+    return "\n".join(lines)
 
 
 @router.callback_query(lambda callback: callback.data == "view_subs")
@@ -149,16 +208,19 @@ async def show_user_subscriptions(user_id, username, message, state: FSMContext)
                 )
             ])
 
+            list_text = _subscriptions_list_intro_html(subscription_data)
             try:
                 await message.edit_text(
-                    text='<b>Нажми на подписку, чтобы узнать о ней подробнее</b>',
+                    text=list_text,
                     reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
-                    parse_mode="HTML")
-            except:
+                    parse_mode="HTML",
+                )
+            except Exception:
                 await message.answer(
-                    text='<b>Нажми на подписку, чтобы узнать о ней подробнее</b>',
+                    text=list_text,
                     reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
-                    parse_mode="HTML")
+                    parse_mode="HTML",
+                )
 
         except Exception as e:
             await logger.log_error(f'Пользователь: @{username}\n'
@@ -261,6 +323,7 @@ async def extend_subscription(callback: CallbackQuery, callback_data: Subscripti
     await callback.message.edit_text(
         text=LEXICON_RU['createorder'],
         reply_markup=await InlineKeyboards.create_order_keyboards(StatusPay.OLD, back, subscription_id),
+        parse_mode="HTML",
     )
 
 

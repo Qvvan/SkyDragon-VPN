@@ -1,13 +1,10 @@
-from html import escape
-
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import Message, CallbackQuery
 
-from keyboards.kb_inline import InlineKeyboards, MAIN_MENU_BTN, MAIN_MENU_CB
+from keyboards.kb_inline import InlineKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
-from logger.logging_config import logger
 
 router = Router()
 
@@ -36,73 +33,11 @@ async def handle_know_more(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(lambda c: c.data == 'my_gifts')
 async def handle_my_gifts(callback: CallbackQuery):
-    """Обработчик кнопки 'Мои подарки'"""
+    """Старая кнопка: подарки теперь зачисляются автоматически."""
     await callback.answer()
-
-    from database.context_manager import DatabaseContextManager
-
-    async with DatabaseContextManager() as session_methods:
-        try:
-            # Получаем пользователя
-            user = await session_methods.users.get_user(callback.from_user.id)
-            if not user:
-                await callback.message.edit_text(
-                    "❌ Не удалось найти ваш профиль",
-                    reply_markup=InlineKeyboards.row_main_menu()
-                )
-                return
-
-            # Получаем подарки пользователя
-            gifts = await session_methods.gifts.get_gifts(callback.from_user.id)
-            user_gifts = [gift for gift in gifts if gift.status == "awaiting_activation"]
-
-            if not user_gifts:
-                await callback.message.edit_text(
-                    "🎁 У вас нет подарков для активации",
-                    reply_markup=InlineKeyboards.row_main_menu()
-                )
-                return
-
-            # HTML + escape: динамические имена ломают legacy Markdown (например «_» в @username).
-            message_text = "🎁 <b>Ваши подарки:</b>\n\n"
-
-            keyboard = []
-            for i, gift in enumerate(user_gifts, 1):
-                try:
-                    service = await session_methods.services.get_service_by_id(gift.service_id)
-                    giver = await session_methods.users.get_user(gift.giver_id)
-
-                    service_name = service.name if service else "Неизвестная услуга"
-                    service_days = service.duration_days if service else "?"
-                    giver_name = f"@{giver.username}" if giver and giver.username else "Неизвестный пользователь"
-
-                    message_text += (
-                        f"{i}. <b>{escape(str(service_name))}</b> "
-                        f"на {escape(str(service_days))} дней\n"
-                        f"   От: {escape(giver_name)}\n\n"
-                    )
-
-                    # Добавляем кнопку активации для каждого подарка
-                    keyboard.append([
-                        InlineKeyboardButton(
-                            text=f"🎁 Активировать подарок {i}",
-                            callback_data=f"activate_gift_{gift.gift_id}"
-                        )
-                    ])
-                except Exception:
-                    continue
-
-            keyboard.append([InlineKeyboardButton(text=MAIN_MENU_BTN, callback_data=MAIN_MENU_CB)])
-
-            await callback.message.edit_text(
-                message_text,
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard),
-                parse_mode="HTML",
-            )
-
-        except Exception as e:
-            await logger.log_error("Ошибка при загрузке подарков (my_gifts)", e)
-            await callback.message.edit_text(
-                "❌ Произошла ошибка при загрузке подарков",
-                reply_markup=InlineKeyboards.row_main_menu()
-            )
+    await callback.message.edit_text(
+        "🎁 Подарочные подписки начисляются автоматически — отдельно активировать ничего не нужно.\n\n"
+        "Загляните в «Мои подписки», если вам недавно дарили доступ.",
+        reply_markup=InlineKeyboards.row_main_menu(),
+        parse_mode="HTML",
+    )

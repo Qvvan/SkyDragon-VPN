@@ -8,6 +8,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from database.context_manager import DatabaseContextManager
 from handlers.services.extend_latest_subscription import extend_user_subscription
 from keyboards.kb_inline import InlineKeyboards, BACK_BTN, MAIN_MENU_CB
+from utils.gift_checker import deliver_pending_gifts_for_user
 from keyboards.set_menu import set_main_menu
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
@@ -45,6 +46,15 @@ async def process_start_command(message: Message):
                 f'ID: {message.from_user.id}\n'
                 f'При команде /start произошла ошибка:', e
             )
+
+    try:
+        await deliver_pending_gifts_for_user(
+            message.bot, message.from_user.id, message.from_user.username
+        )
+    except Exception as e:
+        await logger.log_error(
+            f"deliver_pending_gifts_for_user user_id={message.from_user.id}", e
+        )
 
 
 async def handle_referral(referrer_id, message):

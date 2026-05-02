@@ -25,10 +25,11 @@ class GiftsMethods:
             await logger.log_error(f"Ошибка получение подарков", e)
             return []
 
-    async def add_gift(self, gift: Gifts):
+    async def add_gift(self, gift: Gifts) -> Gifts | None:
         try:
             self.session.add(gift)
-            return True
+            await self.session.flush()
+            return gift
         except SQLAlchemyError as e:
             await logger.log_error(f"Ошибка добавления подарка", e)
             return None
@@ -58,4 +59,28 @@ class GiftsMethods:
             return gift
         except SQLAlchemyError as e:
             await logger.log_error(f"Ошибка получения подарка", e)
-            return
+            return []
+
+    async def get_undelivered_gifts(self):
+        """pending или старый awaiting_activation — к зачислению, когда получатель уже в users."""
+        try:
+            result = await self.session.execute(
+                select(Gifts).where(Gifts.status.in_(["pending", "awaiting_activation"]))
+            )
+            return list(result.scalars().all())
+        except SQLAlchemyError as e:
+            await logger.log_error(f"Ошибка получения подарков к доставке", e)
+            return []
+
+    async def get_pending_gifts_for_recipient(self, recipient_user_id: int):
+        try:
+            result = await self.session.execute(
+                select(Gifts).where(
+                    Gifts.recipient_user_id == recipient_user_id,
+                    Gifts.status.in_(["pending", "awaiting_activation"]),
+                )
+            )
+            return list(result.scalars().all())
+        except SQLAlchemyError as e:
+            await logger.log_error(f"Ошибка получения подарков получателя", e)
+            return []

@@ -13,6 +13,7 @@ from keyboards.kb_inline import SubscriptionCallbackFactory, InlineKeyboards
 from lexicon.lexicon_ru import LEXICON_RU
 from logger.logging_config import logger
 from models.models import SubscriptionStatusEnum, Payments
+from utils.admin_activity_log import admin_activity_message
 
 
 async def check_subscriptions(bot: Bot):
@@ -85,14 +86,33 @@ async def send_reminder(bot: Bot, sub, session_methods):
             await logger.warning(message=f"Не удалось отправить напоминание: {e}", )
             keyboard = None
 
+        service = None
+        if sub.service_id is not None:
+            try:
+                service = await session_methods.services.get_service_by_id(sub.service_id)
+            except Exception:
+                pass
+
+        reminder_text = admin_activity_message(
+            "Напоминание за ~3 дня до окончания (уведомление пользователю отправлено)",
+            user_id=sub.user_id,
+            username=username,
+            service=service,
+            subscription_id=sub.subscription_id,
+            payment_response=None,
+            extra=(
+                f"end_date (UTC в БД): {sub.end_date}\n"
+                f"статус: {sub.status}\n"
+                f"автопродление: {'да' if sub.auto_renewal else 'нет'}\n"
+                f"сохранённая карта (автосписание): {'да' if sub.card_details_id else 'нет'}\n"
+                f"service_id в подписке: {sub.service_id}\n"
+                f"reminder_sent: выставлен 1 после отправки"
+            ),
+        )
         try:
-            await logger.log_info(
-                f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{username}\nИстечет через 3 дня.", keyboard
-            )
-        except:
-            await logger.log_info(
-                f"Подписка у пользователя:\nID: {sub.user_id}\nUsername: @{username}\nИстечет через 3 дня."
-            )
+            await logger.log_info(reminder_text, keyboard)
+        except Exception:
+            await logger.log_info(reminder_text)
     except Exception as e:
         await session_methods.session.rollback()
         await logger.log_error(
@@ -145,9 +165,24 @@ async def handle_expired_subscription(bot: Bot, sub, session_methods):
                 except:
                     await logger.warning(
                         message=f"Не удалось отправить сообщение о продлении подписки ID: {sub.user_id}")
-                await logger.log_info(message="Успешное автопродление у пользователя\n"
-                                              f"ID: {sub.user_id}")
                 new_end_date = sub.end_date + timedelta(days=int(service.duration_days))
+                payer = await session_methods.users.get_user(sub.user_id)
+                payer_name = payer.username if payer else None
+                await logger.log_info(
+                    admin_activity_message(
+                        "Автопродление: списание успешно",
+                        user_id=sub.user_id,
+                        username=payer_name,
+                        service=service,
+                        subscription_id=sub.subscription_id,
+                        payment_response=res,
+                        extra=(
+                            f"новая end_date: {new_end_date}\n"
+                            f"payment_method_id (сохранённая карта): {sub.card_details_id}\n"
+                            f"запись payments.payment_id: {res.get('id')}"
+                        ),
+                    )
+                )
                 await session_methods.subscription.update_sub(
                     subscription_id=sub.subscription_id,
                     status=SubscriptionStatusEnum.ACTIVE,
