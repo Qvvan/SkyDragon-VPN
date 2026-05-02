@@ -16,11 +16,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Docker Compose
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y docker-compose
-
       - name: Notify start of deployment
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -48,17 +43,17 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            set -e
             cd /root/SkyDragon-VPN
             git pull origin main
-            # Сначала билдим не трогая запущенный бот
-            docker-compose build
-            
-            # Только когда собрался — быстро переключаем
-            docker-compose down
-            docker-compose up -d
+            # Пока старые контейнеры работают — только сборка образов (Compose V2)
+            docker compose build
+            # Сборка прошла — коротко выключаем и поднимаем уже собранное (без повторного build при up)
+            docker compose down
+            docker compose up -d --no-build
 
       - name: Notify end of deployment
-        if: success()  # Это сообщение будет отправлено только если деплой прошел успешно
+        if: success()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
