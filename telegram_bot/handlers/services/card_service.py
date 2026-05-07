@@ -3,6 +3,7 @@ import json
 from datetime import timedelta, datetime
 
 import requests
+from aiogram.exceptions import TelegramForbiddenError
 from yookassa import Configuration, Payment
 
 from config_data.config import SHOP_ID, SHOP_API_TOKEN
@@ -21,6 +22,17 @@ Configuration.secret_key = SHOP_API_TOKEN
 # чтобы не ждать бесконечно.
 YOOKASSA_CREATE_TIMEOUT_SEC = 25
 YOOKASSA_FIND_TIMEOUT_SEC = 15
+
+
+async def _safe_notify_user(bot, user_id: int, text: str):
+    try:
+        await bot.send_message(chat_id=user_id, text=text)
+    except TelegramForbiddenError:
+        await logger.warning(
+            f"Не удалось отправить сообщение пользователю {user_id}: бот заблокирован"
+        )
+    except Exception as e:
+        await logger.log_error(f"Не удалось отправить сообщение пользователю {user_id}", e)
 
 
 async def auto_renewal_payment(amount, description, payment_method_id, user_id, username, subscription_id, service_id):
@@ -148,8 +160,6 @@ async def payment_status_checker(bot):
                                     status='succeeded',
                                     receipt_link=receipt_link
                                 )
-                                await bot.send_message(chat_id=user_id, text="Платеж успешно прошел!")
-
                                 await successful_payment(bot, payment_response)
 
                             payment_time_limit = payment.created_at + timedelta(hours=1)
@@ -190,11 +200,19 @@ async def successful_payment(bot, payment_response):
             try:
                 user = await session_methods.users.get_user(recipient_user_id)
                 if not user:
-                    await bot.send_message(chat_id=user_id, text=LEXICON_RU['gift_thank_you'].format(gift_days=30))
                     await extend_user_subscription(user_id, username, 30, session_methods)
+                    await _safe_notify_user(
+                        bot,
+                        user_id,
+                        LEXICON_RU['gift_thank_you'].format(gift_days=30)
+                    )
                 else:
                     await extend_user_subscription(user_id, username, 10, session_methods)
-                    await bot.send_message(chat_id=user_id, text=LEXICON_RU['gift_thank_you'].format(gift_days=10))
+                    await _safe_notify_user(
+                        bot,
+                        user_id,
+                        LEXICON_RU['gift_thank_you'].format(gift_days=10)
+                    )
                 await session_methods.session.commit()
             except Exception as e:
                 await session_methods.session.rollback()

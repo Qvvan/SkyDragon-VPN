@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime, timedelta
 
 from aiogram import Bot
+from aiogram.exceptions import TelegramForbiddenError
 
 from database.context_manager import DatabaseContextManager
 from handlers.services.create_config_link import create_config_link
@@ -17,6 +18,15 @@ from utils.admin_activity_log import admin_activity_message
 
 class NoActiveSubscriptionsError(Exception):
     pass
+
+
+async def _safe_send_message(bot: Bot, chat_id: int, text: str, **kwargs):
+    try:
+        await bot.send_message(chat_id=chat_id, text=text, **kwargs)
+    except TelegramForbiddenError:
+        await logger.warning(f"Не удалось отправить сообщение пользователю {chat_id}: бот заблокирован")
+    except Exception as e:
+        await logger.log_error(f"Ошибка отправки сообщения пользователю {chat_id}", e)
 
 
 class SubscriptionsServiceCard:
@@ -45,8 +55,6 @@ class SubscriptionsServiceCard:
 
                 config_link = await create_config_link(user_id, subscription.subscription_id)
 
-                # Сразу отправляем успех пользователю
-                await SubscriptionsServiceCard.send_success_response(bot, user_id, subscription)
                 await session_methods.session.commit()
                 await logger.log_info(
                     admin_activity_message(
@@ -62,6 +70,8 @@ class SubscriptionsServiceCard:
                         ),
                     )
                 )
+                # Сообщение пользователю не должно ломать уже успешную транзакцию
+                await SubscriptionsServiceCard.send_success_response(bot, user_id, subscription)
 
                 # Запускаем создание ключей в фоне (не блокируем ответ пользователю)
                 asyncio.create_task(
@@ -80,11 +90,11 @@ class SubscriptionsServiceCard:
 
             except Exception as e:
                 if isinstance(e, NoAvailableServersError):
-                    await bot.send_message(chat_id=user_id, text=LEXICON_RU['no_servers_available'])
+                    await _safe_send_message(bot, user_id, LEXICON_RU['no_servers_available'])
                 else:
                     await logger.log_error(f"Пользователь: @{username}, ID {user_id}\nОшибка при обработке транзакции",
                                            e)
-                    await bot.send_message(chat_id=user_id, text=LEXICON_RU['purchase_cancelled'])
+                    await _safe_send_message(bot, user_id, LEXICON_RU['purchase_cancelled'])
 
                 await session_methods.session.rollback()
 
@@ -124,9 +134,6 @@ class SubscriptionsServiceCard:
                             )
                             await logger.info(f"Успешно создана подписка {subscription_id}")
                             await session_methods.session.commit()
-                            
-                            # Сразу отправляем успех пользователю
-                            await bot.send_message(chat_id=user_id, text=LEXICON_RU['subscription_renewed'])
                             await logger.log_info(
                                 admin_activity_message(
                                     "Покупка: продление подписки",
@@ -142,6 +149,7 @@ class SubscriptionsServiceCard:
                                     ),
                                 )
                             )
+                            await _safe_send_message(bot, user_id, LEXICON_RU['subscription_renewed'])
                             
                             # Запускаем обновление ключей в фоне (не блокируем ответ пользователю)
                             asyncio.create_task(
@@ -162,15 +170,7 @@ class SubscriptionsServiceCard:
                             return
 
                 subscription = await extend_user_subscription(user_id, username, int(durations_days), session_methods)
-                
-                # Сразу отправляем сообщение пользователю
-                await bot.send_message(
-                    chat_id=user_id,
-                    text="Ваша старая подписка больше не актуальна, поэтому мы создали новую. \n\n"
-                         "Чтобы продолжить пользоваться сервисом, нужно заново установить профиль. Это займет всего пару кликов! 🚀"
-                )
                 await create_config_link(user_id, subscription.subscription_id)
-                await SubscriptionsServiceCard.send_success_response(bot, user_id, subscription)
                 await session_methods.session.commit()
                 await logger.log_info(
                     admin_activity_message(
@@ -187,6 +187,13 @@ class SubscriptionsServiceCard:
                         ),
                     )
                 )
+                await _safe_send_message(
+                    bot,
+                    user_id,
+                    "Ваша старая подписка больше не актуальна, поэтому мы создали новую. \n\n"
+                    "Чтобы продолжить пользоваться сервисом, нужно заново установить профиль. Это займет всего пару кликов! 🚀"
+                )
+                await SubscriptionsServiceCard.send_success_response(bot, user_id, subscription)
                 
                 # Запускаем создание ключей в фоне (не блокируем ответ пользователю)
                 asyncio.create_task(
@@ -199,7 +206,7 @@ class SubscriptionsServiceCard:
                 )
 
             except Exception as e:
-                await bot.send_message(chat_id=user_id, text=LEXICON_RU['purchase_cancelled'])
+                await _safe_send_message(bot, user_id, LEXICON_RU['purchase_cancelled'])
                 await logger.error("Ошибка при продление", e)
                 await logger.log_error(
                     f"Пользователь: @{username}\n"
@@ -212,13 +219,14 @@ class SubscriptionsServiceCard:
 
     @staticmethod
     async def send_success_response(bot: Bot, user_id: int, subscription):
-        await bot.send_message(
-            chat_id=user_id,
-            text=LEXICON_RU["choose_device"],
+        await _safe_send_message(
+            bot,
+            user_id,
+            LEXICON_RU["choose_device"],
             reply_markup=await InlineKeyboards.get_menu_install_app(
                 subscription.subscription_id,
-                user_id=user_id,
-            ),
+                user_id=user_id
+            )
         )
 
     @staticmethod
@@ -230,7 +238,11 @@ class SubscriptionsServiceCard:
                     subscription = await extend_user_subscription(referrer_id, str(username), 15, session_methods)
                     ref_user = await session_methods.users.get_user(referrer_id)
                     ref_username = ref_user.username if ref_user else None
-                    await bot.send_message(referrer_id, LEXICON_RU['referrer_message'].format(username=username))
+                    await _safe_send_message(
+                        bot,
+                        referrer_id,
+                        LEXICON_RU['referrer_message'].format(username=username)
+                    )
                     await logger.log_info(
                         admin_activity_message(
                             "Реферальный бонус: пригласившему +15 дней",
