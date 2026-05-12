@@ -4,7 +4,6 @@ import sys
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
-from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 
@@ -32,19 +31,6 @@ bot_instance = None
 dp_instance = None
 background_tasks = []
 is_shutting_down = False
-
-
-def normalize_telegram_proxy(proxy: str) -> str:
-    """
-    Приводим прокси к формату, который ожидает aiogram/AiohttpSession.
-    Поддерживаем ввод как `ip:port` (автопрефикс `socks5://`) или полный URL.
-    """
-    proxy = (proxy or "").strip()
-    if not proxy:
-        return ""
-    if "://" not in proxy:
-        return f"socks5://{proxy}"
-    return proxy
 
 
 async def cleanup_bot_resources():
@@ -169,13 +155,9 @@ async def create_bot_instance():
     # Создаем новые экземпляры
     storage = MemoryStorage()
 
-    telegram_proxy = normalize_telegram_proxy(config.TELEGRAM_PROXY)
-    session = AiohttpSession(proxy=telegram_proxy or None)
-
     bot_instance = Bot(
         token=config.BOT_TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
-        session=session,
     )
 
     dp_instance = Dispatcher(storage=storage)
